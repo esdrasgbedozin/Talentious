@@ -23,7 +23,8 @@ services:
     depends_on:
       - db
     environment:
-      - DATABASE_URL=postgresql://talentious:talentious@db/talentious
+      - DATABASE_URL=postgresql+asyncpg://talentious:talentious@db/talentious
+      - SECRET_KEY=dev-secret-key-change-in-production-min-32-chars
 
   frontend:
     build:

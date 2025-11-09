@@ -335,22 +335,22 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
   - [x] Créer `get_current_active_user` pour extension future.
 
 #### 1.6. Endpoints d'Authentification
-- [ ] Créer `backend/app/routes/auth.py` :
-  - [ ] `POST /auth/register` :
-    - [ ] Vérifier que l'email n'existe pas déjà.
-    - [ ] Hasher le mot de passe.
-    - [ ] Créer l'utilisateur dans la DB (rôle par défaut : `user`).
-    - [ ] Créer un profil vide associé.
-    - [ ] Retourner un message de succès.
-  - [ ] `POST /auth/login` :
-    - [ ] Vérifier que l'email existe.
-    - [ ] Vérifier le mot de passe avec `verify_password`.
-    - [ ] Générer un token JWT.
-    - [ ] Retourner le token.
-  - [ ] `GET /auth/me` (protégé) :
-    - [ ] Utiliser la dépendance `get_current_user`.
-    - [ ] Retourner les informations de l'utilisateur connecté.
-- [ ] Intégrer les routes dans `backend/app/main.py`.
+- [x] Créer `backend/app/routes/auth.py` :
+  - [x] `POST /auth/register` :
+    - [x] Vérifier que l'email n'existe pas déjà.
+    - [x] Hasher le mot de passe.
+    - [x] Créer l'utilisateur dans la DB (rôle par défaut : `user`).
+    - [x] Créer un profil vide associé.
+    - [x] Retourner un message de succès.
+  - [x] `POST /auth/login` :
+    - [x] Vérifier que l'email existe.
+    - [x] Vérifier le mot de passe avec `verify_password`.
+    - [x] Générer un token JWT.
+    - [x] Retourner le token.
+  - [x] `GET /auth/me` (protégé) :
+    - [x] Utiliser la dépendance `get_current_user`.
+    - [x] Retourner les informations de l'utilisateur connecté.
+- [x] Intégrer les routes dans `backend/app/main.py`.
 
 #### 1.7. Endpoints de Gestion du Profil
 - [ ] Créer `backend/app/routes/profile.py` :
