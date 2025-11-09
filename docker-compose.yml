@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:15
+    container_name: talentious_db
+    restart: always
+    environment:
+      - POSTGRES_USER=talentious
+      - POSTGRES_PASSWORD=talentious
+      - POSTGRES_DB=talentious
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: talentious_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://talentious:talentious@db/talentious
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: talentious_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
