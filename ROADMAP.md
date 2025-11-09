@@ -365,19 +365,19 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 - [x] Intégrer les routes dans `backend/app/main.py`.
 
 #### 1.8. Tests & Validation
-- [ ] Installer pytest et les plugins :
-  - [ ] `pip install pytest pytest-asyncio httpx`.
-- [ ] Créer `backend/tests/test_auth.py` :
-  - [ ] Test de l'endpoint `/auth/register` (succès).
-  - [ ] Test de l'endpoint `/auth/register` (email déjà existant).
-  - [ ] Test de l'endpoint `/auth/login` (succès).
-  - [ ] Test de l'endpoint `/auth/login` (mauvais mot de passe).
-  - [ ] Test de l'endpoint `/auth/me` (avec et sans token valide).
-- [ ] Créer `backend/tests/test_profile.py` :
-  - [ ] Test de `GET /profile` (utilisateur authentifié).
-  - [ ] Test de `PUT /profile` (mise à jour valide).
-- [ ] Lancer les tests localement : `pytest backend/tests/`.
-- [ ] Vérifier que le pipeline CI/CD exécute les tests correctement.
+- [x] Installer pytest et les plugins :
+  - [x] `pip install pytest pytest-asyncio httpx`.
+- [x] Créer `backend/tests/test_auth.py` :
+  - [x] Test de l'endpoint `/auth/register` (succès).
+  - [x] Test de l'endpoint `/auth/register` (email déjà existant).
+  - [x] Test de l'endpoint `/auth/login` (succès).
+  - [x] Test de l'endpoint `/auth/login` (mauvais mot de passe).
+  - [x] Test de l'endpoint `/auth/me` (avec et sans token valide).
+- [x] Créer `backend/tests/test_profile.py` :
+  - [x] Test de `GET /profile` (utilisateur authentifié).
+  - [x] Test de `PUT /profile` (mise à jour valide).
+- [x] Lancer les tests localement : `pytest backend/tests/`.
+- [x] Vérifier que le pipeline CI/CD exécute les tests correctement.
 
 #### 1.9. Gestion des Secrets (GCP Secret Manager)
 - [ ] Créer les secrets dans Secret Manager :
