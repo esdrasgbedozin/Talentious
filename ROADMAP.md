@@ -214,25 +214,28 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 - [x] Vérifier que tous les services fonctionnent correctement.
 
 #### 0.5. CI/CD (GitHub Actions)
-- [ ] Créer le dossier `.github/workflows/` à la racine.
-- [ ] Créer le workflow `backend-staging.yml` :
-  - [ ] Déclencher sur push vers `develop` (uniquement si des fichiers dans `/backend` ont changé).
-  - [ ] Étapes :
-    - [ ] Checkout du code.
-    - [ ] Setup Python 3.11.
-    - [ ] Installation des dépendances : `pip install -r backend/requirements.txt`.
-    - [ ] Lancer les tests : `pytest backend/tests/`.
-    - [ ] Authentification GCP (via un Service Account).
-    - [ ] Configurer Docker pour utiliser Artifact Registry.
-    - [ ] Construire l'image Docker : `docker build -t europe-west9-docker.pkg.dev/talentious-project/talentious-images/backend:$GITHUB_SHA ./backend`.
-    - [ ] Pousser l'image vers Artifact Registry.
-    - [ ] Déployer sur Cloud Run (service `backend-staging`, région `europe-west9`).
-- [ ] Créer le workflow `frontend-staging.yml` (même logique pour le frontend).
-- [ ] Créer un Service Account GCP dédié au CI/CD :
-  - [ ] Créer le compte : `ci-cd-deployer@talentious-project.iam.gserviceaccount.com`.
-  - [ ] Lui attribuer les rôles nécessaires (Cloud Run Admin, Artifact Registry Writer, Storage Admin).
-  - [ ] Générer une clé JSON.
-  - [ ] Ajouter cette clé comme secret GitHub (`GCP_SA_KEY`).
+- [x] Créer le dossier `.github/workflows/` à la racine.
+- [x] Créer le workflow `backend-staging.yml` :
+  - [x] Déclencher sur push vers `develop` (uniquement si des fichiers dans `/backend` ont changé).
+  - [x] Étapes :
+    - [x] Checkout du code.
+    - [x] Setup Python 3.11.
+    - [x] Installation des dépendances : `pip install -r backend/requirements.txt`.
+    - [x] Lancer les tests : `pytest backend/tests/`.
+    - [x] Authentification GCP (via un Service Account).
+    - [x] Configurer Docker pour utiliser Artifact Registry.
+    - [x] Construire l'image Docker : `docker build -t europe-west9-docker.pkg.dev/talentious-project/talentious-images/backend:$GITHUB_SHA ./backend`.
+    - [x] Pousser l'image vers Artifact Registry.
+    - [x] Déployer sur Cloud Run (service `backend-staging`, région `europe-west9`).
+- [x] Créer le workflow `frontend-staging.yml` (même logique pour le frontend).
+- [x] Créer un Service Account GCP dédié au CI/CD :
+  - [x] Créer le compte : `ci-cd-deployer@talentious-project.iam.gserviceaccount.com`.
+  - [x] Lui attribuer les rôles nécessaires (Cloud Run Admin, Artifact Registry Writer, Storage Admin).
+  - [x] Générer une clé JSON.
+  - [x] Ajouter cette clé comme secret GitHub (`GCP_SA_KEY`).
+- [x] Mettre à jour le Dockerfile du frontend pour supporter les build arguments.
+- [x] Créer le guide de configuration `.github/CICD_SETUP.md`.
+- [ ] Configurer les secrets GitHub (DATABASE_URL, SECRET_KEY, GCP_SA_KEY).
 - [ ] Tester le pipeline en poussant un commit sur `develop`.
 
 ---
