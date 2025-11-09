@@ -45,74 +45,109 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 ## 2. Roadmap Détaillée par Phases
 
 ### Phase 0 : Fondations & Infrastructure (Durée estimée : 3-4 jours)
+> **Branche pour cette phase :** `feature/project-foundations` (à créer depuis `develop`)
+> 
+> **Workflow :**
+> 1. `git checkout develop`
+> 2. `git pull`
+> 3. `git checkout -b feature/project-foundations`
+> 4. Effectuez toutes les tâches de la Phase 0 dans cette branche.
+> 5. Une fois terminé, créez une Pull Request de `feature/project-foundations` vers `develop`.
 *Objectif : Mettre en place un squelette de projet fonctionnel et automatisé.*
 
 #### 0.1. Gestion de Projet & Versioning
-- [ ] Créer le dépôt GitHub privé `Talentious`.
-- [ ] Initialiser le dépôt localement avec `git init`.
-- [ ] Créer la structure de branches initiale :
-  - [ ] Créer la branche `main`.
-  - [ ] Créer la branche `develop` à partir de `main`.
-- [ ] Configurer les protections de branches sur GitHub :
-  - [ ] Bloquer les pushs directs sur `main` (require PR).
-  - [ ] Bloquer les pushs directs sur `develop` (require PR).
-- [ ] Ajouter les fichiers de documentation :
-  - [ ] Copier `PROJECT_CONTEXT.md` à la racine.
-  - [ ] Copier `ROADMAP.md` à la racine.
-  - [ ] Créer un fichier `README.md` avec la description du projet.
-- [ ] Créer un fichier `.gitignore` global pour Python et Node.js.
+- [x] Créer le dépôt GitHub privé `Talentious`.
+- [x] Initialiser le dépôt localement avec `git init`.
+- [x] Créer la structure de branches initiale :
+  - [x] Créer la branche `main`.
+  - [x] Créer la branche `develop` à partir de `main`.
+- [x] Configurer les protections de branches sur GitHub :
+  - [x] Bloquer les pushs directs sur `main` (require PR).
+  - [x] Bloquer les pushs directs sur `develop` (require PR).
+- [x] Ajouter les fichiers de documentation :
+  - [x] Copier `PROJECT_CONTEXT.md` à la racine.
+  - [x] Copier `ROADMAP.md` à la racine.
+  - [x] Créer un fichier `README.md` avec la description du projet.
+- [x] Créer un fichier `.gitignore` global pour Python et Node.js.
 
 #### 0.2. Environnement de Développement Local (Docker Compose)
-- [ ] Créer un fichier `docker-compose.yml` à la racine du projet.
-- [ ] Configurer le service PostgreSQL local :
-  - [ ] Utiliser l'image officielle `postgres:15`.
-  - [ ] Définir les variables d'environnement (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB).
-  - [ ] Mapper le port `5432` pour l'accès local.
-  - [ ] Créer un volume pour persister les données localement.
-- [ ] Configurer le service Backend (FastAPI) :
-  - [ ] Définir le Dockerfile pour le backend (image Python 3.11).
-  - [ ] Configurer le hot-reload avec `uvicorn --reload`.
-  - [ ] Mapper le port `8000` pour l'API.
-  - [ ] Lier le service à PostgreSQL local.
-- [ ] Configurer le service Frontend (Next.js) :
-  - [ ] Définir le Dockerfile pour le frontend (image Node 20).
-  - [ ] Configurer le hot-reload avec `next dev`.
-  - [ ] Mapper le port `3000` pour l'interface.
-- [ ] Tester le lancement de l'ensemble avec `docker-compose up`.
-- [ ] Créer un fichier `Makefile` ou un script `dev.sh` pour simplifier les commandes courantes.
+- [x] Créer un fichier `docker-compose.yml` à la racine du projet.
+- [x] Configurer le service PostgreSQL local :
+  - [x] Utiliser l'image officielle `postgres:15`.
+  - [x] Définir les variables d'environnement (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB).
+  - [x] Mapper le port `5432` pour l'accès local.
+  - [x] Créer un volume pour persister les données localement.
+- [x] Configurer le service Backend (FastAPI) :
+  - [x] Définir le Dockerfile pour le backend (image Python 3.11).
+  - [x] Configurer le hot-reload avec `uvicorn --reload`.
+  - [x] Mapper le port `8000` pour l'API.
+  - [x] Lier le service à PostgreSQL local.
+- [x] Configurer le service Frontend (Next.js) :
+  - [x] Définir le Dockerfile pour le frontend (image Node 20).
+  - [x] Configurer le hot-reload avec `next dev`.
+  - [x] Mapper le port `3000` pour l'interface.
+- [x] Tester le lancement de l'ensemble avec `docker-compose up`.
+- [x] Créer un fichier `Makefile` ou un script `dev.sh` pour simplifier les commandes courantes.
 
-#### 0.3. Infrastructure GCP
-- [ ] Créer un nouveau projet GCP via la console (ex: `talentious-prod`).
-- [ ] Activer la facturation sur le projet.
-- [ ] Activer les APIs nécessaires :
-  - [ ] Cloud Run API.
-  - [ ] Cloud SQL Admin API.
-  - [ ] Cloud Storage API.
-  - [ ] Artifact Registry API.
-  - [ ] Secret Manager API.
-  - [ ] Vertex AI API.
-- [ ] Installer et configurer le CLI `gcloud` sur votre machine locale.
-- [ ] Authentifier `gcloud` : `gcloud auth login`.
-- [ ] Définir le projet par défaut : `gcloud config set project talentious-prod`.
-- [ ] Créer l'instance PostgreSQL sur Cloud SQL :
-  - [ ] Choisir PostgreSQL 15.
-  - [ ] Région : `europe-west9` (Paris).
-  - [ ] Type d'instance : choisir une config économique pour le dev (ex: `db-f1-micro` pour commencer).
-  - [ ] Activer le chiffrement au repos.
-  - [ ] Noter les identifiants de connexion (host, user, password).
-- [ ] Créer le bucket sur Cloud Storage :
-  - [ ] Nom du bucket (ex: `talentious-cvs-prod`).
-  - [ ] Type : Regional.
-  - [ ] Région : `europe-west9`.
-  - [ ] Classe de stockage : Standard.
-  - [ ] Activer le chiffrement par défaut.
-- [ ] Créer le dépôt sur Artifact Registry :
-  - [ ] Format : Docker.
-  - [ ] Nom (ex: `talentious-images`).
-  - [ ] Région : `europe-west9`.
+#### 0.3. Infrastructure GCP (via Terraform)
+
+**Pré-requis manuels :**
+- [x] Créer un nouveau projet GCP via la console (ex: `talentious-project`).
+- [x] Activer la facturation sur le projet.
+- [x] Activer les APIs nécessaires (Cloud Run, Cloud SQL, Storage, Artifact Registry, Secret Manager, Vertex AI).
+- [x] Installer Terraform sur votre machine locale.
+- [x] Installer et configurer le CLI `gcloud` sur votre machine locale.
+- [x] Authentifier `gcloud` : `gcloud auth login`.
+- [x] Définir le projet par défaut : `gcloud config set project talentious-project`.
+- [x] Créer manuellement un bucket GCS pour stocker l'état Terraform :
+  - [x] Nom : `talentious-tf-state` (doit être globalement unique).
+  - [x] Région : `europe-west9`.
+  - [x] Activer le versioning sur ce bucket.
+  - [x] Commande : `gcloud storage buckets create gs://talentious-tf-state-1000 --location=europe-west9 --uniform-bucket-level-access`.
+  - [x] Activer le versioning : `gcloud storage buckets update gs://talentious-tf-state-1000 --versioning`.
+
+**Configuration Terraform :**
+- [x] Créer le dossier `infra/` à la racine du projet.
+- [x] Créer le fichier `infra/variables.tf` :
+  - [x] Définir les variables : `project_id`, `region` (default: `europe-west9`), `db_password` (sensitive).
+- [x] Créer le fichier `infra/terraform.tfvars` :
+  - [x] Définir `project_id = "talentious-project"`.
+  - [x] Définir `region = "europe-west9"`.
+  - [x] Définir `db_password` avec un mot de passe fort.
+  - [x] Ajouter `*.tfvars` au `.gitignore` pour ne pas commiter les secrets.
+- [x] Créer le fichier `infra/main.tf` :
+  - [x] Configurer le provider Google Cloud.
+  - [x] Configurer le backend GCS pour l'état Terraform (utiliser le bucket `talentious-tf-state`).
+  - [x] Activer les APIs nécessaires via `google_project_service`.
+  - [x] Créer l'instance Cloud SQL PostgreSQL 15 :
+    - [x] Nom : `talentious-db-prod`.
+    - [x] Région : `europe-west9`.
+    - [x] Tier : `db-f1-micro`.
+    - [x] `deletion_protection = false` pour le dev (passer à `true` en production).
+  - [x] Créer la base de données `talentious` dans l'instance SQL.
+  - [x] Créer l'utilisateur `talentious-app` avec le mot de passe de `var.db_password`.
+  - [x] Créer le bucket Cloud Storage :
+    - [x] Nom : `${var.project_id}-cvs` pour garantir l'unicité.
+    - [x] Région : `europe-west9`.
+    - [x] Activer le versioning.
+    - [x] `uniform_bucket_level_access = true`.
+    - [x] `force_destroy = true` pour le dev (passer à `false` en production).
+  - [x] Créer le repository Artifact Registry :
+    - [x] Nom : `talentious-images`.
+    - [x] Format : `DOCKER`.
+    - [x] Région : `europe-west9`.
+- [x] Créer le fichier `infra/outputs.tf` :
+  - [x] Définir des outputs pour : connection string de la BDD, nom du bucket, URL du registry.
+
+**Déploiement de l'infrastructure :**
+- [x] Dans le dossier `infra/`, exécuter `terraform init`.
+- [x] Exécuter `terraform plan` et vérifier la liste des ressources à créer.
+- [x] Exécuter `terraform apply` et confirmer pour créer l'infrastructure.
+- [x] Noter les outputs affichés (connection string, etc.) dans un gestionnaire de mots de passe sécurisé.
+- [x] Vérifier dans la console GCP que toutes les ressources sont bien créées.
 
 #### 0.4. Initialisation des Projets (Code)
-- [ ] Créer la structure du monorepo :
+- [x] Créer la structure du monorepo :
   ```
   /
   ├── backend/
@@ -126,11 +161,8 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
   ├── ROADMAP.md
   └── README.md
   ```
-- [ ] Initialiser le projet **Backend (FastAPI)** :
-  - [ ] `cd backend && python -m venv venv`.
-  - [ ] Activer l'environnement virtuel.
-  - [ ] Installer FastAPI et Uvicorn : `pip install fastapi uvicorn[standard]`.
-  - [ ] Créer la structure de base :
+- [x] Initialiser le projet **Backend (FastAPI)** :
+  - [x] Créer la structure de base :
     ```
     backend/
     ├── app/
@@ -147,26 +179,39 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
     ├── requirements.txt
     └── .env.example
     ```
-  - [ ] Créer un endpoint de test `GET /health` dans `main.py`.
-  - [ ] Générer le fichier `requirements.txt` : `pip freeze > requirements.txt`.
-- [ ] Initialiser le projet **Frontend (Next.js)** :
-  - [ ] `npx create-next-app@latest frontend --typescript --tailwind --app`.
-  - [ ] Installer les dépendances de base : `cd frontend && npm install`.
-  - [ ] Configurer Tailwind CSS avec les couleurs du projet (#2D3748, #38A169).
-  - [ ] Créer la structure de base :
+  - [x] Créer un endpoint de test `GET /health` dans `main.py`.
+  - [x] Mettre à jour le fichier `requirements.txt` avec toutes les dépendances nécessaires.
+  - [x] Créer `config.py` avec Pydantic Settings pour la configuration.
+  - [x] Créer `.env.example` avec les variables d'environnement.
+  - [x] Créer les fichiers `__init__.py` pour tous les packages Python.
+  - [x] Créer `tests/test_main.py` avec un test basique du endpoint health.
+  - [x] Créer `pytest.ini` pour la configuration des tests.
+- [x] Initialiser le projet **Frontend (Next.js)** :
+  - [x] La structure Next.js est déjà créée avec TypeScript et Tailwind.
+  - [x] Installer les dépendances utilitaires : `clsx` et `tailwind-merge`.
+  - [x] Créer la structure de base :
     ```
     frontend/
     ├── src/
     │   ├── app/
-    │   ├── components/
+    │   ├── components/ui/
     │   ├── lib/
-    │   └── styles/
+    │   └── context/
     ├── public/
     ├── Dockerfile
     ├── package.json
     └── .env.local.example
     ```
-  - [ ] Créer une page de test à la racine.
+  - [x] Créer `.env.local.example` avec les variables d'environnement.
+  - [x] Créer `src/lib/api.ts` pour le client API.
+  - [x] Créer `src/lib/utils.ts` pour les fonctions utilitaires.
+- [x] Créer le dossier `agents/` avec les sous-dossiers :
+  - [x] `parser-pdf/` avec README.md
+  - [x] `analyseur-offre/` avec README.md
+  - [x] `redacteur-cv/` avec README.md
+  - [x] `agents/README.md` pour la documentation générale
+- [x] Reconstruire et tester les containers Docker.
+- [x] Vérifier que tous les services fonctionnent correctement.
 
 #### 0.5. CI/CD (GitHub Actions)
 - [ ] Créer le dossier `.github/workflows/` à la racine.
@@ -179,12 +224,12 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
     - [ ] Lancer les tests : `pytest backend/tests/`.
     - [ ] Authentification GCP (via un Service Account).
     - [ ] Configurer Docker pour utiliser Artifact Registry.
-    - [ ] Construire l'image Docker : `docker build -t europe-west9-docker.pkg.dev/talentious-prod/talentious-images/backend:$GITHUB_SHA ./backend`.
+    - [ ] Construire l'image Docker : `docker build -t europe-west9-docker.pkg.dev/talentious-project/talentious-images/backend:$GITHUB_SHA ./backend`.
     - [ ] Pousser l'image vers Artifact Registry.
     - [ ] Déployer sur Cloud Run (service `backend-staging`, région `europe-west9`).
 - [ ] Créer le workflow `frontend-staging.yml` (même logique pour le frontend).
 - [ ] Créer un Service Account GCP dédié au CI/CD :
-  - [ ] Créer le compte : `ci-cd-deployer@talentious-prod.iam.gserviceaccount.com`.
+  - [ ] Créer le compte : `ci-cd-deployer@talentious-project.iam.gserviceaccount.com`.
   - [ ] Lui attribuer les rôles nécessaires (Cloud Run Admin, Artifact Registry Writer, Storage Admin).
   - [ ] Générer une clé JSON.
   - [ ] Ajouter cette clé comme secret GitHub (`GCP_SA_KEY`).
@@ -193,6 +238,14 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 ---
 
 ### Phase 1 : Cœur Backend - Utilisateurs & Profils (Durée estimée : 5-6 jours)
+> **Branche pour cette phase :** `feature/backend-auth-profile` (à créer depuis `develop`)
+> 
+> **Workflow :**
+> 1. `git checkout develop`
+> 2. `git pull`
+> 3. `git checkout -b feature/backend-auth-profile`
+> 4. Effectuez toutes les tâches de la Phase 1.
+> 5. Une fois terminé, créez une Pull Request de `feature/backend-auth-profile` vers `develop`.
 *Objectif : Avoir un backend capable de gérer des utilisateurs et leurs données de profil de manière sécurisée.*
 
 #### 1.1. Configuration de la Base de Données
@@ -317,6 +370,14 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 ---
 
 ### Phase 2 : Frontend - Authentification & Gestion du Profil (Durée estimée : 5-6 jours)
+> **Branche pour cette phase :** `feature/frontend-auth-profile` (à créer depuis `develop`)
+> 
+> **Workflow :**
+> 1. `git checkout develop`
+> 2. `git pull`
+> 3. `git checkout -b feature/frontend-auth-profile`
+> 4. Effectuez toutes les tâches de la Phase 2.
+> 5. Une fois terminé, créez une Pull Request de `feature/frontend-auth-profile` vers `develop`.
 *Objectif : Permettre à un utilisateur de créer un compte, se connecter et modifier son profil.*
 
 #### 2.1. Configuration de Base & Design System
@@ -428,6 +489,14 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 ---
 
 ### Phase 3 : Magie IA - Agents & Flux de Génération (Durée estimée : 7-9 jours)
+> **Branche pour cette phase :** `feature/ai-generation-flow` (à créer depuis `develop`)
+> 
+> **Workflow :**
+> 1. `git checkout develop`
+> 2. `git pull`
+> 3. `git checkout -b feature/ai-generation-flow`
+> 4. Effectuez toutes les tâches de la Phase 3.
+> 5. Une fois terminé, créez une Pull Request de `feature/ai-generation-flow` vers `develop`.
 *Objectif : Construire les microservices IA et le flux backend qui génère le contenu d'un CV.*
 
 #### 3.1. Agent `Parser-PDF`
@@ -538,6 +607,14 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 ---
 
 ### Phase 4 : Cœur de l'Application - Dashboard & Éditeur (Durée estimée : 8-11 jours)
+> **Branche pour cette phase :** `feature/dashboard-and-editor` (à créer depuis `develop`)
+> 
+> **Workflow :**
+> 1. `git checkout develop`
+> 2. `git pull`
+> 3. `git checkout -b feature/dashboard-and-editor`
+> 4. Effectuez toutes les tâches de la Phase 4.
+> 5. Une fois terminé, créez une Pull Request de `feature/dashboard-and-editor` vers `develop`.
 *Objectif : L'utilisateur peut générer, voir, éditer et télécharger son CV.*
 
 #### 4.1. Dashboard (Écran 3)
@@ -640,6 +717,16 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 ---
 
 ### Phase 5 : Monétisation & Lancement (Durée estimée : 4-5 jours)
+> **Branche pour cette phase :** `feature/monetization-stripe` (à créer depuis `develop`)
+> 
+> **Workflow :**
+> 1. `git checkout develop`
+> 2. `git pull`
+> 3. `git checkout -b feature/monetization-stripe`
+> 4. Effectuez toutes les tâches de la Phase 5.
+> 5. Une fois terminé, créez une Pull Request de `feature/monetization-stripe` vers `develop`.
+>
+> **Mise en production :** Une fois cette PR fusionnée et testée sur staging, créez une PR de `develop` vers `main` pour le lancement.
 *Objectif : L'utilisateur peut acheter le Pass 30 Jours pour continuer à générer des CVs. L'application est prête pour la production.*
 
 #### 5.1. Intégration Stripe (Backend)
@@ -803,6 +890,9 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 ---
 
 ### Phase 6 : Post-Lancement & Itérations (Continu)
+> **Branches pour cette phase :** `fix/nom-du-bug` ou `feature/nom-de-l-iteration` (à créer depuis `develop`)
+> 
+> **Workflow :** Le cycle de développement normal reprend. Chaque bug ou petite amélioration a sa propre branche et sa propre PR vers `develop`. Les mises en production se font en groupant plusieurs fonctionnalités/corrections dans une PR de `develop` vers `main`.
 *Objectif : Surveiller la production, recueillir les retours utilisateurs et préparer les évolutions futures.*
 
 #### 6.1. Monitoring & Alertes
