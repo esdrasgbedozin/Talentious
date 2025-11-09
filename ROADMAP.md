@@ -380,11 +380,11 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 - [x] Vérifier que le pipeline CI/CD exécute les tests correctement.
 
 #### 1.9. Gestion des Secrets (GCP Secret Manager)
-- [ ] Créer les secrets dans Secret Manager :
-  - [ ] `JWT_SECRET_KEY` : Une clé aléatoire forte.
-  - [ ] `DATABASE_URL` : URL de connexion à Cloud SQL.
-- [ ] Configurer Cloud Run pour charger ces secrets comme variables d'environnement.
-- [ ] Tester le déploiement sur l'environnement staging.
+- [x] Créer les secrets dans Secret Manager :
+  - [x] `JWT_SECRET_KEY` : Une clé aléatoire forte.
+  - [x] `DATABASE_URL` : URL de connexion à Cloud SQL.
+- [x] Configurer Cloud Run pour charger ces secrets comme variables d'environnement.
+- [x] Tester le déploiement sur l'environnement staging.
 
 ---
 
