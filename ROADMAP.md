@@ -280,17 +280,24 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 - [x] Créer le fichier `backend/app/models/__init__.py` pour exporter tous les modèles.
 
 #### 1.3. Schémas Pydantic
-- [ ] Créer `backend/app/schemas/user.py` :
-  - [ ] Schéma `UserCreate` (email, password).
-  - [ ] Schéma `UserLogin` (email, password).
-  - [ ] Schéma `UserResponse` (id, email, role, created_at).
-  - [ ] Schéma `Token` (access_token, token_type).
-- [ ] Créer `backend/app/schemas/profile.py` :
-  - [ ] Schéma `PersonalInfo` (first_name, last_name, phone, email, linkedin, address).
-  - [ ] Schéma `Experience` (id, title, company, start_date, end_date, description, location).
-  - [ ] Schéma `Education` (id, degree, institution, date).
-  - [ ] Schéma `ProfileData` (personal_info, summary, experiences, educations, skills, projects, certifications).
-  - [ ] Schéma `ProfileResponse` (user_id, profile_data, updated_at).
+- [x] Créer `backend/app/schemas/user.py` :
+  - [x] Schéma `UserCreate` (email, password).
+  - [x] Schéma `UserLogin` (email, password).
+  - [x] Schéma `UserResponse` (id, email, role avec UserRole enum, created_at).
+  - [x] Schéma `Token` (access_token, token_type).
+  - [x] Schéma `TokenData` (user_id, email).
+- [x] Créer `backend/app/schemas/profile.py` :
+  - [x] Schéma `PersonalInfo` (first_name, last_name, phone, email, linkedin, address).
+  - [x] Schéma `Experience` (id, title, company, start_date, end_date, description, location).
+  - [x] Schéma `Education` (id, degree, institution, graduation_date).
+  - [x] Schéma `Skill` (name, level).
+  - [x] Schéma `Project` (id, name, description, url, completion_date).
+  - [x] Schéma `Certification` (id, name, issuer, issue_date, url).
+  - [x] Schéma `ProfileData` (personal_info, summary, experiences, educations, skills, projects, certifications).
+  - [x] Schéma `ProfileResponse` (user_id, profile_data, updated_at).
+  - [x] Schéma `ProfileUpdate` (profile_data).
+- [x] Upgradé Pydantic à 2.10.5 pour compatibilité Python 3.11.
+- [x] Ajouté email-validator pour validation EmailStr.
 
 #### 1.4. Migrations de Base de Données
 - [x] Créer la migration initiale :
