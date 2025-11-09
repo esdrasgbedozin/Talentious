@@ -266,16 +266,18 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
   - [x] Configurer la connexion DB dans `alembic.ini`.
 
 #### 1.2. Modèles de Données (SQLAlchemy)
-- [ ] Créer `backend/app/models/user.py` :
-  - [ ] Définir le modèle `User` avec les colonnes : `id (UUID)`, `email`, `hashed_password`, `role`, `stripe_customer_id`, `created_at`.
-  - [ ] Ajouter les contraintes (UNIQUE sur email, DEFAULT pour role).
-- [ ] Créer `backend/app/models/user_profile.py` :
-  - [ ] Définir le modèle `UserProfile` avec : `user_id (PK, FK)`, `profile_data (JSONB)`, `updated_at`.
-- [ ] Créer `backend/app/models/career_pass.py` :
-  - [ ] Définir le modèle `CareerPass` avec : `id`, `user_id`, `stripe_payment_id`, `pass_type`, `valid_until`, `purchased_at`.
-- [ ] Créer `backend/app/models/generated_cv.py` :
-  - [ ] Définir le modèle `GeneratedCV` avec : `id`, `user_id`, `cv_name`, `template_id`, `job_offer_context`, `cv_data_json (JSONB)`, `gcs_pdf_url`, `created_at`, `updated_at`.
-- [ ] Créer le fichier `backend/app/models/__init__.py` pour exporter tous les modèles.
+- [x] Créer `backend/app/models/user.py` :
+  - [x] Définir le modèle `User` avec les colonnes : `id (UUID)`, `email`, `hashed_password`, `role` (USER/ADMIN), `stripe_customer_id`, `created_at`.
+  - [x] Ajouter les contraintes (UNIQUE sur email, DEFAULT pour role).
+- [x] Créer `backend/app/models/user_profile.py` :
+  - [x] Définir le modèle `UserProfile` avec : `user_id (PK, FK)`, `profile_data (JSONB)`, `updated_at`.
+- [x] Créer `backend/app/models/career_pass.py` :
+  - [x] Définir le modèle `CareerPass` avec : `id`, `user_id`, `stripe_payment_id`, `pass_type` (PASS_30_DAYS/PASS_90_DAYS), `valid_until`, `purchased_at`.
+  - [x] Ajouter la méthode `is_active()` pour vérifier la validité du pass.
+- [x] Créer `backend/app/models/generated_cv.py` :
+  - [x] Définir le modèle `GeneratedCV` avec : `id`, `user_id`, `cv_name`, `template_id`, `job_offer_context`, `cv_data_json (JSONB)`, `gcs_pdf_url`, `created_at`, `updated_at`.
+  - [x] Ajouter un index sur `created_at` pour optimiser les requêtes.
+- [x] Créer le fichier `backend/app/models/__init__.py` pour exporter tous les modèles.
 
 #### 1.3. Schémas Pydantic
 - [ ] Créer `backend/app/schemas/user.py` :
@@ -291,12 +293,15 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
   - [ ] Schéma `ProfileResponse` (user_id, profile_data, updated_at).
 
 #### 1.4. Migrations de Base de Données
-- [ ] Créer la première migration :
-  - [ ] `cd backend && alembic revision --autogenerate -m "Initial tables"`.
-  - [ ] Vérifier le fichier de migration généré.
-- [ ] Appliquer la migration localement (Docker Compose) :
-  - [ ] `alembic upgrade head`.
-- [ ] Vérifier que les tables sont créées dans PostgreSQL local.
+- [x] Créer la migration initiale :
+  - [x] `docker exec -it talentious_backend alembic revision --autogenerate -m "Initial schema"`.
+  - [x] Vérifier le fichier de migration généré.
+- [x] Appliquer la migration localement (Docker Compose) :
+  - [x] `docker exec -it talentious_backend alembic upgrade head`.
+- [x] Vérifier que les tables sont créées dans PostgreSQL local :
+  - [x] Tables créées : `users`, `user_profiles`, `career_passes`, `generated_cvs`.
+  - [x] Enums PostgreSQL : `UserRole` (USER, ADMIN), `PassType` (PASS_30_DAYS, PASS_90_DAYS).
+  - [x] Relations CASCADE configurées.
 - [ ] **Automatisation CD** : Ajouter une étape au pipeline de déploiement pour exécuter `alembic upgrade head` avant de déployer le nouveau code :
   - [ ] Modifier `.github/workflows/backend-staging.yml`.
   - [ ] Ajouter une étape pour se connecter à Cloud SQL via le proxy.
