@@ -235,8 +235,8 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
   - [x] Ajouter cette clé comme secret GitHub (`GCP_SA_KEY`).
 - [x] Mettre à jour le Dockerfile du frontend pour supporter les build arguments.
 - [x] Créer le guide de configuration `.github/CICD_SETUP.md`.
-- [ ] Configurer les secrets GitHub (DATABASE_URL, SECRET_KEY, GCP_SA_KEY).
-- [ ] Tester le pipeline en poussant un commit sur `develop`.
+- [x] Configurer les secrets GitHub (DATABASE_URL, SECRET_KEY, GCP_SA_KEY).
+- [x] Tester le pipeline en poussant un commit sur `develop`.
 
 ---
 
@@ -252,18 +252,18 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 *Objectif : Avoir un backend capable de gérer des utilisateurs et leurs données de profil de manière sécurisée.*
 
 #### 1.1. Configuration de la Base de Données
-- [ ] Installer les dépendances nécessaires :
-  - [ ] `pip install sqlalchemy psycopg2-binary alembic python-dotenv`.
-  - [ ] Mettre à jour `requirements.txt`.
-- [ ] Créer le fichier `backend/app/database.py` :
-  - [ ] Configurer la connexion à PostgreSQL avec SQLAlchemy.
-  - [ ] Créer un engine asynchrone (`create_async_engine`).
-  - [ ] Créer une session factory.
-  - [ ] Définir une dépendance FastAPI `get_db()` pour injecter la session.
-- [ ] Configurer Alembic pour les migrations :
-  - [ ] `cd backend && alembic init alembic`.
-  - [ ] Modifier `alembic/env.py` pour utiliser le modèle SQLAlchemy.
-  - [ ] Configurer la connexion DB dans `alembic.ini`.
+- [x] Installer les dépendances nécessaires :
+  - [x] `pip install sqlalchemy psycopg2-binary alembic python-dotenv`.
+  - [x] Mettre à jour `requirements.txt`.
+- [x] Créer le fichier `backend/app/database.py` :
+  - [x] Configurer la connexion à PostgreSQL avec SQLAlchemy.
+  - [x] Créer un engine asynchrone (`create_async_engine`).
+  - [x] Créer une session factory.
+  - [x] Définir une dépendance FastAPI `get_db()` pour injecter la session.
+- [x] Configurer Alembic pour les migrations :
+  - [x] `cd backend && alembic init alembic`.
+  - [x] Modifier `alembic/env.py` pour utiliser le modèle SQLAlchemy.
+  - [x] Configurer la connexion DB dans `alembic.ini`.
 
 #### 1.2. Modèles de Données (SQLAlchemy)
 - [ ] Créer `backend/app/models/user.py` :
