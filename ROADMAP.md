@@ -316,20 +316,23 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
   - [x] Documenter le secret `CLOUD_SQL_CONNECTION_NAME`.
 
 #### 1.5. Authentification & Sécurité
-- [ ] Installer les dépendances :
-  - [ ] `pip install python-jose[cryptography] passlib[bcrypt] python-multipart`.
-- [ ] Créer `backend/app/services/auth.py` :
-  - [ ] Fonction `hash_password(password: str) -> str` (utilise bcrypt).
-  - [ ] Fonction `verify_password(plain_password: str, hashed_password: str) -> bool`.
-  - [ ] Fonction `create_access_token(data: dict) -> str` (génère un JWT).
-  - [ ] Fonction `decode_access_token(token: str) -> dict` (valide et décode le JWT).
-- [ ] Créer `backend/app/config.py` :
-  - [ ] Charger les variables d'environnement (SECRET_KEY, DATABASE_URL, etc.).
-  - [ ] Utiliser `python-dotenv` pour le développement local.
-- [ ] Créer la dépendance `get_current_user` dans `backend/app/services/dependencies.py` :
-  - [ ] Extraire le token du header `Authorization: Bearer <token>`.
-  - [ ] Décoder le token et récupérer l'utilisateur depuis la DB.
-  - [ ] Lever une exception `HTTPException(401)` si invalide.
+- [x] Installer les dépendances :
+  - [x] `pip install python-jose[cryptography] passlib bcrypt python-multipart`.
+  - [x] Fixer la compatibilité bcrypt (version 4.0.1).
+- [x] Créer `backend/app/services/auth.py` :
+  - [x] Fonction `hash_password(password: str) -> str` (utilise bcrypt).
+  - [x] Fonction `verify_password(plain_password: str, hashed_password: str) -> bool`.
+  - [x] Fonction `create_access_token(data: dict) -> str` (génère un JWT).
+  - [x] Fonction `decode_access_token(token: str) -> dict` (valide et décode le JWT).
+- [x] Mettre à jour `backend/app/config.py` :
+  - [x] Ajouter CORS origins configuration.
+  - [x] Ajouter Stripe placeholders pour future intégration.
+  - [x] Exposer instance settings globale.
+- [x] Créer la dépendance `get_current_user` dans `backend/app/services/dependencies.py` :
+  - [x] Extraire le token du header `Authorization: Bearer <token>`.
+  - [x] Décoder le token et récupérer l'utilisateur depuis la DB.
+  - [x] Lever une exception `HTTPException(401)` si invalide.
+  - [x] Créer `get_current_active_user` pour extension future.
 
 #### 1.6. Endpoints d'Authentification
 - [ ] Créer `backend/app/routes/auth.py` :
