@@ -309,10 +309,11 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
   - [x] Tables créées : `users`, `user_profiles`, `career_passes`, `generated_cvs`.
   - [x] Enums PostgreSQL : `UserRole` (USER, ADMIN), `PassType` (PASS_30_DAYS, PASS_90_DAYS).
   - [x] Relations CASCADE configurées.
-- [ ] **Automatisation CD** : Ajouter une étape au pipeline de déploiement pour exécuter `alembic upgrade head` avant de déployer le nouveau code :
-  - [ ] Modifier `.github/workflows/backend-staging.yml`.
-  - [ ] Ajouter une étape pour se connecter à Cloud SQL via le proxy.
-  - [ ] Exécuter la commande `alembic upgrade head`.
+- [x] **Automatisation CD** : Ajouter une étape au pipeline de déploiement pour exécuter `alembic upgrade head` avant de déployer le nouveau code :
+  - [x] Modifier `.github/workflows/backend-staging.yml`.
+  - [x] Ajouter une étape pour se connecter à Cloud SQL via le proxy.
+  - [x] Exécuter la commande `alembic upgrade head`.
+  - [x] Documenter le secret `CLOUD_SQL_CONNECTION_NAME`.
 
 #### 1.5. Authentification & Sécurité
 - [ ] Installer les dépendances :
