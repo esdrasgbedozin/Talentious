@@ -353,16 +353,16 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 - [x] Intégrer les routes dans `backend/app/main.py`.
 
 #### 1.7. Endpoints de Gestion du Profil
-- [ ] Créer `backend/app/routes/profile.py` :
-  - [ ] `GET /profile` (protégé) :
-    - [ ] Récupérer le profil de l'utilisateur connecté.
-    - [ ] Retourner `profile_data` (JSONB).
-  - [ ] `PUT /profile` (protégé) :
-    - [ ] Valider les données entrantes avec le schéma `ProfileData`.
-    - [ ] Mettre à jour le champ `profile_data` dans la DB.
-    - [ ] Mettre à jour `updated_at`.
-    - [ ] Retourner le profil mis à jour.
-- [ ] Intégrer les routes dans `backend/app/main.py`.
+- [x] Créer `backend/app/routes/profile.py` :
+  - [x] `GET /profile` (protégé) :
+    - [x] Récupérer le profil de l'utilisateur connecté.
+    - [x] Retourner `profile_data` (JSONB).
+  - [x] `PUT /profile` (protégé) :
+    - [x] Valider les données entrantes avec le schéma `ProfileData`.
+    - [x] Mettre à jour le champ `profile_data` dans la DB.
+    - [x] Mettre à jour `updated_at`.
+    - [x] Retourner le profil mis à jour.
+- [x] Intégrer les routes dans `backend/app/main.py`.
 
 #### 1.8. Tests & Validation
 - [ ] Installer pytest et les plugins :

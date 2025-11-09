@@ -12,6 +12,7 @@ from app.database import get_db
 from app.models.user import User, UserRole
 from app.models.user_profile import UserProfile
 from app.schemas.user import UserCreate, UserLogin, UserResponse, Token
+from app.schemas.profile import PersonalInfo, ProfileData
 from app.services.auth import hash_password, verify_password, create_access_token
 from app.services.dependencies import get_current_active_user
 from app.config import settings
@@ -57,10 +58,24 @@ async def register(
     db.add(new_user)
     await db.flush()  # Get the user ID
     
-    # Create empty profile for the user
+    # Create empty profile for the user with minimal valid structure
+    empty_profile_data = ProfileData(
+        personal_info=PersonalInfo(
+            first_name="",
+            last_name="",
+            email=user_data.email
+        ),
+        summary=None,
+        experiences=[],
+        educations=[],
+        skills=[],
+        projects=[],
+        certifications=[]
+    )
+    
     new_profile = UserProfile(
         user_id=new_user.id,
-        profile_data={}  # Empty JSONB object
+        profile_data=empty_profile_data.model_dump(mode='json')
     )
     
     db.add(new_profile)
