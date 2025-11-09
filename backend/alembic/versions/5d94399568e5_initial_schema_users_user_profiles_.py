@@ -24,7 +24,7 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('email', sa.String(length=255), nullable=False),
     sa.Column('hashed_password', sa.String(length=255), nullable=False),
-    sa.Column('role', sa.Enum('USER', 'ADMIN', name='userrole'), nullable=False),
+    sa.Column('role', sa.Enum('user', 'admin', name='userrole'), nullable=False),
     sa.Column('stripe_customer_id', sa.String(length=255), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id')
@@ -34,7 +34,7 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('stripe_payment_id', sa.String(length=255), nullable=False),
-    sa.Column('pass_type', sa.Enum('PASS_30_DAYS', 'PASS_90_DAYS', name='passtype'), nullable=False),
+    sa.Column('pass_type', sa.Enum('pass_30_days', 'pass_90_days', name='passtype'), nullable=False),
     sa.Column('valid_until', sa.DateTime(), nullable=False),
     sa.Column('purchased_at', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),

@@ -10,7 +10,6 @@ from sqlalchemy import select
 from app.database import get_db
 from app.models.user import User
 from app.services.auth import decode_access_token
-from app.schemas.user import TokenData
 
 
 # OAuth2 scheme for token extraction

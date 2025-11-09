@@ -68,8 +68,9 @@ async def update_profile(
     
     # Update profile data (use mode='json' to serialize dates properly)
     profile.profile_data = profile_update.profile_data.model_dump(mode='json')
+    # TODO: Use timezone-aware datetime once migration updates to TIMESTAMP WITH TIME ZONE
     profile.updated_at = datetime.utcnow()
-    
+
     await db.commit()
     await db.refresh(profile)
     

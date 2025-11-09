@@ -16,7 +16,10 @@ class Settings(BaseSettings):
     debug: bool = True
     
     # Database
-    database_url: str = "postgresql://talentious:talentious@db:5432/talentious"
+    # Use asyncpg dialect by default for async SQLAlchemy engine
+    database_url: str = "postgresql+asyncpg://talentious:talentious@db:5432/talentious"
+    # Echo SQL statements (disable in production)
+    sql_echo: bool = False
     
     # Security
     secret_key: str = "your-secret-key-change-in-production"

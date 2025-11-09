@@ -23,8 +23,9 @@ services:
     depends_on:
       - db
     environment:
-      - DATABASE_URL=postgresql+asyncpg://talentious:talentious@db/talentious
-      - SECRET_KEY=dev-secret-key-change-in-production-min-32-chars
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://talentious:talentious@db:5432/talentious}
+      # Use an environment variable for SECRET_KEY in production. Default for local dev only.
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production-min-32-chars}
 
   frontend:
     build:

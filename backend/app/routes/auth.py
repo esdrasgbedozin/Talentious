@@ -11,7 +11,7 @@ from sqlalchemy import select
 from app.database import get_db
 from app.models.user import User, UserRole
 from app.models.user_profile import UserProfile
-from app.schemas.user import UserCreate, UserLogin, UserResponse, Token
+from app.schemas.user import UserCreate, UserResponse, Token
 from app.schemas.profile import PersonalInfo, ProfileData
 from app.services.auth import hash_password, verify_password, create_access_token
 from app.services.dependencies import get_current_active_user

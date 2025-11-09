@@ -41,6 +41,7 @@ class CareerPass(Base):
     stripe_payment_id = Column(String(255), nullable=False, unique=True)
     pass_type = Column(Enum(PassType), nullable=False)
     valid_until = Column(DateTime, nullable=False)  # Always required for our temporary passes
+    # TODO: Migrate to TIMESTAMP WITH TIME ZONE for timezone-aware storage
     purchased_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
     # Relationship

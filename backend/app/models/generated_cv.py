@@ -39,6 +39,7 @@ class GeneratedCV(Base):
     job_offer_context = Column(Text, nullable=True)
     cv_data_json = Column(JSONB, nullable=False)
     gcs_pdf_url = Column(String(500), nullable=True)
+    # TODO: Migrate to TIMESTAMP WITH TIME ZONE for timezone-aware storage
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     

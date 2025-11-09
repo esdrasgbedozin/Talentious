@@ -1,7 +1,6 @@
 """
 UserProfile model for storing user career profile data.
 """
-import uuid
 from datetime import datetime
 from sqlalchemy import Column, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -36,6 +35,7 @@ class UserProfile(Base):
         primary_key=True
     )
     profile_data = Column(JSONB, nullable=False, default=dict)
+    # TODO: Migrate to TIMESTAMP WITH TIME ZONE for timezone-aware storage
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationship

@@ -2,8 +2,7 @@
 Pytest configuration and fixtures for testing.
 """
 import pytest
-import asyncio
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import NullPool
@@ -18,12 +17,8 @@ from app.services.auth import hash_password
 TEST_DATABASE_URL = "postgresql+asyncpg://talentious:talentious@db/talentious_test"
 
 
-@pytest.fixture(scope="session")
-def event_loop() -> Generator:
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+# Remove session event_loop fixture for compatibility with pytest-asyncio>=0.23
+# pytest-asyncio now manages the event loop automatically
 
 
 @pytest.fixture(scope="function")

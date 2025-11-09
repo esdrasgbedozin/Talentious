@@ -105,8 +105,15 @@ jobs:
           ./cloud_sql_proxy -instances=${{ secrets.CLOUD_SQL_CONNECTION_NAME }}=tcp:5432 &
           PROXY_PID=$!
           
-          # Wait for proxy to be ready
-          sleep 5
+          # Wait for proxy to be ready (poll for TCP connection)
+          for i in {1..30}; do
+            if nc -z localhost 5432 2>/dev/null; then
+              echo "Cloud SQL Proxy is ready."
+              break
+            fi
+            echo "Waiting for Cloud SQL Proxy... (attempt $i)"
+            sleep 1
+          done
           
           # Run Alembic migrations
           cd backend

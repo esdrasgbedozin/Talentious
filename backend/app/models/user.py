@@ -40,6 +40,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
     stripe_customer_id = Column(String(255), nullable=True)
+    # TODO: Migrate to TIMESTAMP WITH TIME ZONE for timezone-aware storage
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
     def __repr__(self):
