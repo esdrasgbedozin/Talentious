@@ -893,29 +893,230 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
   - [ ] Cliquer sur "Acheter", puis "Annuler" dans le formulaire Stripe.
   - [ ] Vérifier la redirection vers `/payment/cancel`.
 
-#### 5.4. Test End-to-End "Golden Path"
-- [ ] Installer Playwright :
-  - [ ] `npm install -D @playwright/test`.
-  - [ ] `npx playwright install`.
+#### 5.4. Tests End-to-End & Tests d'Intégration Complets
+
+**Objectif** : Valider l'ensemble des flux utilisateurs critiques avec Playwright et atteindre minimum 70% de couverture de code.
+
+##### 5.4.1. Configuration Playwright
+- [ ] Installer Playwright et ses dépendances :
+  ```bash
+  cd frontend
+  npm install -D @playwright/test
+  npx playwright install
+  npx playwright install-deps
+  ```
+- [ ] Créer `frontend/playwright.config.ts` :
+  - [ ] Configuration des navigateurs (Chromium, Firefox, WebKit).
+  - [ ] Configuration de la base URL (`http://localhost:3000` en dev).
+  - [ ] Configuration des retries (2 tentatives en cas d'échec).
+  - [ ] Configuration des timeouts (30s par défaut).
+  - [ ] Configuration des traces et screenshots en cas d'échec.
+- [ ] Créer la structure de dossiers de tests :
+  ```
+  frontend/tests/
+  ├── e2e/                    # Tests end-to-end
+  │   ├── auth.spec.ts
+  │   ├── onboarding.spec.ts
+  │   ├── profile.spec.ts
+  │   ├── cv-generation.spec.ts
+  │   ├── payment.spec.ts
+  │   └── golden-path.spec.ts
+  ├── integration/            # Tests d'intégration
+  │   ├── api/
+  │   │   ├── auth.test.ts
+  │   │   └── profile.test.ts
+  │   └── components/
+  │       ├── login-flow.test.ts
+  │       └── profile-forms.test.ts
+  └── fixtures/               # Données de test
+      ├── users.json
+      ├── profiles.json
+      └── test-cv.pdf
+  ```
+
+##### 5.4.2. Tests d'Authentification E2E
+- [ ] Créer `frontend/tests/e2e/auth.spec.ts` :
+  - [ ] **Test : Inscription utilisateur**
+    - [ ] Naviguer vers `/register`.
+    - [ ] Remplir email, mot de passe, confirmation.
+    - [ ] Vérifier validation frontend (email format, mot de passe fort).
+    - [ ] Soumettre le formulaire.
+    - [ ] Vérifier redirection vers `/onboarding`.
+    - [ ] Vérifier que le token JWT est stocké.
+  - [ ] **Test : Connexion utilisateur**
+    - [ ] Naviguer vers `/login`.
+    - [ ] Remplir identifiants valides.
+    - [ ] Vérifier connexion réussie.
+    - [ ] Vérifier redirection vers `/dashboard` ou `/onboarding`.
+  - [ ] **Test : Gestion erreurs authentification**
+    - [ ] Tester email invalide → message d'erreur affiché.
+    - [ ] Tester mot de passe incorrect → message d'erreur.
+    - [ ] Tester compte inexistant → message d'erreur.
+  - [ ] **Test : Déconnexion**
+    - [ ] Se connecter.
+    - [ ] Cliquer sur "Déconnexion".
+    - [ ] Vérifier redirection vers `/login`.
+    - [ ] Vérifier suppression du token.
+
+##### 5.4.3. Tests Onboarding E2E
+- [ ] Créer `frontend/tests/e2e/onboarding.spec.ts` :
+  - [ ] **Test : Parcours complet onboarding**
+    - [ ] Écran 1 : Informations personnelles (nom, prénom, téléphone).
+    - [ ] Écran 2 : Objectifs professionnels (titre souhaité, salaire).
+    - [ ] Écran 3 : Upload CV (optionnel) ou saisie manuelle.
+    - [ ] Vérifier la progression (barre de progression).
+    - [ ] Vérifier sauvegarde à chaque étape.
+    - [ ] Vérifier redirection finale vers `/dashboard`.
+  - [ ] **Test : Validation des champs obligatoires**
+    - [ ] Tenter de passer à l'étape suivante sans remplir les champs.
+    - [ ] Vérifier messages d'erreur.
+  - [ ] **Test : Upload PDF parsing**
+    - [ ] Upload un CV PDF de test.
+    - [ ] Vérifier appel API `/profile/parse-cv`.
+    - [ ] Vérifier pré-remplissage du profil.
+
+##### 5.4.4. Tests Profil E2E
+- [ ] Créer `frontend/tests/e2e/profile.spec.ts` :
+  - [ ] **Test : Affichage du profil**
+    - [ ] Naviguer vers `/profile`.
+    - [ ] Vérifier affichage des informations personnelles.
+    - [ ] Vérifier affichage des expériences, formations, compétences.
+  - [ ] **Test : Modification du profil**
+    - [ ] Cliquer sur "Modifier" pour chaque section.
+    - [ ] Modifier les champs.
+    - [ ] Sauvegarder.
+    - [ ] Vérifier appel API `PUT /profile`.
+    - [ ] Vérifier affichage du message de confirmation.
+    - [ ] Recharger la page → vérifier persistance des données.
+  - [ ] **Test : Ajout d'expérience**
+    - [ ] Cliquer sur "+ Ajouter une expérience".
+    - [ ] Remplir titre, entreprise, dates, description.
+    - [ ] Ajouter des achievements.
+    - [ ] Sauvegarder.
+    - [ ] Vérifier ajout dans la liste.
+  - [ ] **Test : Suppression d'expérience**
+    - [ ] Supprimer une expérience existante.
+    - [ ] Confirmer la suppression.
+    - [ ] Vérifier retrait de la liste.
+  - [ ] **Test : Validation des dates**
+    - [ ] Tenter d'entrer date de fin < date de début.
+    - [ ] Vérifier message d'erreur.
+
+##### 5.4.5. Tests Génération CV E2E
+- [ ] Créer `frontend/tests/e2e/cv-generation.spec.ts` :
+  - [ ] **Test : Génération sans Pass (erreur 402)**
+    - [ ] Naviguer vers dashboard.
+    - [ ] Cliquer sur "+ Générer un nouveau CV".
+    - [ ] Remplir l'offre d'emploi.
+    - [ ] Soumettre.
+    - [ ] Vérifier affichage popup paiement (402 Payment Required).
+  - [ ] **Test : Génération avec Pass valide**
+    - [ ] Simuler achat de Pass (injecter pass_expires_at dans le profil).
+    - [ ] Cliquer sur "+ Générer un nouveau CV".
+    - [ ] Remplir l'offre d'emploi.
+    - [ ] Soumettre.
+    - [ ] Vérifier appel aux agents IA.
+    - [ ] Vérifier redirection vers `/editor/[cv_id]`.
+    - [ ] Vérifier affichage du CV généré.
+
+##### 5.4.6. Tests Paiement Stripe E2E
+- [ ] Créer `frontend/tests/e2e/payment.spec.ts` :
+  - [ ] **Test : Parcours d'achat complet (mode test Stripe)**
+    - [ ] Déclencher popup paiement.
+    - [ ] Remplir carte de test Stripe (`4242 4242 4242 4242`).
+    - [ ] Valider le paiement.
+    - [ ] Vérifier redirection vers `/payment/success`.
+    - [ ] Vérifier mise à jour du profil (pass_expires_at).
+    - [ ] Vérifier possibilité de générer un CV.
+  - [ ] **Test : Annulation du paiement**
+    - [ ] Déclencher popup paiement.
+    - [ ] Cliquer sur "Annuler".
+    - [ ] Vérifier redirection vers `/payment/cancel`.
+    - [ ] Vérifier que le Pass n'est pas activé.
+  - [ ] **Test : Gestion erreur paiement**
+    - [ ] Utiliser une carte refusée (`4000 0000 0000 0002`).
+    - [ ] Vérifier message d'erreur.
+
+##### 5.4.7. Test Golden Path Complet
 - [ ] Créer `frontend/tests/e2e/golden-path.spec.ts` :
-  - [ ] Scénario complet :
-    1. [ ] Naviguer vers la landing page.
-    2. [ ] Cliquer sur "Créer mon compte".
-    3. [ ] Remplir le formulaire d'inscription et soumettre.
-    4. [ ] Vérifier la redirection vers `/onboarding`.
-    5. [ ] Remplir les 3 écrans d'onboarding.
-    6. [ ] Arriver sur le dashboard.
-    7. [ ] Cliquer sur "+ Générer un nouveau CV".
-    8. [ ] Remplir l'offre d'emploi (en texte).
-    9. [ ] Vérifier la popup de paiement (402).
-    10. [ ] Simuler l'achat (ou passer par Stripe en mode test).
-    11. [ ] Regénérer un CV après achat.
-    12. [ ] Vérifier la redirection vers l'éditeur.
-    13. [ ] Éditer un texte dans le CV.
-    14. [ ] Télécharger le PDF.
-  - [ ] Commande pour lancer le test :
-    - [ ] `npx playwright test`.
-- [ ] Documenter les résultats du test.
+  - [ ] **Scénario complet de bout en bout** :
+    1. [ ] Inscription d'un nouvel utilisateur.
+    2. [ ] Complétion des 3 écrans d'onboarding.
+    3. [ ] Arrivée sur le dashboard.
+    4. [ ] Modification du profil (ajout expérience + compétences).
+    5. [ ] Tentative de génération CV → popup paiement (402).
+    6. [ ] Achat du Pass avec carte de test Stripe.
+    7. [ ] Vérification webhook Stripe (attendre 5s).
+    8. [ ] Génération d'un CV avec une offre d'emploi.
+    9. [ ] Édition du CV dans l'éditeur.
+    10. [ ] Téléchargement du PDF final.
+    11. [ ] Déconnexion.
+  - [ ] Durée estimée du test : ~2-3 minutes.
+  - [ ] Prendre des screenshots à chaque étape critique.
+
+##### 5.4.8. Tests d'Intégration API
+- [ ] Créer `frontend/tests/integration/api/auth.test.ts` :
+  - [ ] Tester `POST /auth/register` avec données valides/invalides.
+  - [ ] Tester `POST /auth/login` avec credentials valides/invalides.
+  - [ ] Tester `POST /auth/logout` avec/sans token.
+  - [ ] Tester `GET /auth/me` avec token valide/invalide/expiré.
+- [ ] Créer `frontend/tests/integration/api/profile.test.ts` :
+  - [ ] Tester `GET /profile` avec utilisateur authentifié.
+  - [ ] Tester `PUT /profile` avec données valides.
+  - [ ] Tester validation des données (schéma Pydantic).
+  - [ ] Tester `POST /profile/parse-cv` avec PDF valide/invalide.
+
+##### 5.4.9. Tests de Composants avec Interactions
+- [ ] Créer `frontend/tests/integration/components/login-flow.test.ts` :
+  - [ ] Test complet du flux de connexion avec React Testing Library.
+  - [ ] Mock des appels API avec MSW (Mock Service Worker).
+  - [ ] Vérifier gestion des états (loading, success, error).
+  - [ ] Vérifier redirections après connexion.
+- [ ] Créer `frontend/tests/integration/components/profile-forms.test.ts` :
+  - [ ] Tester ExperienceForm avec toutes les interactions.
+  - [ ] Tester EducationForm avec validation des dates.
+  - [ ] Tester SkillsInput avec ajout/suppression.
+  - [ ] Tester sauvegarde et gestion des erreurs.
+
+##### 5.4.10. Configuration CI/CD pour les Tests
+- [ ] Mettre à jour `.github/workflows/ci.yml` :
+  - [ ] Ajouter job pour tests Playwright :
+    ```yaml
+    playwright-tests:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v3
+        - uses: actions/setup-node@v3
+        - name: Install dependencies
+          run: cd frontend && npm ci
+        - name: Install Playwright
+          run: cd frontend && npx playwright install --with-deps
+        - name: Run E2E tests
+          run: cd frontend && npx playwright test
+        - name: Upload test results
+          if: always()
+          uses: actions/upload-artifact@v3
+          with:
+            name: playwright-report
+            path: frontend/playwright-report/
+    ```
+  - [ ] Configurer execution des tests sur PR et push vers develop/main.
+  - [ ] Bloquer les merges si les tests échouent.
+
+##### 5.4.11. Rapport de Couverture et Documentation
+- [ ] Générer rapport de couverture :
+  - [ ] `npm test -- --coverage` pour tests Jest.
+  - [ ] Générer rapport HTML : `npm test -- --coverage --coverageReporters=html`.
+  - [ ] Viser minimum **70% de couverture** globale.
+- [ ] Créer `frontend/tests/README.md` :
+  - [ ] Documentation de la stratégie de test.
+  - [ ] Instructions pour lancer les tests localement.
+  - [ ] Liste des scénarios couverts.
+  - [ ] Instructions pour déboguer les tests qui échouent.
+- [ ] Documenter les résultats des tests E2E :
+  - [ ] Capturer screenshots/vidéos du Golden Path.
+  - [ ] Documenter les temps d'exécution.
+  - [ ] Identifier les points d'amélioration.
 
 #### 5.5. CGU, Mentions Légales & Politique de Confidentialité
 - [ ] Créer `frontend/src/app/legal/terms.tsx` (CGU) :
