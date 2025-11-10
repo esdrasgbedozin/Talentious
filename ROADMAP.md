@@ -502,18 +502,25 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 **Note de sécurité** : Le système actuel utilise JWT dans localStorage + cookie de session pour le middleware. Migration vers HttpOnly cookies recommandée avant V1 (voir Phase Pré-V1).
 
 #### 2.5. Page d'Onboarding (Écran 1)
-- [ ] Créer `frontend/src/app/onboarding/page.tsx` :
-  - [ ] Message d'accueil : "Bienvenue sur Talentious. Importons votre profil pour commencer."
-  - [ ] Trois options de cartes cliquables :
-    - [ ] **Option 1** : "Importer un CV (PDF)" (mise en avant visuelle).
-    - [ ] **Option 2** : "Importer un profil LinkedIn (PDF)" (avec info-bulle).
-    - [ ] **Option 3** : "Commencer manuellement" (discret).
-  - [ ] Pour l'Option 1 et 2 :
-    - [ ] Bouton d'upload de fichier.
-    - [ ] Prévisualisation du nom du fichier.
-    - [ ] Bouton "Continuer" qui appelle l'API de parsing (Phase 3).
-  - [ ] Pour l'Option 3 :
-    - [ ] Redirection directe vers `/profile`.
+- [x] Créer `frontend/src/app/onboarding/page.tsx` :
+  - [x] Message d'accueil : "Bienvenue sur Talentious. Importons votre profil pour commencer."
+  - [x] Trois options de cartes cliquables :
+    - [x] **Option 1** : "Importer un CV (PDF)" (mise en avant visuelle avec badge "Recommandé").
+    - [x] **Option 2** : "Importer un profil LinkedIn (PDF)" (avec info-bulle explicative).
+    - [x] **Option 3** : "Commencer manuellement" (discret).
+  - [x] Pour l'Option 1 et 2 :
+    - [x] Zone d'upload drag & drop avec feedback visuel.
+    - [x] Validation du fichier : PDF uniquement, max 10MB.
+    - [x] Prévisualisation du nom du fichier et taille.
+    - [x] Gestion des erreurs avec messages clairs.
+    - [x] Bouton "Continuer" qui simulera l'API de parsing (Phase 3 : connexion réelle).
+  - [x] Pour l'Option 3 :
+    - [x] Redirection directe vers `/profile`.
+  - [x] Design ultra-professionnel avec gradients, ombres, animations.
+  - [x] Navbar authentifiée intégrée.
+  - [x] Route protégée par middleware.
+
+**Note technique** : L'intégration avec l'API de parsing CV (`POST /profile/parse-cv`) sera implémentée en Phase 3.
 
 #### 2.6. Page de Profil (Écran 2)
 - [ ] Créer `frontend/src/app/profile/page.tsx` :
