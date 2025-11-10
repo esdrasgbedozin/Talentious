@@ -20,6 +20,21 @@ jobs:
     name: Run Tests
     runs-on: ubuntu-latest
     
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: talentious
+          POSTGRES_PASSWORD: talentious
+          POSTGRES_DB: talentious_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,6 +54,10 @@ jobs:
         run: |
           cd backend
           pytest tests/ -v
+        env:
+          DATABASE_URL: postgresql+asyncpg://talentious:talentious@localhost:5432/talentious_test
+          SECRET_KEY: test-secret-key-for-ci
+          ENVIRONMENT: testing
 
   build-and-deploy:
     name: Build and Deploy to Cloud Run
@@ -75,6 +94,35 @@ jobs:
           docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}
           docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:latest
       
+      - name: Install Cloud SQL Proxy
+        run: |
+          wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O cloud_sql_proxy
+          chmod +x cloud_sql_proxy
+      
+      - name: Run Database Migrations
+        run: |
+          # Start Cloud SQL Proxy in background on non-standard port 6543
+          ./cloud_sql_proxy -instances=${{ secrets.CLOUD_SQL_CONNECTION_NAME }}=tcp:6543 &
+          PROXY_PID=$!
+          trap 'kill $PROXY_PID' EXIT
+          
+          # Wait for proxy to be ready (poll for TCP connection)
+          for i in {1..30}; do
+            if nc -z localhost 6543 2>/dev/null; then
+              echo "Cloud SQL Proxy is ready."
+              break
+            fi
+            echo "Waiting for Cloud SQL Proxy... (attempt $i)"
+            sleep 1
+          done
+          
+          # Run Alembic migrations
+          cd backend
+          pip install -r requirements.txt
+          alembic upgrade head
+        env:
+          DATABASE_URL: postgresql+asyncpg://talentious:talentious@localhost:6543/talentious
+      
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${{ env.SERVICE_NAME }} \
@@ -84,8 +132,8 @@ jobs:
             --allow-unauthenticated \
             --port=8000 \
             --set-env-vars="ENVIRONMENT=staging" \
-            --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }}" \
-            --set-env-vars="SECRET_KEY=${{ secrets.SECRET_KEY }}" \
+            --set-secrets="SECRET_KEY=JWT_SECRET_KEY:latest,DATABASE_URL=DATABASE_URL:latest" \
+            --add-cloudsql-instances=${{ secrets.CLOUD_SQL_CONNECTION_NAME }} \
             --memory=512Mi \
             --cpu=1 \
             --min-instances=0 \

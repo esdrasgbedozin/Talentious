@@ -235,8 +235,8 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
   - [x] Ajouter cette clé comme secret GitHub (`GCP_SA_KEY`).
 - [x] Mettre à jour le Dockerfile du frontend pour supporter les build arguments.
 - [x] Créer le guide de configuration `.github/CICD_SETUP.md`.
-- [ ] Configurer les secrets GitHub (DATABASE_URL, SECRET_KEY, GCP_SA_KEY).
-- [ ] Tester le pipeline en poussant un commit sur `develop`.
+- [x] Configurer les secrets GitHub (DATABASE_URL, SECRET_KEY, GCP_SA_KEY).
+- [x] Tester le pipeline en poussant un commit sur `develop`.
 
 ---
 
@@ -252,123 +252,139 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 *Objectif : Avoir un backend capable de gérer des utilisateurs et leurs données de profil de manière sécurisée.*
 
 #### 1.1. Configuration de la Base de Données
-- [ ] Installer les dépendances nécessaires :
-  - [ ] `pip install sqlalchemy psycopg2-binary alembic python-dotenv`.
-  - [ ] Mettre à jour `requirements.txt`.
-- [ ] Créer le fichier `backend/app/database.py` :
-  - [ ] Configurer la connexion à PostgreSQL avec SQLAlchemy.
-  - [ ] Créer un engine asynchrone (`create_async_engine`).
-  - [ ] Créer une session factory.
-  - [ ] Définir une dépendance FastAPI `get_db()` pour injecter la session.
-- [ ] Configurer Alembic pour les migrations :
-  - [ ] `cd backend && alembic init alembic`.
-  - [ ] Modifier `alembic/env.py` pour utiliser le modèle SQLAlchemy.
-  - [ ] Configurer la connexion DB dans `alembic.ini`.
+- [x] Installer les dépendances nécessaires :
+  - [x] `pip install sqlalchemy psycopg2-binary alembic python-dotenv`.
+  - [x] Mettre à jour `requirements.txt`.
+- [x] Créer le fichier `backend/app/database.py` :
+  - [x] Configurer la connexion à PostgreSQL avec SQLAlchemy.
+  - [x] Créer un engine asynchrone (`create_async_engine`).
+  - [x] Créer une session factory.
+  - [x] Définir une dépendance FastAPI `get_db()` pour injecter la session.
+- [x] Configurer Alembic pour les migrations :
+  - [x] `cd backend && alembic init alembic`.
+  - [x] Modifier `alembic/env.py` pour utiliser le modèle SQLAlchemy.
+  - [x] Configurer la connexion DB dans `alembic.ini`.
 
 #### 1.2. Modèles de Données (SQLAlchemy)
-- [ ] Créer `backend/app/models/user.py` :
-  - [ ] Définir le modèle `User` avec les colonnes : `id (UUID)`, `email`, `hashed_password`, `role`, `stripe_customer_id`, `created_at`.
-  - [ ] Ajouter les contraintes (UNIQUE sur email, DEFAULT pour role).
-- [ ] Créer `backend/app/models/user_profile.py` :
-  - [ ] Définir le modèle `UserProfile` avec : `user_id (PK, FK)`, `profile_data (JSONB)`, `updated_at`.
-- [ ] Créer `backend/app/models/career_pass.py` :
-  - [ ] Définir le modèle `CareerPass` avec : `id`, `user_id`, `stripe_payment_id`, `pass_type`, `valid_until`, `purchased_at`.
-- [ ] Créer `backend/app/models/generated_cv.py` :
-  - [ ] Définir le modèle `GeneratedCV` avec : `id`, `user_id`, `cv_name`, `template_id`, `job_offer_context`, `cv_data_json (JSONB)`, `gcs_pdf_url`, `created_at`, `updated_at`.
-- [ ] Créer le fichier `backend/app/models/__init__.py` pour exporter tous les modèles.
+- [x] Créer `backend/app/models/user.py` :
+  - [x] Définir le modèle `User` avec les colonnes : `id (UUID)`, `email`, `hashed_password`, `role` (USER/ADMIN), `stripe_customer_id`, `created_at`.
+  - [x] Ajouter les contraintes (UNIQUE sur email, DEFAULT pour role).
+- [x] Créer `backend/app/models/user_profile.py` :
+  - [x] Définir le modèle `UserProfile` avec : `user_id (PK, FK)`, `profile_data (JSONB)`, `updated_at`.
+- [x] Créer `backend/app/models/career_pass.py` :
+  - [x] Définir le modèle `CareerPass` avec : `id`, `user_id`, `stripe_payment_id`, `pass_type` (PASS_30_DAYS/PASS_90_DAYS), `valid_until`, `purchased_at`.
+  - [x] Ajouter la méthode `is_active()` pour vérifier la validité du pass.
+- [x] Créer `backend/app/models/generated_cv.py` :
+  - [x] Définir le modèle `GeneratedCV` avec : `id`, `user_id`, `cv_name`, `template_id`, `job_offer_context`, `cv_data_json (JSONB)`, `gcs_pdf_url`, `created_at`, `updated_at`.
+  - [x] Ajouter un index sur `created_at` pour optimiser les requêtes.
+- [x] Créer le fichier `backend/app/models/__init__.py` pour exporter tous les modèles.
 
 #### 1.3. Schémas Pydantic
-- [ ] Créer `backend/app/schemas/user.py` :
-  - [ ] Schéma `UserCreate` (email, password).
-  - [ ] Schéma `UserLogin` (email, password).
-  - [ ] Schéma `UserResponse` (id, email, role, created_at).
-  - [ ] Schéma `Token` (access_token, token_type).
-- [ ] Créer `backend/app/schemas/profile.py` :
-  - [ ] Schéma `PersonalInfo` (first_name, last_name, phone, email, linkedin, address).
-  - [ ] Schéma `Experience` (id, title, company, start_date, end_date, description, location).
-  - [ ] Schéma `Education` (id, degree, institution, date).
-  - [ ] Schéma `ProfileData` (personal_info, summary, experiences, educations, skills, projects, certifications).
-  - [ ] Schéma `ProfileResponse` (user_id, profile_data, updated_at).
+- [x] Créer `backend/app/schemas/user.py` :
+  - [x] Schéma `UserCreate` (email, password).
+  - [x] Schéma `UserLogin` (email, password).
+  - [x] Schéma `UserResponse` (id, email, role avec UserRole enum, created_at).
+  - [x] Schéma `Token` (access_token, token_type).
+  - [x] Schéma `TokenData` (user_id, email).
+- [x] Créer `backend/app/schemas/profile.py` :
+  - [x] Schéma `PersonalInfo` (first_name, last_name, phone, email, linkedin, address).
+  - [x] Schéma `Experience` (id, title, company, start_date, end_date, description, location).
+  - [x] Schéma `Education` (id, degree, institution, graduation_date).
+  - [x] Schéma `Skill` (name, level).
+  - [x] Schéma `Project` (id, name, description, url, completion_date).
+  - [x] Schéma `Certification` (id, name, issuer, issue_date, url).
+  - [x] Schéma `ProfileData` (personal_info, summary, experiences, educations, skills, projects, certifications).
+  - [x] Schéma `ProfileResponse` (user_id, profile_data, updated_at).
+  - [x] Schéma `ProfileUpdate` (profile_data).
+- [x] Upgradé Pydantic à 2.10.5 pour compatibilité Python 3.11.
+- [x] Ajouté email-validator pour validation EmailStr.
 
 #### 1.4. Migrations de Base de Données
-- [ ] Créer la première migration :
-  - [ ] `cd backend && alembic revision --autogenerate -m "Initial tables"`.
-  - [ ] Vérifier le fichier de migration généré.
-- [ ] Appliquer la migration localement (Docker Compose) :
-  - [ ] `alembic upgrade head`.
-- [ ] Vérifier que les tables sont créées dans PostgreSQL local.
-- [ ] **Automatisation CD** : Ajouter une étape au pipeline de déploiement pour exécuter `alembic upgrade head` avant de déployer le nouveau code :
-  - [ ] Modifier `.github/workflows/backend-staging.yml`.
-  - [ ] Ajouter une étape pour se connecter à Cloud SQL via le proxy.
-  - [ ] Exécuter la commande `alembic upgrade head`.
+- [x] Créer la migration initiale :
+  - [x] `docker exec -it talentious_backend alembic revision --autogenerate -m "Initial schema"`.
+  - [x] Vérifier le fichier de migration généré.
+- [x] Appliquer la migration localement (Docker Compose) :
+  - [x] `docker exec -it talentious_backend alembic upgrade head`.
+- [x] Vérifier que les tables sont créées dans PostgreSQL local :
+  - [x] Tables créées : `users`, `user_profiles`, `career_passes`, `generated_cvs`.
+  - [x] Enums PostgreSQL : `UserRole` (USER, ADMIN), `PassType` (PASS_30_DAYS, PASS_90_DAYS).
+  - [x] Relations CASCADE configurées.
+- [x] **Automatisation CD** : Ajouter une étape au pipeline de déploiement pour exécuter `alembic upgrade head` avant de déployer le nouveau code :
+  - [x] Modifier `.github/workflows/backend-staging.yml`.
+  - [x] Ajouter une étape pour se connecter à Cloud SQL via le proxy.
+  - [x] Exécuter la commande `alembic upgrade head`.
+  - [x] Documenter le secret `CLOUD_SQL_CONNECTION_NAME`.
 
 #### 1.5. Authentification & Sécurité
-- [ ] Installer les dépendances :
-  - [ ] `pip install python-jose[cryptography] passlib[bcrypt] python-multipart`.
-- [ ] Créer `backend/app/services/auth.py` :
-  - [ ] Fonction `hash_password(password: str) -> str` (utilise bcrypt).
-  - [ ] Fonction `verify_password(plain_password: str, hashed_password: str) -> bool`.
-  - [ ] Fonction `create_access_token(data: dict) -> str` (génère un JWT).
-  - [ ] Fonction `decode_access_token(token: str) -> dict` (valide et décode le JWT).
-- [ ] Créer `backend/app/config.py` :
-  - [ ] Charger les variables d'environnement (SECRET_KEY, DATABASE_URL, etc.).
-  - [ ] Utiliser `python-dotenv` pour le développement local.
-- [ ] Créer la dépendance `get_current_user` dans `backend/app/services/dependencies.py` :
-  - [ ] Extraire le token du header `Authorization: Bearer <token>`.
-  - [ ] Décoder le token et récupérer l'utilisateur depuis la DB.
-  - [ ] Lever une exception `HTTPException(401)` si invalide.
+- [x] Installer les dépendances :
+  - [x] `pip install python-jose[cryptography] passlib bcrypt python-multipart`.
+  - [x] Fixer la compatibilité bcrypt (version 4.0.1).
+- [x] Créer `backend/app/services/auth.py` :
+  - [x] Fonction `hash_password(password: str) -> str` (utilise bcrypt).
+  - [x] Fonction `verify_password(plain_password: str, hashed_password: str) -> bool`.
+  - [x] Fonction `create_access_token(data: dict) -> str` (génère un JWT).
+  - [x] Fonction `decode_access_token(token: str) -> dict` (valide et décode le JWT).
+- [x] Mettre à jour `backend/app/config.py` :
+  - [x] Ajouter CORS origins configuration.
+  - [x] Ajouter Stripe placeholders pour future intégration.
+  - [x] Exposer instance settings globale.
+- [x] Créer la dépendance `get_current_user` dans `backend/app/services/dependencies.py` :
+  - [x] Extraire le token du header `Authorization: Bearer <token>`.
+  - [x] Décoder le token et récupérer l'utilisateur depuis la DB.
+  - [x] Lever une exception `HTTPException(401)` si invalide.
+  - [x] Créer `get_current_active_user` pour extension future.
 
 #### 1.6. Endpoints d'Authentification
-- [ ] Créer `backend/app/routes/auth.py` :
-  - [ ] `POST /auth/register` :
-    - [ ] Vérifier que l'email n'existe pas déjà.
-    - [ ] Hasher le mot de passe.
-    - [ ] Créer l'utilisateur dans la DB (rôle par défaut : `user`).
-    - [ ] Créer un profil vide associé.
-    - [ ] Retourner un message de succès.
-  - [ ] `POST /auth/login` :
-    - [ ] Vérifier que l'email existe.
-    - [ ] Vérifier le mot de passe avec `verify_password`.
-    - [ ] Générer un token JWT.
-    - [ ] Retourner le token.
-  - [ ] `GET /auth/me` (protégé) :
-    - [ ] Utiliser la dépendance `get_current_user`.
-    - [ ] Retourner les informations de l'utilisateur connecté.
-- [ ] Intégrer les routes dans `backend/app/main.py`.
+- [x] Créer `backend/app/routes/auth.py` :
+  - [x] `POST /auth/register` :
+    - [x] Vérifier que l'email n'existe pas déjà.
+    - [x] Hasher le mot de passe.
+    - [x] Créer l'utilisateur dans la DB (rôle par défaut : `user`).
+    - [x] Créer un profil vide associé.
+    - [x] Retourner un message de succès.
+  - [x] `POST /auth/login` :
+    - [x] Vérifier que l'email existe.
+    - [x] Vérifier le mot de passe avec `verify_password`.
+    - [x] Générer un token JWT.
+    - [x] Retourner le token.
+  - [x] `GET /auth/me` (protégé) :
+    - [x] Utiliser la dépendance `get_current_user`.
+    - [x] Retourner les informations de l'utilisateur connecté.
+- [x] Intégrer les routes dans `backend/app/main.py`.
 
 #### 1.7. Endpoints de Gestion du Profil
-- [ ] Créer `backend/app/routes/profile.py` :
-  - [ ] `GET /profile` (protégé) :
-    - [ ] Récupérer le profil de l'utilisateur connecté.
-    - [ ] Retourner `profile_data` (JSONB).
-  - [ ] `PUT /profile` (protégé) :
-    - [ ] Valider les données entrantes avec le schéma `ProfileData`.
-    - [ ] Mettre à jour le champ `profile_data` dans la DB.
-    - [ ] Mettre à jour `updated_at`.
-    - [ ] Retourner le profil mis à jour.
-- [ ] Intégrer les routes dans `backend/app/main.py`.
+- [x] Créer `backend/app/routes/profile.py` :
+  - [x] `GET /profile` (protégé) :
+    - [x] Récupérer le profil de l'utilisateur connecté.
+    - [x] Retourner `profile_data` (JSONB).
+  - [x] `PUT /profile` (protégé) :
+    - [x] Valider les données entrantes avec le schéma `ProfileData`.
+    - [x] Mettre à jour le champ `profile_data` dans la DB.
+    - [x] Mettre à jour `updated_at`.
+    - [x] Retourner le profil mis à jour.
+- [x] Intégrer les routes dans `backend/app/main.py`.
 
 #### 1.8. Tests & Validation
-- [ ] Installer pytest et les plugins :
-  - [ ] `pip install pytest pytest-asyncio httpx`.
-- [ ] Créer `backend/tests/test_auth.py` :
-  - [ ] Test de l'endpoint `/auth/register` (succès).
-  - [ ] Test de l'endpoint `/auth/register` (email déjà existant).
-  - [ ] Test de l'endpoint `/auth/login` (succès).
-  - [ ] Test de l'endpoint `/auth/login` (mauvais mot de passe).
-  - [ ] Test de l'endpoint `/auth/me` (avec et sans token valide).
-- [ ] Créer `backend/tests/test_profile.py` :
-  - [ ] Test de `GET /profile` (utilisateur authentifié).
-  - [ ] Test de `PUT /profile` (mise à jour valide).
-- [ ] Lancer les tests localement : `pytest backend/tests/`.
-- [ ] Vérifier que le pipeline CI/CD exécute les tests correctement.
+- [x] Installer pytest et les plugins :
+  - [x] `pip install pytest pytest-asyncio httpx`.
+- [x] Créer `backend/tests/test_auth.py` :
+  - [x] Test de l'endpoint `/auth/register` (succès).
+  - [x] Test de l'endpoint `/auth/register` (email déjà existant).
+  - [x] Test de l'endpoint `/auth/login` (succès).
+  - [x] Test de l'endpoint `/auth/login` (mauvais mot de passe).
+  - [x] Test de l'endpoint `/auth/me` (avec et sans token valide).
+- [x] Créer `backend/tests/test_profile.py` :
+  - [x] Test de `GET /profile` (utilisateur authentifié).
+  - [x] Test de `PUT /profile` (mise à jour valide).
+- [x] Lancer les tests localement : `pytest backend/tests/`.
+- [x] Vérifier que le pipeline CI/CD exécute les tests correctement.
 
 #### 1.9. Gestion des Secrets (GCP Secret Manager)
-- [ ] Créer les secrets dans Secret Manager :
-  - [ ] `JWT_SECRET_KEY` : Une clé aléatoire forte.
-  - [ ] `DATABASE_URL` : URL de connexion à Cloud SQL.
-- [ ] Configurer Cloud Run pour charger ces secrets comme variables d'environnement.
-- [ ] Tester le déploiement sur l'environnement staging.
+- [x] Créer les secrets dans Secret Manager :
+  - [x] `JWT_SECRET_KEY` : Une clé aléatoire forte.
+  - [x] `DATABASE_URL` : URL de connexion à Cloud SQL.
+- [x] Configurer Cloud Run pour charger ces secrets comme variables d'environnement.
+- [x] Tester le déploiement sur l'environnement staging.
 
 ---
 

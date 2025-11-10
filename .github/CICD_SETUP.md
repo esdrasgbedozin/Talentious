@@ -76,7 +76,29 @@ openssl rand -base64 32
 
 ---
 
-### 4. `NEXT_PUBLIC_API_URL` (OPTIONNEL, sera mis à jour après premier déploiement)
+### 4. `CLOUD_SQL_CONNECTION_NAME` (OBLIGATOIRE pour les migrations)
+**Description** : Nom de connexion Cloud SQL pour le proxy (nécessaire pour exécuter les migrations Alembic)
+
+**Comment l'obtenir** :
+```bash
+# Récupérer depuis Terraform
+cd infra
+terraform output -raw db_connection_name
+```
+
+**Format attendu** :
+```
+talentious-project:europe-west9:talentious-db-prod
+```
+
+**Action** :
+1. Copiez le connection name
+2. Dans GitHub Secrets, créez `CLOUD_SQL_CONNECTION_NAME`
+3. Collez la valeur
+
+---
+
+### 5. `NEXT_PUBLIC_API_URL` (OPTIONNEL, sera mis à jour après premier déploiement)
 **Description** : URL du backend pour le frontend
 
 **Valeur initiale** :
@@ -93,6 +115,7 @@ https://backend-staging-PLACEHOLDER.run.app
 - [ ] `GCP_SA_KEY` - Clé JSON du Service Account
 - [ ] `DATABASE_URL` - URL de connexion PostgreSQL
 - [ ] `SECRET_KEY` - Clé de chiffrement (32+ caractères)
+- [ ] `CLOUD_SQL_CONNECTION_NAME` - Nom de connexion Cloud SQL pour migrations
 - [ ] `NEXT_PUBLIC_API_URL` - URL du backend (optionnel au début)
 
 ---
