@@ -77,12 +77,13 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <div className="flex-shrink-0">
-              <Link href="/" className="flex items-center gap-2">
+              <Link href="/" className="flex items-center gap-3">
                 <Image
                   src="/logos/logo-mark.svg"
                   alt="Talentious"
-                  width={32}
-                  height={32}
+                  width={56}
+                  height={56}
+                  className="w-14 h-14 md:w-16 md:h-16 drop-shadow-md"
                 />
                 <span className="text-2xl font-bold bg-gradient-to-r from-primary to-action bg-clip-text text-transparent">
                   Talentious
@@ -221,12 +222,13 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <Link href="/profile" className="flex items-center gap-2">
+            <Link href="/profile" className="flex items-center gap-3">
               <Image
                 src="/logos/logo-mark.svg"
                 alt="Talentious"
-                width={32}
-                height={32}
+                width={56}
+                height={56}
+                className="w-14 h-14 md:w-16 md:h-16 drop-shadow-md"
               />
               <span className="text-xl font-bold text-gray-900">Talentious</span>
             </Link>
@@ -361,12 +363,13 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-3">
             <Image
               src="/logos/logo-mark.svg"
               alt="Talentious"
-              width={28}
-              height={28}
+              width={56}
+              height={56}
+              className="w-14 h-14 md:w-16 md:h-16 drop-shadow-md"
             />
             <span className="text-2xl font-bold bg-gradient-to-r from-primary to-action bg-clip-text text-transparent">
               Talentious
