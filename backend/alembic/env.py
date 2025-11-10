@@ -13,7 +13,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 # Import the base and the models
 from app.database import Base
-from app.models import user  # Import to register the models
+from app.models import user, user_profile, career_pass, generated_cv  # Import to register the models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
