@@ -33,8 +33,8 @@ export interface AuthResponse {
  */
 export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   try {
-    // FastAPI expects credentials in form-data for OAuth2
-    const formData = new FormData();
+    // FastAPI expects credentials in application/x-www-form-urlencoded for OAuth2
+    const formData = new URLSearchParams();
     formData.append('username', credentials.email); // OAuth2 utilise 'username'
     formData.append('password', credentials.password);
     

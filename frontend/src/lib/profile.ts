@@ -38,8 +38,20 @@ export const saveProfile = async (profileData: UserProfile): Promise<ProfileResp
  * Parse CV file and extract profile data
  * @param file - PDF file to parse
  * @returns Extracted profile data
+ * @throws Error if file is invalid (not PDF or exceeds size limit)
  */
 export const parseCV = async (file: File): Promise<UserProfile> => {
+  // Validate file type
+  if (file.type !== 'application/pdf') {
+    throw new Error('Seuls les fichiers PDF sont acceptés');
+  }
+
+  // Validate file size (max 10MB)
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error('La taille du fichier ne doit pas dépasser 10 MB');
+  }
+
   try {
     const formData = new FormData();
     formData.append('file', file);
