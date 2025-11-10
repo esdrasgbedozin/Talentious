@@ -70,8 +70,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const currentUser = await getMe();
       setUser(currentUser);
       
-      // Set session cookie for middleware
-      document.cookie = 'talentious_session=true; path=/; max-age=2592000; SameSite=Strict';
+      // Set session cookie for middleware (add Secure flag in production)
+      const secureCookie = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+      document.cookie = `talentious_session=true; path=/; max-age=2592000; SameSite=Strict${secureCookie}`;
     } catch (error) {
       setUser(null);
       throw error; // Re-throw so the component can display the error

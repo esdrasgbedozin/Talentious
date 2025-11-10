@@ -152,7 +152,6 @@ export default function RegisterPage() {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
               {/* General error */}
-              {/* General error */}
               {errors.general && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
                   <div className="flex items-center gap-3">

@@ -134,7 +134,12 @@ export const createEmptyProfile = (): UserProfile => ({
 
 // Helper to generate unique IDs
 export const generateId = (): string => {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  // Use crypto.randomUUID() for guaranteed uniqueness
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older environments (should not happen in modern browsers)
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
 };
 
 // Create empty entities
