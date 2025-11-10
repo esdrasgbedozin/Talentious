@@ -61,8 +61,8 @@ async def register(
     # Create empty profile for the user with minimal valid structure
     empty_profile_data = ProfileData(
         personal_info=PersonalInfo(
-            first_name="",
-            last_name="",
+            first_name=None,
+            last_name=None,
             email=user_data.email
         ),
         summary=None,

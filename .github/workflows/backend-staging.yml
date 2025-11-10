@@ -101,13 +101,14 @@ jobs:
       
       - name: Run Database Migrations
         run: |
-          # Start Cloud SQL Proxy in background
-          ./cloud_sql_proxy -instances=${{ secrets.CLOUD_SQL_CONNECTION_NAME }}=tcp:5432 &
+          # Start Cloud SQL Proxy in background on non-standard port 6543
+          ./cloud_sql_proxy -instances=${{ secrets.CLOUD_SQL_CONNECTION_NAME }}=tcp:6543 &
           PROXY_PID=$!
+          trap 'kill $PROXY_PID' EXIT
           
           # Wait for proxy to be ready (poll for TCP connection)
           for i in {1..30}; do
-            if nc -z localhost 5432 2>/dev/null; then
+            if nc -z localhost 6543 2>/dev/null; then
               echo "Cloud SQL Proxy is ready."
               break
             fi
@@ -119,11 +120,8 @@ jobs:
           cd backend
           pip install -r requirements.txt
           alembic upgrade head
-          
-          # Stop Cloud SQL Proxy
-          kill $PROXY_PID
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: postgresql+asyncpg://talentious:talentious@localhost:6543/talentious
       
       - name: Deploy to Cloud Run
         run: |

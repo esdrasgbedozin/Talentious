@@ -13,8 +13,13 @@ from app.models.user import User, UserRole
 from app.services.auth import hash_password
 
 
-# Test database URL (using a separate test database)
-TEST_DATABASE_URL = "postgresql+asyncpg://talentious:talentious@db/talentious_test"
+
+# Test database URL (configurable via environment variable)
+import os
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql+asyncpg://talentious:talentious@db/talentious_test"
+)
 
 
 # Remove session event_loop fixture for compatibility with pytest-asyncio>=0.23

@@ -9,8 +9,8 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class PersonalInfo(BaseModel):
     """Personal information schema."""
-    first_name: str = Field(..., description="First name")
-    last_name: str = Field(..., description="Last name")
+    first_name: Optional[str] = Field(None, description="First name")
+    last_name: Optional[str] = Field(None, description="Last name")
     phone: Optional[str] = Field(None, description="Phone number")
     email: str = Field(..., description="Email address")
     linkedin: Optional[str] = Field(None, description="LinkedIn profile URL")

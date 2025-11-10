@@ -53,4 +53,5 @@ class CareerPass(Base):
     @property
     def is_active(self) -> bool:
         """Check if this pass is currently valid."""
+        # TODO: Use timezone-aware datetime once migration updates to TIMESTAMP WITH TIME ZONE
         return self.valid_until > datetime.utcnow()
