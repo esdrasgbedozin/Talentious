@@ -81,8 +81,8 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                 <Image
                   src="/logos/logo-mark.svg"
                   alt="Talentious"
-                  width={56}
-                  height={56}
+                  width={96}
+                  height={96}
                   className="w-14 h-14 md:w-16 md:h-16 drop-shadow-md"
                 />
                 <span className="text-2xl font-bold bg-gradient-to-r from-primary to-action bg-clip-text text-transparent">
@@ -226,8 +226,8 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
               <Image
                 src="/logos/logo-mark.svg"
                 alt="Talentious"
-                width={56}
-                height={56}
+                width={96}
+                height={96}
                 className="w-14 h-14 md:w-16 md:h-16 drop-shadow-md"
               />
               <span className="text-xl font-bold text-gray-900">Talentious</span>
@@ -367,8 +367,8 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
             <Image
               src="/logos/logo-mark.svg"
               alt="Talentious"
-              width={56}
-              height={56}
+              width={96}
+              height={96}
               className="w-14 h-14 md:w-16 md:h-16 drop-shadow-md"
             />
             <span className="text-2xl font-bold bg-gradient-to-r from-primary to-action bg-clip-text text-transparent">

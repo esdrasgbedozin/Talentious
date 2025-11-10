@@ -165,12 +165,12 @@ export default function OnboardingPage() {
               
               {/* Info tooltip */}
               <div className="group/tooltip relative inline-block">
-                <button className="text-xs text-[#38A169] hover:text-[#2F855A] font-medium flex items-center gap-1">
+                <span className="text-xs text-[#38A169] hover:text-[#2F855A] font-medium flex items-center gap-1 cursor-help">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Comment faire ?
-                </button>
+                </span>
                 <div className="invisible group-hover/tooltip:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl z-10">
                   <p className="mb-2 font-semibold">Exporter votre profil LinkedIn :</p>
                   <ol className="list-decimal list-inside space-y-1 text-left">

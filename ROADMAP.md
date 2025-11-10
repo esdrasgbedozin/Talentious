@@ -523,24 +523,27 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 **Note technique** : L'intégration avec l'API de parsing CV (`POST /profile/parse-cv`) sera implémentée en Phase 3.
 
 #### 2.6. Page de Profil (Écran 2)
-- [ ] Créer `frontend/src/app/profile/page.tsx` :
-  - [ ] Formulaire structuré par sections (accordéon ou onglets) :
-    - [ ] **Informations Personnelles** : Prénom, nom, téléphone, email, LinkedIn, adresse.
-    - [ ] **Résumé** : Textarea pour le résumé professionnel.
-    - [ ] **Expériences** : Liste dynamique (ajout/suppression).
-      - [ ] Pour chaque expérience : Poste, entreprise, dates, description.
-    - [ ] **Formations** : Liste dynamique.
-      - [ ] Pour chaque formation : Diplôme, institution, date.
-    - [ ] **Compétences** : Deux sections (hard skills, soft skills).
-      - [ ] Input avec tags pour ajouter/supprimer des compétences.
-    - [ ] **Projets** : Liste dynamique (optionnel).
-    - [ ] **Certifications** : Liste dynamique (optionnel).
-  - [ ] Bouton "Sauvegarder" :
-    - [ ] Appel à `PUT /profile`.
-    - [ ] Affichage d'un message de confirmation.
-  - [ ] Si le profil est pré-rempli (via parsing), afficher les données existantes.
+
+- [x] Créer `frontend/src/app/profile/page.tsx` :
+  - [x] Formulaire structuré par sections (accordéon ou onglets) :
+    - [x] **Informations Personnelles** : Prénom, nom, téléphone, email, LinkedIn, adresse.
+    - [x] **Résumé** : Textarea pour le résumé professionnel.
+    - [x] **Expériences** : Liste dynamique (ajout/suppression/édition).
+      - [x] Pour chaque expérience : Poste, entreprise, dates, description, poste actuel.
+    - [x] **Formations** : Liste dynamique (ajout/suppression/édition).
+      - [x] Pour chaque formation : Diplôme, institution, dates, domaine, mention, description.
+    - [x] **Compétences** : Deux sections (hard skills, soft skills).
+      - [x] Input avec tags pour ajouter/supprimer des compétences.
+    - [x] **Projets** : Liste dynamique (ajout/suppression/édition).
+    - [x] **Certifications** : Liste dynamique (ajout/suppression/édition).
+  - [x] Bouton "Sauvegarder" :
+    - [x] Appel à `PUT /profile`.
+    - [x] Affichage d'un message de confirmation.
+  - [x] Si le profil est pré-rempli (via parsing), afficher les données existantes.
+  - [x] Conformité stricte avec le schéma backend (types TypeScript synchronisés avec Pydantic, structure JSONB, tests backend et frontend validés).
 
 #### 2.7. Tests Frontend
+
 - [ ] Installer les dépendances de test :
   - [ ] `npm install --save-dev @testing-library/react @testing-library/jest-dom jest`.
 - [ ] Créer des tests pour les composants critiques :
