@@ -22,10 +22,25 @@ services:
       - ./backend:/app
     depends_on:
       - db
+      - parser-pdf
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://talentious:talentious@db:5432/talentious}
       # Use an environment variable for SECRET_KEY in production. Default for local dev only.
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production-min-32-chars}
+      # Parser-PDF Agent URL (local development)
+      PARSER_SERVICE_URL: ${PARSER_SERVICE_URL:-http://parser-pdf:8001}
+
+  parser-pdf:
+    build: ./agents/parser-pdf
+    container_name: talentious_parser_pdf
+    restart: always
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./agents/parser-pdf/app:/service/app
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SERVICE_PORT: 8001
 
   frontend:
     build:

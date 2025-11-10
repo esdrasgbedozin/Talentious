@@ -1,0 +1,18 @@
+# Parser-PDF Agent Dependencies
+# FastAPI microservice for PDF text extraction
+
+# Core Framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+
+# PDF Processing
+pymupdf==1.24.13  # PyMuPDF for robust PDF parsing
+
+# File Upload Handling
+python-multipart==0.0.19
+
+# HTTP Client (for future IAM integration)
+httpx==0.28.1
+
+# Environment Variables
+python-dotenv==1.0.1
