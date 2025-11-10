@@ -400,8 +400,8 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 *Objectif : Permettre à un utilisateur de créer un compte, se connecter et modifier son profil.*
 
 #### 2.1. Configuration de Base & Design System
-- [ ] Configurer Tailwind CSS avec les couleurs du projet :
-  - [ ] Ajouter dans `tailwind.config.js` :
+- [x] Configurer Tailwind CSS avec les couleurs du projet :
+  - [x] Ajouter dans `tailwind.config.js` :
     ```js
     colors: {
       primary: '#2D3748',
@@ -411,14 +411,76 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
       'text-primary': '#1A202C'
     }
     ```
-- [ ] Installer la police "Inter" :
-  - [ ] Ajouter via Google Fonts dans `layout.tsx`.
-  - [ ] Configurer comme police par défaut dans Tailwind.
-- [ ] Créer un fichier de composants réutilisables :
-  - [ ] `frontend/src/components/ui/Button.tsx` (variants: primary, secondary, danger).
-  - [ ] `frontend/src/components/ui/Input.tsx`.
-  - [ ] `frontend/src/components/ui/Card.tsx`.
-  - [ ] `frontend/src/components/ui/Modal.tsx`.
+- [x] Installer la police "Inter" :
+  - [x] Ajouter via Google Fonts dans `layout.tsx`.
+  - [x] Configurer comme police par défaut dans Tailwind.
+- [x] Créer un fichier de composants réutilisables :
+  - [x] `frontend/src/components/ui/Button.tsx` (variants: primary, secondary, danger).
+  - [x] `frontend/src/components/ui/Input.tsx`.
+  - [x] `frontend/src/components/ui/Card.tsx`.
+  - [x] `frontend/src/components/ui/Modal.tsx`.
+
+##### 2.1.1. Assets & Logos (où déposer et comment intégrer)
+
+- [x] Emplacement dans le repo:
+  - [x] `frontend/public/logos/` : fichiers publics créés avec les logos suivants :
+    - `talentious-full.svg` et `talentious-full.png` (version complète)
+    - `talentious-mark.svg` (logomark/icône)
+    - `talentious-wordmark.svg` (logotype)
+    - `talentious-full-mono-black.svg` et `talentious-full-mono-white.svg` (variantes monochromes)
+  - [x] `site.webmanifest` créé et configuré pour PWA
+  - [x] `layout.tsx` configuré avec les métadonnées et icônes
+  - [x] **Favicons générés** :
+    - [x] `favicon.ico` (multi-résolution)
+    - [x] `favicon.svg` (moderne, vectoriel)
+    - [x] `favicon-96x96.png` (haute résolution)
+    - [x] `apple-touch-icon.png` (iOS/iPadOS)
+    - [x] `web-app-manifest-192x192.png` (Android)
+    - [x] `web-app-manifest-512x512.png` (Android HD)
+
+  - Emplacement recommandé dans le repo:
+    - `frontend/public/logos/` : fichiers publics (utilisation via URL, bon pour favicons, avatars et images servies statiquement).
+    - `frontend/src/assets/logos/` : sources (SVG, PSD/AI originaux, exports optimisés) si vous importez les SVG dans des composants React.
+
+  - Conventions de nommage (exemples) :
+    - `talentious-full.svg` (version complète)
+    - `talentious-mark.svg` (logomark)
+    - `talentious-wordmark.svg` (logotype)
+    - variantes monochromes : `talentious-full-mono.svg`, `talentious-mark-mono.svg`
+    - export raster pour fallback : `talentious-mark@2x.png` (utile pour emails ou environnements ne supportant pas SVG)
+
+  - Formats recommandés :
+    - SVG (privilégier pour l'interface web : vectoriel, petit, scalabilité parfaite).
+    - PNG 2x/3x pour les fallbacks si nécessaire (retina).
+    - Favicon : `favicon.ico` et `site.webmanifest` (générer à partir du logomark).
+
+  - Tailles utiles à générer (exemples) :
+    - 32x32, 64x64, 128x128 (icônes UI) ; 256x256 pour app previews.
+
+  - Optimisation & accessibilité :
+    - Optimiser les SVG avec `svgo` avant commit.
+    - Ajouter des `title`/`<desc>` dans les SVG pour l'accessibilité si le SVG est inline.
+    - Toujours fournir un `alt` explicite quand vous utilisez une balise `<img>` ou le composant `Image` de Next.js.
+
+  - Intégration front-end (Next.js) :
+    - Si le fichier est dans `public/`, référez-le directement : `<img src="/logos/talentious-mark.svg" alt="Talentious" />` ou `next/image` pour optimisation.
+    - Si vous importez le SVG comme composant (SVGR), placez-le dans `src/assets/logos` et importez : `import Mark from '@/assets/logos/talentious-mark.svg'`.
+    - Pour la navbar : utiliser la `logomark` compacte en mobile et la `wordmark` sur desktop si l'espace le permet.
+
+  - Production & distribution :
+    - Option 1 (simple) : commit dans `frontend/public/logos/` et servir via Cloud Run + CDN (Cloud CDN) pour performance.
+    - Option 2 (scalable) : stocker les logos dans un bucket GCS public (`gs://<bucket>/logos/`) et servir via URL CDN (bon pour mises à jour sans déployer le frontend).
+
+  - Processus recommandé pour l'ajout d'un nouveau logo (PR flow) :
+    1. Préparer les fichiers sources et exports optimisés (SVG + PNG fallback).
+    2. Ajouter les fichiers dans `frontend/src/assets/logos/` (sources) et `frontend/public/logos/` (assets publics) dans une branche `feature/branding`.
+    3. Ajouter un petit aperçu visuel dans la PR (GIF/PNG) ou un screenshot du composant Navbar montrant le logo.
+    4. Exiger validation visuelle (self-review) avant merge.
+
+  - Tests visuels (optionnel mais utile) :
+    - Ajouter un petit snapshot test ou Storybook story pour la Navbar/Logo afin de vérifier les régressions visuelles lors des PRs.
+
+  > Remarque : Ne commitez pas les fichiers sources (PSD/AI) de très gros poids si vous préférez garder le repo léger — stockez-les dans un dossier Drive/GCS privé et conservez uniquement les exports optimisés dans le repo.
 
 #### 2.2. Gestion de l'État & API
 - [ ] Installer les dépendances :

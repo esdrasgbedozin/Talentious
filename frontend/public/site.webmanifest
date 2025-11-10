@@ -1,0 +1,34 @@
+{
+  "name": "Talentious - Générez des CVs professionnels avec l'IA",
+  "short_name": "Talentious",
+  "description": "Plateforme SaaS qui utilise l'IA pour générer des CVs ultra-professionnels enrichis et adaptés aux offres d'emploi",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#2D3748",
+  "background_color": "#FFFFFF",
+  "icons": [
+    {
+      "src": "/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
