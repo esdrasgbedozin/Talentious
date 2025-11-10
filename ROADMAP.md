@@ -558,7 +558,9 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 ---
 
 ### Phase 3 : Magie IA - Agents & Flux de Génération (Durée estimée : 7-9 jours)
-> **Branche pour cette phase :** `feature/ai-generation-flow` (à créer depuis `develop`)
+> **Branche pour cette phase :** `feature/ai-generation-flow`
+> 
+> **Status**: 🟢 **EN COURS** (Phase 3.1 ✅ Complétée - 10 Nov 2025)
 > 
 > **Workflow :**
 > 1. `git checkout develop`
@@ -568,26 +570,57 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 > 5. Une fois terminé, créez une Pull Request de `feature/ai-generation-flow` vers `develop`.
 *Objectif : Construire les microservices IA et le flux backend qui génère le contenu d'un CV.*
 
-#### 3.1. Agent `Parser-PDF`
-- [ ] Créer la structure du projet :
-  - [ ] `agents/parser-pdf/` avec la même structure qu'un projet FastAPI.
-- [ ] Installer les dépendances :
-  - [ ] `pip install fastapi uvicorn PyMuPDF`.
-- [ ] Créer `agents/parser-pdf/app/main.py` :
-  - [ ] Endpoint `POST /parse` :
-    - [ ] Accepter un fichier PDF en multipart/form-data.
-    - [ ] Utiliser PyMuPDF pour extraire le texte.
-    - [ ] Retourner le texte brut en JSON : `{"text": "..."}`.
-- [ ] Créer un Dockerfile pour cet agent.
-- [ ] Déployer sur Cloud Run (service privé) :
-  - [ ] Configurer pour n'accepter que les requêtes authentifiées (IAM).
-  - [ ] Région : `europe-west9`.
-- [ ] Intégrer cet agent dans le backend principal :
-  - [ ] Créer `backend/app/services/parser_client.py` :
-    - [ ] Fonction `parse_pdf(file_bytes: bytes) -> str`.
-    - [ ] Utilise un HTTP client pour appeler le service Cloud Run.
-    - [ ] Gère l'authentification IAM.
-- [ ] Tester l'intégration avec un PDF de test.
+#### 3.1. Agent `Parser-PDF` ✅ **COMPLÉTÉ (10 Nov 2025)**
+> **Commits**: `333443a`, `fd4afeb`  
+> **Documentation**: `agents/parser-pdf/PHASE_3.1_COMPLETION_REPORT.md`
+
+- [x] Créer la structure du projet :
+  - [x] `agents/parser-pdf/` avec structure FastAPI complète
+  - [x] `app/main.py`, `app/__init__.py`
+  - [x] `Dockerfile` (multi-stage optimisé)
+  - [x] `requirements.txt`, `.env.example`, `.gitignore`
+  - [x] `README.md` (documentation complète)
+- [x] Installer les dépendances :
+  - [x] `fastapi==0.115.5`
+  - [x] `uvicorn[standard]==0.32.1`
+  - [x] `pymupdf==1.24.13` (PyMuPDF)
+  - [x] `python-multipart==0.0.19`
+  - [x] `httpx==0.28.1`
+- [x] Créer `agents/parser-pdf/app/main.py` :
+  - [x] Endpoint `GET /health` : Health check pour Cloud Run
+  - [x] Endpoint `POST /parse` :
+    - [x] Accepter fichier PDF via `UploadFile`
+    - [x] Validation MIME type strict (`application/pdf`)
+    - [x] Validation taille (max 10MB)
+    - [x] Gestion fichiers corrompus (PyMuPDF error handling)
+    - [x] Utiliser PyMuPDF (fitz) pour extraction texte
+    - [x] Retourner JSON: `{"text": "...", "page_count": N, "character_count": N, "filename": "..."}`
+- [x] Créer un Dockerfile multi-stage (optimisé ~200MB vs 1.2GB)
+  - [x] Utilisateur non-root (UID 1000)
+  - [x] Health check intégré
+- [x] Intégration environnement local :
+  - [x] Ajout dans `docker-compose.yml` (port 8001)
+  - [x] Backend dépend de parser-pdf
+  - [x] Variable `PARSER_SERVICE_URL` configurée
+  - [x] Hot-reload activé
+- [x] Intégrer dans le backend principal :
+  - [x] Créer `backend/app/services/parser_client.py`
+  - [x] Client HTTP asynchrone (`httpx.AsyncClient`)
+  - [x] Fonction `parse_pdf(file: UploadFile) -> Dict`
+  - [x] Support IAM authentication (Google Service Account)
+  - [x] Gestion d'erreurs complète (400/422/500/503/504)
+  - [x] Pattern singleton
+- [x] Ajouter `google-auth==2.36.0` au backend
+- [x] Tester l'intégration :
+  - [x] Build Docker: ✅ SUCCESS (254s initial, 11s rebuild)
+  - [x] Health check: ✅ `{"status":"healthy","service":"parser-pdf"}`
+  - [x] Validation MIME: ✅ Rejette fichiers non-PDF
+  - [x] **Test PDF réel**: ✅ PDF 4 pages, 88KB, 3,505 caractères extraits
+  - [x] Logs service: ✅ Confirmation extraction complète
+
+**À venir (Déploiement Cloud Run)** :
+- [ ] Déployer sur Cloud Run (service privé, région `europe-west9`)
+- [ ] Configurer IAM (requêtes authentifiées uniquement)
 
 #### 3.2. Agent `Analyseur-Offre`
 - [ ] Créer la structure du projet : `agents/analyseur-offre/`.
