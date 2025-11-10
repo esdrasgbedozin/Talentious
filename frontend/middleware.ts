@@ -29,9 +29,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
   
-  // Redirect to onboarding if already authenticated and trying to access auth pages
+  // Redirect authenticated users away from auth pages to their profile
+  // Note: The profile page will handle redirecting to onboarding if needed
   if (isAuthRoute && hasSession) {
-    return NextResponse.redirect(new URL('/onboarding', request.url));
+    return NextResponse.redirect(new URL('/profile', request.url));
   }
   
   return NextResponse.next();
