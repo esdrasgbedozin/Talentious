@@ -21,21 +21,21 @@ export default function Home() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link href="/design-system">
+            <Link href="/register">
               <Button variant="primary" size="lg">
-                Voir le Design System
+                Créer un compte
               </Button>
             </Link>
-            <Link href="/register">
+            <Link href="/login">
               <Button variant="outline" size="lg">
-                Créer un compte
+                Se connecter
               </Button>
             </Link>
           </div>
 
           <div className="pt-8 border-t border-border mt-12">
             <p className="text-sm text-text-secondary">
-              🚧 Application en développement - Phase 2.1 complétée
+              🚧 Application en développement - Phase 2.3 en cours
             </p>
           </div>
         </div>

@@ -420,100 +420,63 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
   - [x] `frontend/src/components/ui/Card.tsx`.
   - [x] `frontend/src/components/ui/Modal.tsx`.
 
-##### 2.1.1. Assets & Logos (où déposer et comment intégrer)
+##### 2.1.1. Assets & Logos - COMPLÉTÉ
 
-- [x] Emplacement dans le repo:
-  - [x] `frontend/public/logos/` : fichiers publics créés avec les logos suivants :
-    - `talentious-full.svg` et `talentious-full.png` (version complète)
-    - `talentious-mark.svg` (logomark/icône)
-    - `talentious-wordmark.svg` (logotype)
-    - `talentious-full-mono-black.svg` et `talentious-full-mono-white.svg` (variantes monochromes)
-  - [x] `site.webmanifest` créé et configuré pour PWA
-  - [x] `layout.tsx` configuré avec les métadonnées et icônes
-  - [x] **Favicons générés** :
-    - [x] `favicon.ico` (multi-résolution)
-    - [x] `favicon.svg` (moderne, vectoriel)
-    - [x] `favicon-96x96.png` (haute résolution)
-    - [x] `apple-touch-icon.png` (iOS/iPadOS)
-    - [x] `web-app-manifest-192x192.png` (Android)
-    - [x] `web-app-manifest-512x512.png` (Android HD)
+- [x] Logos créés et optimisés dans `frontend/public/logos/`
+- [x] Favicons générés pour toutes les plateformes (ico, svg, png)
+- [x] PWA manifest configuré avec thème Talentious
+- [x] Layout Next.js mis à jour avec métadonnées complètes
 
-  - Emplacement recommandé dans le repo:
-    - `frontend/public/logos/` : fichiers publics (utilisation via URL, bon pour favicons, avatars et images servies statiquement).
-    - `frontend/src/assets/logos/` : sources (SVG, PSD/AI originaux, exports optimisés) si vous importez les SVG dans des composants React.
+#### 2.2. Gestion de l'État & API - COMPLÉTÉ ✅
+- [x] Installer les dépendances :
+  - [x] `npm install @tanstack/react-query axios`.
+- [x] Créer `frontend/src/lib/api.ts` :
+  - [x] Configurer une instance Axios avec la base URL du backend.
+  - [x] Ajouter un intercepteur pour injecter le token JWT dans les headers.
+  - [x] Intercepteur de réponse pour gérer les erreurs 401 (auto-logout).
+- [x] Créer `frontend/src/lib/auth.ts` :
+  - [x] Fonctions `login(email, password)`, `register(email, password)`.
+  - [x] Fonction `getMe()` pour récupérer l'utilisateur connecté.
+  - [x] Fonction `logout()`.
+  - [x] Fonctions utilitaires `isAuthenticated()`, `getStoredUser()`.
+- [x] Créer un Context React pour l'authentification :
+  - [x] `frontend/src/context/AuthContext.tsx`.
+  - [x] Stocker l'utilisateur connecté et le token (localStorage).
+  - [x] Fournir des méthodes pour login, logout, register, refreshUser.
+  - [x] Hook personnalisé `useAuth()`.
+- [x] Créer `frontend/src/components/providers/QueryProvider.tsx` :
+  - [x] Configuration TanStack Query avec staleTime 5min, retry 1.
+- [x] Intégrer les providers dans `layout.tsx` :
+  - [x] QueryProvider > AuthProvider wrapping children.
 
-  - Conventions de nommage (exemples) :
-    - `talentious-full.svg` (version complète)
-    - `talentious-mark.svg` (logomark)
-    - `talentious-wordmark.svg` (logotype)
-    - variantes monochromes : `talentious-full-mono.svg`, `talentious-mark-mono.svg`
-    - export raster pour fallback : `talentious-mark@2x.png` (utile pour emails ou environnements ne supportant pas SVG)
+> **NOTE SÉCURITÉ (Dette Technique)** :  
+> Pour le MVP, le token JWT est stocké dans `localStorage` pour simplicité et rapidité de développement.  
+> **Vulnérabilité** : Sensible aux attaques XSS si une dépendance npm malveillante injecte du code.  
+> **Recommandation V1 publique** : Migrer vers des **cookies HttpOnly** gérés côté backend pour une sécurité renforcée.  
+> Le token ne sera plus accessible au JavaScript, éliminant le risque XSS.  
+> **Action requise** : Modifier le backend FastAPI pour renvoyer le token dans un cookie `Set-Cookie: HttpOnly; Secure; SameSite=Strict`.
 
-  - Formats recommandés :
-    - SVG (privilégier pour l'interface web : vectoriel, petit, scalabilité parfaite).
-    - PNG 2x/3x pour les fallbacks si nécessaire (retina).
-    - Favicon : `favicon.ico` et `site.webmanifest` (générer à partir du logomark).
-
-  - Tailles utiles à générer (exemples) :
-    - 32x32, 64x64, 128x128 (icônes UI) ; 256x256 pour app previews.
-
-  - Optimisation & accessibilité :
-    - Optimiser les SVG avec `svgo` avant commit.
-    - Ajouter des `title`/`<desc>` dans les SVG pour l'accessibilité si le SVG est inline.
-    - Toujours fournir un `alt` explicite quand vous utilisez une balise `<img>` ou le composant `Image` de Next.js.
-
-  - Intégration front-end (Next.js) :
-    - Si le fichier est dans `public/`, référez-le directement : `<img src="/logos/talentious-mark.svg" alt="Talentious" />` ou `next/image` pour optimisation.
-    - Si vous importez le SVG comme composant (SVGR), placez-le dans `src/assets/logos` et importez : `import Mark from '@/assets/logos/talentious-mark.svg'`.
-    - Pour la navbar : utiliser la `logomark` compacte en mobile et la `wordmark` sur desktop si l'espace le permet.
-
-  - Production & distribution :
-    - Option 1 (simple) : commit dans `frontend/public/logos/` et servir via Cloud Run + CDN (Cloud CDN) pour performance.
-    - Option 2 (scalable) : stocker les logos dans un bucket GCS public (`gs://<bucket>/logos/`) et servir via URL CDN (bon pour mises à jour sans déployer le frontend).
-
-  - Processus recommandé pour l'ajout d'un nouveau logo (PR flow) :
-    1. Préparer les fichiers sources et exports optimisés (SVG + PNG fallback).
-    2. Ajouter les fichiers dans `frontend/src/assets/logos/` (sources) et `frontend/public/logos/` (assets publics) dans une branche `feature/branding`.
-    3. Ajouter un petit aperçu visuel dans la PR (GIF/PNG) ou un screenshot du composant Navbar montrant le logo.
-    4. Exiger validation visuelle (self-review) avant merge.
-
-  - Tests visuels (optionnel mais utile) :
-    - Ajouter un petit snapshot test ou Storybook story pour la Navbar/Logo afin de vérifier les régressions visuelles lors des PRs.
-
-  > Remarque : Ne commitez pas les fichiers sources (PSD/AI) de très gros poids si vous préférez garder le repo léger — stockez-les dans un dossier Drive/GCS privé et conservez uniquement les exports optimisés dans le repo.
-
-#### 2.2. Gestion de l'État & API
-- [ ] Installer les dépendances :
-  - [ ] `npm install @tanstack/react-query axios`.
-- [ ] Créer `frontend/src/lib/api.ts` :
-  - [ ] Configurer une instance Axios avec la base URL du backend.
-  - [ ] Ajouter un intercepteur pour injecter le token JWT dans les headers.
-- [ ] Créer `frontend/src/lib/auth.ts` :
-  - [ ] Fonctions `login(email, password)`, `register(email, password)`.
-  - [ ] Fonction `getMe()` pour récupérer l'utilisateur connecté.
-  - [ ] Fonction `logout()`.
-- [ ] Créer un Context React pour l'authentification :
-  - [ ] `frontend/src/context/AuthContext.tsx`.
-  - [ ] Stocker l'utilisateur connecté et le token.
-  - [ ] Fournir des méthodes pour login, logout, et vérifier l'état.
-
-#### 2.3. Pages Publiques (Landing Page & Auth)
-- [ ] Créer `frontend/src/app/page.tsx` (Landing Page - Écran 0) :
-  - [ ] Section hero avec le nom "Talentious" et un slogan accrocheur.
-  - [ ] Description des fonctionnalités clés.
-  - [ ] Boutons "Se connecter" et "S'inscrire" (liens vers `/login` et `/register`).
-  - [ ] Design épuré avec beaucoup d'espace blanc.
-- [ ] Créer `frontend/src/app/register/page.tsx` :
-  - [ ] Formulaire d'inscription (email, password, confirmation password).
-  - [ ] Validation des champs côté client.
-  - [ ] Appel à l'API `/auth/register`.
-  - [ ] Redirection vers `/login` en cas de succès.
-  - [ ] Affichage des erreurs (email déjà existant, etc.).
-- [ ] Créer `frontend/src/app/login/page.tsx` :
-  - [ ] Formulaire de connexion (email, password).
-  - [ ] Appel à l'API `/auth/login`.
-  - [ ] Stockage du token dans le Context.
-  - [ ] Redirection vers `/dashboard` en cas de succès.
+#### 2.3. Pages Publiques (Landing Page & Auth) - COMPLÉTÉ ✅
+- [x] Améliorer `frontend/src/app/page.tsx` (Landing Page - Écran 0) :
+  - [x] Section hero avec le nom "Talentious" et un slogan accrocheur.
+  - [x] Description des fonctionnalités clés (3 cartes: IA, Rapidité, Sécurité).
+  - [x] Boutons "Créer un compte" et "Se connecter" (liens vers `/register` et `/login`).
+  - [x] Design épuré avec beaucoup d'espace blanc et gradient.
+- [x] Créer `frontend/src/app/register/page.tsx` :
+  - [x] Formulaire d'inscription (email, password, confirmation password).
+  - [x] Validation des champs côté client (email format, password min 8 chars, matching passwords).
+  - [x] Appel à l'API via `useAuth().register()`.
+  - [x] Redirection vers `/login?registered=true` en cas de succès.
+  - [x] Affichage des erreurs API (email déjà existant, etc.).
+  - [x] Écran de succès avec animation avant redirection.
+- [x] Créer `frontend/src/app/login/page.tsx` :
+  - [x] Formulaire de connexion (email, password).
+  - [x] Appel à l'API via `useAuth().login()`.
+  - [x] Stockage du token dans AuthContext (automatique).
+  - [x] Redirection vers `/onboarding` en cas de succès.
+  - [x] Message de succès si arrivée depuis `/register`.
+  - [x] Gestion des erreurs (credentials invalides).
+  - [x] Wrapping dans Suspense pour `useSearchParams()` (Next.js requirement).
   - [ ] Affichage des erreurs (identifiants incorrects).
 
 #### 2.4. Routes Protégées & Navigation
