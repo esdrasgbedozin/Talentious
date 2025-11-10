@@ -108,15 +108,15 @@ jobs:
           docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}
           docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:latest
       
-      - name: Install Cloud SQL Proxy
+      - name: Install Cloud SQL Proxy v2
         run: |
-          wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O cloud_sql_proxy
-          chmod +x cloud_sql_proxy
+          curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.13.0/cloud-sql-proxy.linux.amd64
+          chmod +x cloud-sql-proxy
       
       - name: Run Database Migrations
         run: |
-          # Start Cloud SQL Proxy in background on non-standard port 6543
-          ./cloud_sql_proxy -instances=${{ secrets.CLOUD_SQL_CONNECTION_NAME }}=tcp:6543 &
+          # Start Cloud SQL Proxy v2 in background on non-standard port 6543
+          ./cloud-sql-proxy --port 6543 ${{ secrets.CLOUD_SQL_CONNECTION_NAME }} &
           PROXY_PID=$!
           trap 'kill $PROXY_PID' EXIT
           
