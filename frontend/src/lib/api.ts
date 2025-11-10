@@ -58,9 +58,20 @@ apiClient.interceptors.response.use(
 );
 
 // Types for API responses
+/**
+ * API Error response from FastAPI backend
+ * @property detail - Error message from the server
+ * @property [key: string] - Additional error properties (e.g., validation_error, error_code)
+ * 
+ * @example
+ * {
+ *   detail: "Invalid credentials",
+ *   error_code: "AUTH_001"
+ * }
+ */
 export interface ApiError {
   detail: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ApiResponse<T> {
