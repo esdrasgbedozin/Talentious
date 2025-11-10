@@ -135,7 +135,7 @@ jobs:
           pip install -r requirements.txt
           alembic upgrade head
         env:
-          DATABASE_URL: postgresql+asyncpg://talentious:talentious@localhost:6543/talentious
+          DATABASE_URL: postgresql://talentious-app:${{ secrets.CLOUD_SQL_DB_PASSWORD }}@localhost:6543/talentious
       
       - name: Deploy to Cloud Run
         run: |
