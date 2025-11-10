@@ -78,6 +78,12 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
             {/* Logo */}
             <div className="flex-shrink-0">
               <Link href="/" className="flex items-center gap-2">
+                <Image
+                  src="/logos/logo-mark.svg"
+                  alt="Talentious"
+                  width={32}
+                  height={32}
+                />
                 <span className="text-2xl font-bold bg-gradient-to-r from-primary to-action bg-clip-text text-transparent">
                   Talentious
                 </span>
@@ -356,6 +362,12 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/logos/logo-mark.svg"
+              alt="Talentious"
+              width={28}
+              height={28}
+            />
             <span className="text-2xl font-bold bg-gradient-to-r from-primary to-action bg-clip-text text-transparent">
               Talentious
             </span>
