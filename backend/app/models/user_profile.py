@@ -14,13 +14,13 @@ class UserProfile(Base):
     UserProfile model for storing career-related profile information.
     
     The profile_data field stores structured JSON with:
-    - personal_info: Personal details (name, phone, linkedin, address)
-    - summary: Professional summary
-    - experiences: List of work experiences
-    - educations: List of education entries
-    - skills: List of skills
-    - projects: List of projects
-    - certifications: List of certifications
+    - personal_info: Personal details (first_name, last_name, email, phone, linkedin, address, city, postal_code, country)
+    - summary: Professional summary text
+    - experiences: List of work experiences with dates, company, title, description
+    - educations: List of education entries with degree, institution, dates
+    - skills: Object with hard skills list and soft skills list {hard: [], soft: []}
+    - projects: List of projects with name, description, technologies, dates
+    - certifications: List of certifications with name, issuing organization, dates
     
     Attributes:
         user_id: Foreign key to users table (Primary Key)

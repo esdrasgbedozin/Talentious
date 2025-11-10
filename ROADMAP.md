@@ -400,8 +400,8 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 *Objectif : Permettre à un utilisateur de créer un compte, se connecter et modifier son profil.*
 
 #### 2.1. Configuration de Base & Design System
-- [ ] Configurer Tailwind CSS avec les couleurs du projet :
-  - [ ] Ajouter dans `tailwind.config.js` :
+- [x] Configurer Tailwind CSS avec les couleurs du projet :
+  - [x] Ajouter dans `tailwind.config.js` :
     ```js
     colors: {
       primary: '#2D3748',
@@ -411,99 +411,149 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
       'text-primary': '#1A202C'
     }
     ```
-- [ ] Installer la police "Inter" :
-  - [ ] Ajouter via Google Fonts dans `layout.tsx`.
-  - [ ] Configurer comme police par défaut dans Tailwind.
-- [ ] Créer un fichier de composants réutilisables :
-  - [ ] `frontend/src/components/ui/Button.tsx` (variants: primary, secondary, danger).
-  - [ ] `frontend/src/components/ui/Input.tsx`.
-  - [ ] `frontend/src/components/ui/Card.tsx`.
-  - [ ] `frontend/src/components/ui/Modal.tsx`.
+- [x] Installer la police "Inter" :
+  - [x] Ajouter via Google Fonts dans `layout.tsx`.
+  - [x] Configurer comme police par défaut dans Tailwind.
+- [x] Créer un fichier de composants réutilisables :
+  - [x] `frontend/src/components/ui/Button.tsx` (variants: primary, secondary, danger).
+  - [x] `frontend/src/components/ui/Input.tsx`.
+  - [x] `frontend/src/components/ui/Card.tsx`.
+  - [x] `frontend/src/components/ui/Modal.tsx`.
 
-#### 2.2. Gestion de l'État & API
-- [ ] Installer les dépendances :
-  - [ ] `npm install @tanstack/react-query axios`.
-- [ ] Créer `frontend/src/lib/api.ts` :
-  - [ ] Configurer une instance Axios avec la base URL du backend.
-  - [ ] Ajouter un intercepteur pour injecter le token JWT dans les headers.
-- [ ] Créer `frontend/src/lib/auth.ts` :
-  - [ ] Fonctions `login(email, password)`, `register(email, password)`.
-  - [ ] Fonction `getMe()` pour récupérer l'utilisateur connecté.
-  - [ ] Fonction `logout()`.
-- [ ] Créer un Context React pour l'authentification :
-  - [ ] `frontend/src/context/AuthContext.tsx`.
-  - [ ] Stocker l'utilisateur connecté et le token.
-  - [ ] Fournir des méthodes pour login, logout, et vérifier l'état.
+##### 2.1.1. Assets & Logos - COMPLÉTÉ
 
-#### 2.3. Pages Publiques (Landing Page & Auth)
-- [ ] Créer `frontend/src/app/page.tsx` (Landing Page - Écran 0) :
-  - [ ] Section hero avec le nom "Talentious" et un slogan accrocheur.
-  - [ ] Description des fonctionnalités clés.
-  - [ ] Boutons "Se connecter" et "S'inscrire" (liens vers `/login` et `/register`).
-  - [ ] Design épuré avec beaucoup d'espace blanc.
-- [ ] Créer `frontend/src/app/register/page.tsx` :
-  - [ ] Formulaire d'inscription (email, password, confirmation password).
-  - [ ] Validation des champs côté client.
-  - [ ] Appel à l'API `/auth/register`.
-  - [ ] Redirection vers `/login` en cas de succès.
-  - [ ] Affichage des erreurs (email déjà existant, etc.).
-- [ ] Créer `frontend/src/app/login/page.tsx` :
-  - [ ] Formulaire de connexion (email, password).
-  - [ ] Appel à l'API `/auth/login`.
-  - [ ] Stockage du token dans le Context.
-  - [ ] Redirection vers `/dashboard` en cas de succès.
+- [x] Logos créés et optimisés dans `frontend/public/logos/`
+- [x] Favicons générés pour toutes les plateformes (ico, svg, png)
+- [x] PWA manifest configuré avec thème Talentious
+- [x] Layout Next.js mis à jour avec métadonnées complètes
+
+#### 2.2. Gestion de l'État & API - COMPLÉTÉ ✅
+- [x] Installer les dépendances :
+  - [x] `npm install @tanstack/react-query axios`.
+- [x] Créer `frontend/src/lib/api.ts` :
+  - [x] Configurer une instance Axios avec la base URL du backend.
+  - [x] Ajouter un intercepteur pour injecter le token JWT dans les headers.
+  - [x] Intercepteur de réponse pour gérer les erreurs 401 (auto-logout).
+- [x] Créer `frontend/src/lib/auth.ts` :
+  - [x] Fonctions `login(email, password)`, `register(email, password)`.
+  - [x] Fonction `getMe()` pour récupérer l'utilisateur connecté.
+  - [x] Fonction `logout()`.
+  - [x] Fonctions utilitaires `isAuthenticated()`, `getStoredUser()`.
+- [x] Créer un Context React pour l'authentification :
+  - [x] `frontend/src/context/AuthContext.tsx`.
+  - [x] Stocker l'utilisateur connecté et le token (localStorage).
+  - [x] Fournir des méthodes pour login, logout, register, refreshUser.
+  - [x] Hook personnalisé `useAuth()`.
+- [x] Créer `frontend/src/components/providers/QueryProvider.tsx` :
+  - [x] Configuration TanStack Query avec staleTime 5min, retry 1.
+- [x] Intégrer les providers dans `layout.tsx` :
+  - [x] QueryProvider > AuthProvider wrapping children.
+
+> **NOTE SÉCURITÉ (Dette Technique)** :  
+> Pour le MVP, le token JWT est stocké dans `localStorage` pour simplicité et rapidité de développement.  
+> **Vulnérabilité** : Sensible aux attaques XSS si une dépendance npm malveillante injecte du code.  
+> **Recommandation V1 publique** : Migrer vers des **cookies HttpOnly** gérés côté backend pour une sécurité renforcée.  
+> Le token ne sera plus accessible au JavaScript, éliminant le risque XSS.  
+> **Action requise** : Modifier le backend FastAPI pour renvoyer le token dans un cookie `Set-Cookie: HttpOnly; Secure; SameSite=Strict`.
+
+#### 2.3. Pages Publiques (Landing Page & Auth) - COMPLÉTÉ ✅
+- [x] Améliorer `frontend/src/app/page.tsx` (Landing Page - Écran 0) :
+  - [x] Section hero avec le nom "Talentious" et un slogan accrocheur.
+  - [x] Description des fonctionnalités clés (3 cartes: IA, Rapidité, Sécurité).
+  - [x] Boutons "Créer un compte" et "Se connecter" (liens vers `/register` et `/login`).
+  - [x] Design épuré avec beaucoup d'espace blanc et gradient.
+- [x] Créer `frontend/src/app/register/page.tsx` :
+  - [x] Formulaire d'inscription (email, password, confirmation password).
+  - [x] Validation des champs côté client (email format, password min 8 chars, matching passwords).
+  - [x] Appel à l'API via `useAuth().register()`.
+  - [x] Redirection vers `/login?registered=true` en cas de succès.
+  - [x] Affichage des erreurs API (email déjà existant, etc.).
+  - [x] Écran de succès avec animation avant redirection.
+- [x] Créer `frontend/src/app/login/page.tsx` :
+  - [x] Formulaire de connexion (email, password).
+  - [x] Appel à l'API via `useAuth().login()`.
+  - [x] Stockage du token dans AuthContext (automatique).
+  - [x] Redirection vers `/onboarding` en cas de succès.
+  - [x] Message de succès si arrivée depuis `/register`.
+  - [x] Gestion des erreurs (credentials invalides).
+  - [x] Wrapping dans Suspense pour `useSearchParams()` (Next.js requirement).
   - [ ] Affichage des erreurs (identifiants incorrects).
 
 #### 2.4. Routes Protégées & Navigation
-- [ ] Créer un middleware pour protéger les routes :
-  - [ ] `frontend/src/middleware.ts`.
-  - [ ] Vérifier la présence d'un token valide.
-  - [ ] Rediriger vers `/login` si non authentifié.
-- [ ] Créer un composant de navigation :
-  - [ ] `frontend/src/components/Navbar.tsx`.
-  - [ ] Logo "Talentious" à gauche.
-  - [ ] Menu utilisateur à droite (icône de profil, déconnexion).
-  - [ ] Visible uniquement sur les pages authentifiées.
+- [x] Créer un middleware pour protéger les routes :
+  - [x] `frontend/src/middleware.ts`.
+  - [x] Vérifier la présence d'un cookie de session valide (talentious_session).
+  - [x] Rediriger vers `/login` avec paramètre `?redirect` si non authentifié.
+  - [x] Protéger `/onboarding`, `/profile`, `/dashboard`.
+- [x] Créer un composant de navigation authentifié :
+  - [x] `frontend/src/components/Navbar.tsx` - variant `authenticated`.
+  - [x] Logo "Talentious" à gauche avec lien vers `/profile`.
+  - [x] Navigation desktop : liens vers "Mon Profil" et "Mes CV".
+  - [x] Menu utilisateur à droite :
+    - [x] Avatar avec initiales depuis l'email.
+    - [x] Affichage du nom d'utilisateur et email (desktop).
+    - [x] Menu déroulant avec : profil, paramètres, déconnexion.
+    - [x] Version mobile responsive avec navigation dans le menu.
+    - [x] Click-outside handler pour fermer le dropdown.
+- [x] Intégration cookie de session :
+  - [x] AuthContext gère le cookie `talentious_session` (max-age 30 jours).
+  - [x] Cookie set sur login/init, removed sur logout/error.
+
+**Note de sécurité** : Le système actuel utilise JWT dans localStorage + cookie de session pour le middleware. Migration vers HttpOnly cookies recommandée avant V1 (voir Phase Pré-V1).
 
 #### 2.5. Page d'Onboarding (Écran 1)
-- [ ] Créer `frontend/src/app/onboarding/page.tsx` :
-  - [ ] Message d'accueil : "Bienvenue sur Talentious. Importons votre profil pour commencer."
-  - [ ] Trois options de cartes cliquables :
-    - [ ] **Option 1** : "Importer un CV (PDF)" (mise en avant visuelle).
-    - [ ] **Option 2** : "Importer un profil LinkedIn (PDF)" (avec info-bulle).
-    - [ ] **Option 3** : "Commencer manuellement" (discret).
-  - [ ] Pour l'Option 1 et 2 :
-    - [ ] Bouton d'upload de fichier.
-    - [ ] Prévisualisation du nom du fichier.
-    - [ ] Bouton "Continuer" qui appelle l'API de parsing (Phase 3).
-  - [ ] Pour l'Option 3 :
-    - [ ] Redirection directe vers `/profile`.
+- [x] Créer `frontend/src/app/onboarding/page.tsx` :
+  - [x] Message d'accueil : "Bienvenue sur Talentious. Importons votre profil pour commencer."
+  - [x] Trois options de cartes cliquables :
+    - [x] **Option 1** : "Importer un CV (PDF)" (mise en avant visuelle avec badge "Recommandé").
+    - [x] **Option 2** : "Importer un profil LinkedIn (PDF)" (avec info-bulle explicative).
+    - [x] **Option 3** : "Commencer manuellement" (discret).
+  - [x] Pour l'Option 1 et 2 :
+    - [x] Zone d'upload drag & drop avec feedback visuel.
+    - [x] Validation du fichier : PDF uniquement, max 10MB.
+    - [x] Prévisualisation du nom du fichier et taille.
+    - [x] Gestion des erreurs avec messages clairs.
+    - [x] Bouton "Continuer" qui simulera l'API de parsing (Phase 3 : connexion réelle).
+  - [x] Pour l'Option 3 :
+    - [x] Redirection directe vers `/profile`.
+  - [x] Design ultra-professionnel avec gradients, ombres, animations.
+  - [x] Navbar authentifiée intégrée.
+  - [x] Route protégée par middleware.
+
+**Note technique** : L'intégration avec l'API de parsing CV (`POST /profile/parse-cv`) sera implémentée en Phase 3.
 
 #### 2.6. Page de Profil (Écran 2)
-- [ ] Créer `frontend/src/app/profile/page.tsx` :
-  - [ ] Formulaire structuré par sections (accordéon ou onglets) :
-    - [ ] **Informations Personnelles** : Prénom, nom, téléphone, email, LinkedIn, adresse.
-    - [ ] **Résumé** : Textarea pour le résumé professionnel.
-    - [ ] **Expériences** : Liste dynamique (ajout/suppression).
-      - [ ] Pour chaque expérience : Poste, entreprise, dates, description.
-    - [ ] **Formations** : Liste dynamique.
-      - [ ] Pour chaque formation : Diplôme, institution, date.
-    - [ ] **Compétences** : Deux sections (hard skills, soft skills).
-      - [ ] Input avec tags pour ajouter/supprimer des compétences.
-    - [ ] **Projets** : Liste dynamique (optionnel).
-    - [ ] **Certifications** : Liste dynamique (optionnel).
-  - [ ] Bouton "Sauvegarder" :
-    - [ ] Appel à `PUT /profile`.
-    - [ ] Affichage d'un message de confirmation.
-  - [ ] Si le profil est pré-rempli (via parsing), afficher les données existantes.
+
+- [x] Créer `frontend/src/app/profile/page.tsx` :
+  - [x] Formulaire structuré par sections (accordéon ou onglets) :
+    - [x] **Informations Personnelles** : Prénom, nom, téléphone, email, LinkedIn, adresse.
+    - [x] **Résumé** : Textarea pour le résumé professionnel.
+    - [x] **Expériences** : Liste dynamique (ajout/suppression/édition).
+      - [x] Pour chaque expérience : Poste, entreprise, dates, description, poste actuel.
+    - [x] **Formations** : Liste dynamique (ajout/suppression/édition).
+      - [x] Pour chaque formation : Diplôme, institution, dates, domaine, mention, description.
+    - [x] **Compétences** : Deux sections (hard skills, soft skills).
+      - [x] Input avec tags pour ajouter/supprimer des compétences.
+    - [x] **Projets** : Liste dynamique (ajout/suppression/édition).
+    - [x] **Certifications** : Liste dynamique (ajout/suppression/édition).
+  - [x] Bouton "Sauvegarder" :
+    - [x] Appel à `PUT /profile`.
+    - [x] Affichage d'un message de confirmation.
+  - [x] Si le profil est pré-rempli (via parsing), afficher les données existantes.
+  - [x] Conformité stricte avec le schéma backend (types TypeScript synchronisés avec Pydantic, structure JSONB, tests backend et frontend validés).
 
 #### 2.7. Tests Frontend
-- [ ] Installer les dépendances de test :
-  - [ ] `npm install --save-dev @testing-library/react @testing-library/jest-dom jest`.
-- [ ] Créer des tests pour les composants critiques :
-  - [ ] Test du formulaire de login.
-  - [ ] Test du formulaire de profil (sauvegarde).
-- [ ] Lancer les tests : `npm test`.
+
+- [x] Installer les dépendances de test :
+  - [x] `npm install --save-dev @testing-library/react @testing-library/jest-dom @testing-library/user-event jest jest-environment-jsdom @types/jest`.
+  - [x] Configuration Jest avec Next.js (@next/jest wrapper).
+  - [x] Configuration du test environment (jsdom).
+- [x] Créer des tests pour les composants critiques :
+  - [x] Tests de smoke pour le formulaire de login.
+  - [x] Tests de smoke pour la page de profil.
+  - [x] Tests unitaires pour les helpers de types profile.
+- [x] Lancer les tests : `npm test` (20 tests passés, 3 suites).
+- [x] Tests fonctionnels dans l'environnement Docker.
 
 ---
 
@@ -843,29 +893,230 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
   - [ ] Cliquer sur "Acheter", puis "Annuler" dans le formulaire Stripe.
   - [ ] Vérifier la redirection vers `/payment/cancel`.
 
-#### 5.4. Test End-to-End "Golden Path"
-- [ ] Installer Playwright :
-  - [ ] `npm install -D @playwright/test`.
-  - [ ] `npx playwright install`.
+#### 5.4. Tests End-to-End & Tests d'Intégration Complets
+
+**Objectif** : Valider l'ensemble des flux utilisateurs critiques avec Playwright et atteindre minimum 70% de couverture de code.
+
+##### 5.4.1. Configuration Playwright
+- [ ] Installer Playwright et ses dépendances :
+  ```bash
+  cd frontend
+  npm install -D @playwright/test
+  npx playwright install
+  npx playwright install-deps
+  ```
+- [ ] Créer `frontend/playwright.config.ts` :
+  - [ ] Configuration des navigateurs (Chromium, Firefox, WebKit).
+  - [ ] Configuration de la base URL (`http://localhost:3000` en dev).
+  - [ ] Configuration des retries (2 tentatives en cas d'échec).
+  - [ ] Configuration des timeouts (30s par défaut).
+  - [ ] Configuration des traces et screenshots en cas d'échec.
+- [ ] Créer la structure de dossiers de tests :
+  ```
+  frontend/tests/
+  ├── e2e/                    # Tests end-to-end
+  │   ├── auth.spec.ts
+  │   ├── onboarding.spec.ts
+  │   ├── profile.spec.ts
+  │   ├── cv-generation.spec.ts
+  │   ├── payment.spec.ts
+  │   └── golden-path.spec.ts
+  ├── integration/            # Tests d'intégration
+  │   ├── api/
+  │   │   ├── auth.test.ts
+  │   │   └── profile.test.ts
+  │   └── components/
+  │       ├── login-flow.test.ts
+  │       └── profile-forms.test.ts
+  └── fixtures/               # Données de test
+      ├── users.json
+      ├── profiles.json
+      └── test-cv.pdf
+  ```
+
+##### 5.4.2. Tests d'Authentification E2E
+- [ ] Créer `frontend/tests/e2e/auth.spec.ts` :
+  - [ ] **Test : Inscription utilisateur**
+    - [ ] Naviguer vers `/register`.
+    - [ ] Remplir email, mot de passe, confirmation.
+    - [ ] Vérifier validation frontend (email format, mot de passe fort).
+    - [ ] Soumettre le formulaire.
+    - [ ] Vérifier redirection vers `/onboarding`.
+    - [ ] Vérifier que le token JWT est stocké.
+  - [ ] **Test : Connexion utilisateur**
+    - [ ] Naviguer vers `/login`.
+    - [ ] Remplir identifiants valides.
+    - [ ] Vérifier connexion réussie.
+    - [ ] Vérifier redirection vers `/dashboard` ou `/onboarding`.
+  - [ ] **Test : Gestion erreurs authentification**
+    - [ ] Tester email invalide → message d'erreur affiché.
+    - [ ] Tester mot de passe incorrect → message d'erreur.
+    - [ ] Tester compte inexistant → message d'erreur.
+  - [ ] **Test : Déconnexion**
+    - [ ] Se connecter.
+    - [ ] Cliquer sur "Déconnexion".
+    - [ ] Vérifier redirection vers `/login`.
+    - [ ] Vérifier suppression du token.
+
+##### 5.4.3. Tests Onboarding E2E
+- [ ] Créer `frontend/tests/e2e/onboarding.spec.ts` :
+  - [ ] **Test : Parcours complet onboarding**
+    - [ ] Écran 1 : Informations personnelles (nom, prénom, téléphone).
+    - [ ] Écran 2 : Objectifs professionnels (titre souhaité, salaire).
+    - [ ] Écran 3 : Upload CV (optionnel) ou saisie manuelle.
+    - [ ] Vérifier la progression (barre de progression).
+    - [ ] Vérifier sauvegarde à chaque étape.
+    - [ ] Vérifier redirection finale vers `/dashboard`.
+  - [ ] **Test : Validation des champs obligatoires**
+    - [ ] Tenter de passer à l'étape suivante sans remplir les champs.
+    - [ ] Vérifier messages d'erreur.
+  - [ ] **Test : Upload PDF parsing**
+    - [ ] Upload un CV PDF de test.
+    - [ ] Vérifier appel API `/profile/parse-cv`.
+    - [ ] Vérifier pré-remplissage du profil.
+
+##### 5.4.4. Tests Profil E2E
+- [ ] Créer `frontend/tests/e2e/profile.spec.ts` :
+  - [ ] **Test : Affichage du profil**
+    - [ ] Naviguer vers `/profile`.
+    - [ ] Vérifier affichage des informations personnelles.
+    - [ ] Vérifier affichage des expériences, formations, compétences.
+  - [ ] **Test : Modification du profil**
+    - [ ] Cliquer sur "Modifier" pour chaque section.
+    - [ ] Modifier les champs.
+    - [ ] Sauvegarder.
+    - [ ] Vérifier appel API `PUT /profile`.
+    - [ ] Vérifier affichage du message de confirmation.
+    - [ ] Recharger la page → vérifier persistance des données.
+  - [ ] **Test : Ajout d'expérience**
+    - [ ] Cliquer sur "+ Ajouter une expérience".
+    - [ ] Remplir titre, entreprise, dates, description.
+    - [ ] Ajouter des achievements.
+    - [ ] Sauvegarder.
+    - [ ] Vérifier ajout dans la liste.
+  - [ ] **Test : Suppression d'expérience**
+    - [ ] Supprimer une expérience existante.
+    - [ ] Confirmer la suppression.
+    - [ ] Vérifier retrait de la liste.
+  - [ ] **Test : Validation des dates**
+    - [ ] Tenter d'entrer date de fin < date de début.
+    - [ ] Vérifier message d'erreur.
+
+##### 5.4.5. Tests Génération CV E2E
+- [ ] Créer `frontend/tests/e2e/cv-generation.spec.ts` :
+  - [ ] **Test : Génération sans Pass (erreur 402)**
+    - [ ] Naviguer vers dashboard.
+    - [ ] Cliquer sur "+ Générer un nouveau CV".
+    - [ ] Remplir l'offre d'emploi.
+    - [ ] Soumettre.
+    - [ ] Vérifier affichage popup paiement (402 Payment Required).
+  - [ ] **Test : Génération avec Pass valide**
+    - [ ] Simuler achat de Pass (injecter pass_expires_at dans le profil).
+    - [ ] Cliquer sur "+ Générer un nouveau CV".
+    - [ ] Remplir l'offre d'emploi.
+    - [ ] Soumettre.
+    - [ ] Vérifier appel aux agents IA.
+    - [ ] Vérifier redirection vers `/editor/[cv_id]`.
+    - [ ] Vérifier affichage du CV généré.
+
+##### 5.4.6. Tests Paiement Stripe E2E
+- [ ] Créer `frontend/tests/e2e/payment.spec.ts` :
+  - [ ] **Test : Parcours d'achat complet (mode test Stripe)**
+    - [ ] Déclencher popup paiement.
+    - [ ] Remplir carte de test Stripe (`4242 4242 4242 4242`).
+    - [ ] Valider le paiement.
+    - [ ] Vérifier redirection vers `/payment/success`.
+    - [ ] Vérifier mise à jour du profil (pass_expires_at).
+    - [ ] Vérifier possibilité de générer un CV.
+  - [ ] **Test : Annulation du paiement**
+    - [ ] Déclencher popup paiement.
+    - [ ] Cliquer sur "Annuler".
+    - [ ] Vérifier redirection vers `/payment/cancel`.
+    - [ ] Vérifier que le Pass n'est pas activé.
+  - [ ] **Test : Gestion erreur paiement**
+    - [ ] Utiliser une carte refusée (`4000 0000 0000 0002`).
+    - [ ] Vérifier message d'erreur.
+
+##### 5.4.7. Test Golden Path Complet
 - [ ] Créer `frontend/tests/e2e/golden-path.spec.ts` :
-  - [ ] Scénario complet :
-    1. [ ] Naviguer vers la landing page.
-    2. [ ] Cliquer sur "Créer mon compte".
-    3. [ ] Remplir le formulaire d'inscription et soumettre.
-    4. [ ] Vérifier la redirection vers `/onboarding`.
-    5. [ ] Remplir les 3 écrans d'onboarding.
-    6. [ ] Arriver sur le dashboard.
-    7. [ ] Cliquer sur "+ Générer un nouveau CV".
-    8. [ ] Remplir l'offre d'emploi (en texte).
-    9. [ ] Vérifier la popup de paiement (402).
-    10. [ ] Simuler l'achat (ou passer par Stripe en mode test).
-    11. [ ] Regénérer un CV après achat.
-    12. [ ] Vérifier la redirection vers l'éditeur.
-    13. [ ] Éditer un texte dans le CV.
-    14. [ ] Télécharger le PDF.
-  - [ ] Commande pour lancer le test :
-    - [ ] `npx playwright test`.
-- [ ] Documenter les résultats du test.
+  - [ ] **Scénario complet de bout en bout** :
+    1. [ ] Inscription d'un nouvel utilisateur.
+    2. [ ] Complétion des 3 écrans d'onboarding.
+    3. [ ] Arrivée sur le dashboard.
+    4. [ ] Modification du profil (ajout expérience + compétences).
+    5. [ ] Tentative de génération CV → popup paiement (402).
+    6. [ ] Achat du Pass avec carte de test Stripe.
+    7. [ ] Vérification webhook Stripe (attendre 5s).
+    8. [ ] Génération d'un CV avec une offre d'emploi.
+    9. [ ] Édition du CV dans l'éditeur.
+    10. [ ] Téléchargement du PDF final.
+    11. [ ] Déconnexion.
+  - [ ] Durée estimée du test : ~2-3 minutes.
+  - [ ] Prendre des screenshots à chaque étape critique.
+
+##### 5.4.8. Tests d'Intégration API
+- [ ] Créer `frontend/tests/integration/api/auth.test.ts` :
+  - [ ] Tester `POST /auth/register` avec données valides/invalides.
+  - [ ] Tester `POST /auth/login` avec credentials valides/invalides.
+  - [ ] Tester `POST /auth/logout` avec/sans token.
+  - [ ] Tester `GET /auth/me` avec token valide/invalide/expiré.
+- [ ] Créer `frontend/tests/integration/api/profile.test.ts` :
+  - [ ] Tester `GET /profile` avec utilisateur authentifié.
+  - [ ] Tester `PUT /profile` avec données valides.
+  - [ ] Tester validation des données (schéma Pydantic).
+  - [ ] Tester `POST /profile/parse-cv` avec PDF valide/invalide.
+
+##### 5.4.9. Tests de Composants avec Interactions
+- [ ] Créer `frontend/tests/integration/components/login-flow.test.ts` :
+  - [ ] Test complet du flux de connexion avec React Testing Library.
+  - [ ] Mock des appels API avec MSW (Mock Service Worker).
+  - [ ] Vérifier gestion des états (loading, success, error).
+  - [ ] Vérifier redirections après connexion.
+- [ ] Créer `frontend/tests/integration/components/profile-forms.test.ts` :
+  - [ ] Tester ExperienceForm avec toutes les interactions.
+  - [ ] Tester EducationForm avec validation des dates.
+  - [ ] Tester SkillsInput avec ajout/suppression.
+  - [ ] Tester sauvegarde et gestion des erreurs.
+
+##### 5.4.10. Configuration CI/CD pour les Tests
+- [ ] Mettre à jour `.github/workflows/ci.yml` :
+  - [ ] Ajouter job pour tests Playwright :
+    ```yaml
+    playwright-tests:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v3
+        - uses: actions/setup-node@v3
+        - name: Install dependencies
+          run: cd frontend && npm ci
+        - name: Install Playwright
+          run: cd frontend && npx playwright install --with-deps
+        - name: Run E2E tests
+          run: cd frontend && npx playwright test
+        - name: Upload test results
+          if: always()
+          uses: actions/upload-artifact@v3
+          with:
+            name: playwright-report
+            path: frontend/playwright-report/
+    ```
+  - [ ] Configurer execution des tests sur PR et push vers develop/main.
+  - [ ] Bloquer les merges si les tests échouent.
+
+##### 5.4.11. Rapport de Couverture et Documentation
+- [ ] Générer rapport de couverture :
+  - [ ] `npm test -- --coverage` pour tests Jest.
+  - [ ] Générer rapport HTML : `npm test -- --coverage --coverageReporters=html`.
+  - [ ] Viser minimum **70% de couverture** globale.
+- [ ] Créer `frontend/tests/README.md` :
+  - [ ] Documentation de la stratégie de test.
+  - [ ] Instructions pour lancer les tests localement.
+  - [ ] Liste des scénarios couverts.
+  - [ ] Instructions pour déboguer les tests qui échouent.
+- [ ] Documenter les résultats des tests E2E :
+  - [ ] Capturer screenshots/vidéos du Golden Path.
+  - [ ] Documenter les temps d'exécution.
+  - [ ] Identifier les points d'amélioration.
 
 #### 5.5. CGU, Mentions Légales & Politique de Confidentialité
 - [ ] Créer `frontend/src/app/legal/terms.tsx` (CGU) :

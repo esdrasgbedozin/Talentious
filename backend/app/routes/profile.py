@@ -22,6 +22,7 @@ async def get_profile(
 ):
     """
     Get the profile of the currently authenticated user.
+    If profile doesn't exist, create an empty one automatically.
     
     Returns:
         ProfileResponse: Complete profile data with metadata
@@ -32,8 +33,37 @@ async def get_profile(
     )
     profile = result.scalar_one_or_none()
     
+    # Create empty profile if doesn't exist
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        # Create default empty profile data
+        empty_profile_data = {
+            "personal_info": {
+                "first_name": "",
+                "last_name": "",
+                "email": current_user.email,  # Pre-fill from user account
+                "phone": None,
+                "linkedin": None,
+                "address": None,
+                "city": None,
+                "postal_code": None,
+                "country": "France"
+            },
+            "summary": "",
+            "experiences": [],
+            "educations": [],
+            "skills": {"hard": [], "soft": []},
+            "projects": [],
+            "certifications": []
+        }
+        
+        profile = UserProfile(
+            user_id=current_user.id,
+            profile_data=empty_profile_data,
+            updated_at=datetime.utcnow()
+        )
+        db.add(profile)
+        await db.commit()
+        await db.refresh(profile)
     
     return ProfileResponse(
         user_id=profile.user_id,

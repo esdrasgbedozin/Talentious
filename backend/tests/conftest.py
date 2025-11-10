@@ -85,7 +85,7 @@ async def client(test_db) -> AsyncGenerator[AsyncClient, None]:
 async def test_user(test_db: AsyncSession) -> User:
     """Create a test user in the database."""
     from app.models.user_profile import UserProfile
-    from app.schemas.profile import PersonalInfo, ProfileData
+    from app.schemas.profile import PersonalInfo, ProfileData, Skills
     
     user = User(
         email="testuser@example.com",
@@ -95,17 +95,23 @@ async def test_user(test_db: AsyncSession) -> User:
     test_db.add(user)
     await test_db.flush()
     
-    # Create profile for user
+    # Create profile for user with new schema structure
     empty_profile_data = ProfileData(
         personal_info=PersonalInfo(
             first_name="Test",
             last_name="User",
-            email="testuser@example.com"
+            email="testuser@example.com",
+            phone=None,
+            linkedin=None,
+            address=None,
+            city=None,
+            postal_code=None,
+            country="France"
         ),
-        summary=None,
+        summary="",  # Empty string, not None
         experiences=[],
         educations=[],
-        skills=[],
+        skills=Skills(hard=[], soft=[]),  # New structure: object with hard/soft lists
         projects=[],
         certifications=[]
     )
