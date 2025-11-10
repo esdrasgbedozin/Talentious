@@ -544,12 +544,16 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 
 #### 2.7. Tests Frontend
 
-- [ ] Installer les dépendances de test :
-  - [ ] `npm install --save-dev @testing-library/react @testing-library/jest-dom jest`.
-- [ ] Créer des tests pour les composants critiques :
-  - [ ] Test du formulaire de login.
-  - [ ] Test du formulaire de profil (sauvegarde).
-- [ ] Lancer les tests : `npm test`.
+- [x] Installer les dépendances de test :
+  - [x] `npm install --save-dev @testing-library/react @testing-library/jest-dom @testing-library/user-event jest jest-environment-jsdom @types/jest`.
+  - [x] Configuration Jest avec Next.js (@next/jest wrapper).
+  - [x] Configuration du test environment (jsdom).
+- [x] Créer des tests pour les composants critiques :
+  - [x] Tests de smoke pour le formulaire de login.
+  - [x] Tests de smoke pour la page de profil.
+  - [x] Tests unitaires pour les helpers de types profile.
+- [x] Lancer les tests : `npm test` (20 tests passés, 3 suites).
+- [x] Tests fonctionnels dans l'environnement Docker.
 
 ---
 
