@@ -11,6 +11,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import Navbar from '@/components/Navbar';
 
 function LoginForm() {
   const router = useRouter();
@@ -110,91 +111,122 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background-light to-white flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-block">
-            <h1 className="text-4xl font-bold text-primary mb-2">Talentious</h1>
-          </Link>
-          <p className="text-text-secondary">Connectez-vous à votre compte</p>
-        </div>
-
-        {/* Success message if just registered */}
-        {showRegisteredMessage && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-700 text-center">
-              ✅ Compte créé avec succès ! Vous pouvez maintenant vous connecter.
-            </p>
+    <>
+      <Navbar variant="app" />
+      
+      <div className="min-h-screen bg-gradient-to-br from-background-light via-white to-green-50 flex items-center justify-center px-4 py-24 relative overflow-hidden">
+        {/* Decorative gradient orbs */}
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-action/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
+        
+        <div className="w-full max-w-md relative z-10">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-action bg-clip-text text-transparent mb-3">
+              Bon retour !
+            </h1>
+            <p className="text-text-secondary text-lg">Connectez-vous pour continuer</p>
           </div>
-        )}
 
-        {/* Card */}
-        <div className="bg-white rounded-lg border border-border p-8 shadow-sm">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* General error */}
-            {errors.general && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600">{errors.general}</p>
+          {/* Success message if just registered */}
+          {showRegisteredMessage && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-action/10 border border-action/20 rounded-xl animate-fade-in">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-action rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="text-sm text-action font-medium">
+                  Compte créé avec succès ! Connectez-vous maintenant.
+                </p>
               </div>
-            )}
-
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-text-primary mb-2">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="vous@exemple.com"
-                error={errors.email}
-                disabled={isLoading}
-                autoComplete="email"
-              />
             </div>
+          )}
 
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-text-primary mb-2">
-                Mot de passe
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="••••••••"
-                error={errors.password}
+          {/* Card */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-border p-8 shadow-xl">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* General error */}
+              {errors.general && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm text-red-600">{errors.general}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Email */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-semibold text-primary mb-2">
+                  Email
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="vous@exemple.com"
+                  error={errors.email}
+                  disabled={isLoading}
+                  autoComplete="email"
+                  className="transition-all"
+                />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-semibold text-primary mb-2">
+                  Mot de passe
+                </label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="••••••••"
+                  error={errors.password}
+                  disabled={isLoading}
+                  autoComplete="current-password"
+                  className="transition-all"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full shadow-lg shadow-action/20 hover:shadow-xl hover:shadow-action/30 transition-all"
+                isLoading={isLoading}
                 disabled={isLoading}
-                autoComplete="current-password"
-              />
-            </div>
+              >
+                {isLoading ? 'Connexion en cours...' : 'Se connecter'}
+              </Button>
+            </form>
+          </div>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              variant="primary"
-              className="w-full"
-              isLoading={isLoading}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Connexion...' : 'Se connecter'}
-            </Button>
-          </form>
+          {/* Footer */}
+          <div className="text-center mt-6 space-y-4">
+            <p className="text-text-secondary">
+              Pas encore de compte ?{' '}
+              <Link href="/register" className="text-action font-semibold hover:underline transition-all">
+                Créer un compte gratuitement
+              </Link>
+            </p>
+            
+            <Link href="/" className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-primary transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Retour à l&apos;accueil
+            </Link>
+          </div>
         </div>
-
-        {/* Footer */}
-        <p className="text-center text-sm text-text-secondary mt-6">
-          Pas encore de compte ?{' '}
-          <Link href="/register" className="text-action font-medium hover:underline">
-            Créer un compte
-          </Link>
-        </p>
       </div>
-    </div>
+    </>
   );
 }
 
