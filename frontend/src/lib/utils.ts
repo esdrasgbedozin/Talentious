@@ -40,8 +40,8 @@ export function formatDate(date: Date | string): string {
  * @returns Truncated text with ellipsis if needed
  */
 export function truncate(text: string, length: number): string {
-  if (length < 0) {
-    throw new Error('Length must be a positive number');
+  if (length < 1) {
+    throw new Error('Length must be a positive integer greater than zero');
   }
   
   if (text.length <= length) return text;
