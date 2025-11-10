@@ -29,9 +29,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
   
-  // Redirect to onboarding if already authenticated and trying to access auth pages
+  // Redirect authenticated users from auth pages based on onboarding status
   if (isAuthRoute && hasSession) {
-    return NextResponse.redirect(new URL('/onboarding', request.url));
+    const onboardingComplete = request.cookies.get('onboarding_complete')?.value === 'true';
+    if (onboardingComplete) {
+      return NextResponse.redirect(new URL('/profile', request.url));
+    } else {
+      return NextResponse.redirect(new URL('/onboarding', request.url));
+    }
   }
   
   return NextResponse.next();

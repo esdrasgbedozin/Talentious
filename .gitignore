@@ -11,8 +11,11 @@ __pycache__/
 *.egg-info/
 *htmlcov/
 *.egg
-*lib/
-*lib64/
+# Python lib folders (but not frontend/src/lib/)
+backend/lib/
+backend/lib64/
+agents/*/lib/
+agents/*/lib64/
 *parts/
 *sdist/
 *var/

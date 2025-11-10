@@ -27,6 +27,11 @@ import {
 } from '@/types/profile';
 import { getProfile, saveProfile } from '@/lib/profile';
 
+// Validation constants
+const MIN_SUMMARY_LENGTH_COMPLETE = 50; // Minimum for profile completeness
+const MIN_SUMMARY_LENGTH_RECOMMENDED = 100; // Recommended minimum for quality
+const SUCCESS_MESSAGE_DURATION = 5000; // milliseconds
+
 export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile>(createEmptyProfile());
@@ -53,10 +58,10 @@ export default function ProfilePage() {
     loadProfile();
   }, []);
 
-  // Auto-hide success message after 5 seconds
+  // Auto-hide success message after configured duration
   useEffect(() => {
     if (successMessage) {
-      const timer = setTimeout(() => setSuccessMessage(null), 5000);
+      const timer = setTimeout(() => setSuccessMessage(null), SUCCESS_MESSAGE_DURATION);
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
@@ -213,7 +218,7 @@ export default function ProfilePage() {
     );
   };
 
-  const isSummaryComplete = () => (profile?.summary?.trim()?.length || 0) > 50;
+  const isSummaryComplete = () => (profile?.summary?.trim()?.length || 0) > MIN_SUMMARY_LENGTH_COMPLETE;
 
   if (isLoading) {
     return (
@@ -350,8 +355,8 @@ export default function ProfilePage() {
               />
               <p className="mt-2 text-sm text-gray-500">
                 {profile?.summary?.length || 0} caractères
-                {(profile?.summary?.length || 0) > 0 && (profile?.summary?.length || 0) < 100 && (
-                  <span className="ml-2 text-orange-600">• Trop court (minimum recommandé: 100)</span>
+                {(profile?.summary?.length || 0) > 0 && (profile?.summary?.length || 0) < MIN_SUMMARY_LENGTH_RECOMMENDED && (
+                  <span className="ml-2 text-orange-600">• Trop court (minimum recommandé: {MIN_SUMMARY_LENGTH_RECOMMENDED})</span>
                 )}
               </p>
             </div>
