@@ -53,6 +53,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     to_encode = data.copy()
     
     # Use timezone-aware timestamps (UTC). Encode 'exp' as an int timestamp.
+    # JWT 'exp' claim is defined in seconds since epoch (RFC 7519 NumericDate), so sub-second precision is not needed.
     if expires_delta:
         expire_ts = int((datetime.now(timezone.utc) + expires_delta).timestamp())
     else:
