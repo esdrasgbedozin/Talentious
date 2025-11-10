@@ -56,7 +56,6 @@ jobs:
           pytest tests/ -v
         env:
           DATABASE_URL: postgresql+asyncpg://talentious:talentious@localhost:5432/talentious_test
-          TEST_DATABASE_URL: postgresql+asyncpg://talentious:talentious@localhost:5432/talentious_test
           SECRET_KEY: test-secret-key-for-ci
           ENVIRONMENT: testing
 
