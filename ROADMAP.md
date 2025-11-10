@@ -480,15 +480,26 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
   - [ ] Affichage des erreurs (identifiants incorrects).
 
 #### 2.4. Routes Protégées & Navigation
-- [ ] Créer un middleware pour protéger les routes :
-  - [ ] `frontend/src/middleware.ts`.
-  - [ ] Vérifier la présence d'un token valide.
-  - [ ] Rediriger vers `/login` si non authentifié.
-- [ ] Créer un composant de navigation :
-  - [ ] `frontend/src/components/Navbar.tsx`.
-  - [ ] Logo "Talentious" à gauche.
-  - [ ] Menu utilisateur à droite (icône de profil, déconnexion).
-  - [ ] Visible uniquement sur les pages authentifiées.
+- [x] Créer un middleware pour protéger les routes :
+  - [x] `frontend/src/middleware.ts`.
+  - [x] Vérifier la présence d'un cookie de session valide (talentious_session).
+  - [x] Rediriger vers `/login` avec paramètre `?redirect` si non authentifié.
+  - [x] Protéger `/onboarding`, `/profile`, `/dashboard`.
+- [x] Créer un composant de navigation authentifié :
+  - [x] `frontend/src/components/Navbar.tsx` - variant `authenticated`.
+  - [x] Logo "Talentious" à gauche avec lien vers `/profile`.
+  - [x] Navigation desktop : liens vers "Mon Profil" et "Mes CV".
+  - [x] Menu utilisateur à droite :
+    - [x] Avatar avec initiales depuis l'email.
+    - [x] Affichage du nom d'utilisateur et email (desktop).
+    - [x] Menu déroulant avec : profil, paramètres, déconnexion.
+    - [x] Version mobile responsive avec navigation dans le menu.
+    - [x] Click-outside handler pour fermer le dropdown.
+- [x] Intégration cookie de session :
+  - [x] AuthContext gère le cookie `talentious_session` (max-age 30 jours).
+  - [x] Cookie set sur login/init, removed sur logout/error.
+
+**Note de sécurité** : Le système actuel utilise JWT dans localStorage + cookie de session pour le middleware. Migration vers HttpOnly cookies recommandée avant V1 (voir Phase Pré-V1).
 
 #### 2.5. Page d'Onboarding (Écran 1)
 - [ ] Créer `frontend/src/app/onboarding/page.tsx` :
