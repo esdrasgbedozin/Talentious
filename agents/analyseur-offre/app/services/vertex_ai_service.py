@@ -63,22 +63,24 @@ class VertexAIService:
         job_offer_text: str,
         prompt_template: str,
         temperature: float = 0.2,
-        max_output_tokens: int = 4096  # Increased from 2048 for longer responses
+        max_output_tokens: int = 4096,  # Increased from 2048 for longer responses
+        max_retries: int = 3  # Number of retry attempts for malformed JSON
     ) -> Dict[str, Any]:
         """
-        Analyze a job offer using Vertex AI
+        Analyze a job offer using Vertex AI with retry logic for JSON validation
         
         Args:
             job_offer_text: The job offer text to analyze
             prompt_template: The prompt template with {job_offer_text} placeholder
             temperature: Model temperature (0.0-1.0, lower = more deterministic)
             max_output_tokens: Maximum tokens in response
+            max_retries: Maximum number of retry attempts for malformed JSON
             
         Returns:
             Parsed JSON response from the model
             
         Raises:
-            ValueError: If model not initialized or response invalid
+            ValueError: If model not initialized or all retries fail
         """
         if not self.model:
             raise ValueError("Vertex AI model not initialized")
@@ -86,39 +88,67 @@ class VertexAIService:
         # Format the prompt with the job offer text
         prompt = prompt_template.format(job_offer_text=job_offer_text)
         
-        logger.info(f"Analyzing job offer with Vertex AI (text length: {len(job_offer_text)} chars)")
+        logger.info(
+            f"Analyzing job offer with Vertex AI "
+            f"(text length: {len(job_offer_text)} chars, max_retries: {max_retries})"
+        )
         
-        try:
-            # Configure generation parameters
-            generation_config = GenerationConfig(
-                temperature=temperature,
-                max_output_tokens=max_output_tokens,
-                response_mime_type="application/json"  # Force JSON response
-            )
-            
-            # Generate content
-            response = self.model.generate_content(
-                prompt,
-                generation_config=generation_config
-            )
-            
-            # Extract and parse the response
-            response_text = response.text.strip()
-            logger.debug(f"Raw response from Vertex AI: {response_text[:200]}...")
-            
-            # Parse JSON response
+        last_error = None
+        
+        # Retry loop with JSON validation
+        for attempt in range(1, max_retries + 1):
             try:
-                result = json.loads(response_text)
-                logger.info("Job offer analyzed successfully")
-                return result
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse JSON response: {str(e)}")
-                logger.error(f"Raw response: {response_text}")
-                raise ValueError(f"Model returned invalid JSON: {str(e)}")
-            
-        except Exception as e:
-            logger.error(f"Error calling Vertex AI: {str(e)}")
-            raise ValueError(f"Failed to analyze job offer: {str(e)}")
+                # Configure generation parameters
+                generation_config = GenerationConfig(
+                    temperature=temperature,
+                    max_output_tokens=max_output_tokens,
+                    response_mime_type="application/json"  # Force JSON response
+                )
+                
+                logger.info(f"Attempt {attempt}/{max_retries}: Calling Vertex AI...")
+                
+                # Generate content
+                response = self.model.generate_content(
+                    prompt,
+                    generation_config=generation_config
+                )
+                
+                # Extract and parse the response
+                response_text = response.text.strip()
+                logger.debug(f"Raw response from Vertex AI (attempt {attempt}): {response_text[:200]}...")
+                
+                # Parse JSON response
+                try:
+                    result = json.loads(response_text)
+                    logger.info(f"✅ Job offer analyzed successfully on attempt {attempt}")
+                    return result
+                    
+                except json.JSONDecodeError as e:
+                    last_error = e
+                    logger.warning(
+                        f"⚠️  Attempt {attempt}/{max_retries}: JSON parsing failed - {str(e)}"
+                    )
+                    logger.debug(f"Malformed JSON response: {response_text}")
+                    
+                    # If this is not the last attempt, retry
+                    if attempt < max_retries:
+                        logger.info(f"🔄 Retrying... ({max_retries - attempt} attempts remaining)")
+                        continue
+                    else:
+                        # Last attempt failed - raise error
+                        logger.error(f"❌ All {max_retries} attempts failed. Last error: {str(e)}")
+                        logger.error(f"Last malformed response: {response_text}")
+                        raise ValueError(
+                            f"Model returned invalid JSON after {max_retries} attempts. "
+                            f"Last error: {str(e)}"
+                        )
+                
+            except Exception as e:
+                # Non-JSON errors (network, API errors, etc.)
+                if "invalid JSON" not in str(e):
+                    logger.error(f"❌ Error calling Vertex AI on attempt {attempt}: {str(e)}")
+                    raise ValueError(f"Failed to analyze job offer: {str(e)}")
+                raise  # Re-raise JSON errors to be handled by outer try/except
 
 
 # Global instance (singleton pattern)

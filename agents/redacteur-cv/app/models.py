@@ -59,7 +59,9 @@ class Education(BaseModel):
 
 class Skill(BaseModel):
     """User skill from profile"""
+    id: Optional[str] = None  # Optional ID field
     name: str
+    category: Optional[str] = None  # "hard_skill" or "soft_skill"
     level: Optional[str] = None
 
 

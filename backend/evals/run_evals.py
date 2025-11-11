@@ -36,7 +36,8 @@ OFFERS_DIR = SCRIPT_DIR / "offers"
 RESULTS_DIR = SCRIPT_DIR / "results"
 
 # Timeout pour les appels API (en secondes)
-TIMEOUT = 120.0
+# Increased to 300s (5 min) to account for Gemini retry logic (3 attempts × ~60s each)
+TIMEOUT = 300.0
 
 # ===== COULEURS ANSI POUR LE TERMINAL =====
 class Colors:

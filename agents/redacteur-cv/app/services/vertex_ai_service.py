@@ -58,66 +58,97 @@ class VertexAIService:
             raise
     
     async def generate_cv(
-        self, 
-        prompt: str,
+        self,
+        system_prompt: str,
         offer_analysis: Dict[str, Any],
         user_profile: Dict[str, Any],
         temperature: float = 0.3,
-        max_tokens: int = 4096
+        max_tokens: int = 8192,
+        max_retries: int = 3  # Number of retry attempts for malformed JSON
     ) -> Dict[str, Any]:
         """
-        Generate optimized CV using Vertex AI Gemini (async)
+        Generate an optimized CV using Vertex AI Gemini with retry logic
         
         Args:
-            prompt: System prompt with instructions for CV generation
-            offer_analysis: Job offer analysis data (from Analyseur-Offre)
+            system_prompt: System-level instructions for CV generation
+            offer_analysis: Analyzed job offer data
             user_profile: User profile data
-            temperature: Creativity level (0.0-1.0). Lower = more deterministic
-            max_tokens: Maximum tokens in response
+            temperature: Creativity level (0.0-1.0, higher = more creative)
+            max_tokens: Maximum output tokens
+            max_retries: Maximum number of retry attempts for malformed JSON
             
         Returns:
-            Dict containing the generated CV data in JSON format
+            Generated CV data as dictionary
             
         Raises:
-            Exception: If generation fails
+            Exception: If generation fails after all retries
         """
         if not self.model:
-            raise Exception("Vertex AI model not initialized. Check GCP_PROJECT_ID configuration.")
+            raise Exception("Vertex AI model not initialized")
         
         try:
-            # Prepare the full prompt with context
-            full_prompt = self._build_full_prompt(prompt, offer_analysis, user_profile)
+            # Build the complete prompt
+            full_prompt = self._build_full_prompt(system_prompt, offer_analysis, user_profile)
             
-            logger.info(f"Generating CV with Gemini {self.model_name} (temperature={temperature})")
+            logger.info(
+                f"Generating CV with Gemini {self.model_name} "
+                f"(temperature={temperature}, max_retries={max_retries})"
+            )
             logger.debug(f"Prompt length: {len(full_prompt)} characters")
             
-            # Configure generation parameters
-            generation_config = GenerationConfig(
-                temperature=temperature,
-                max_output_tokens=max_tokens,
-                response_mime_type="application/json"  # Force JSON output
-            )
+            last_error = None
             
-            # Generate content asynchronously (non-blocking)
-            # Use asyncio.to_thread to run the synchronous Vertex AI call in a separate thread
-            response = await asyncio.to_thread(
-                self.model.generate_content,
-                full_prompt,
-                generation_config=generation_config
-            )
-            
-            # Parse JSON response
-            cv_data = json.loads(response.text)
-            
-            logger.info("CV generated successfully")
-            logger.debug(f"Response length: {len(response.text)} characters")
-            
-            return cv_data
-            
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse Gemini response as JSON: {str(e)}")
-            logger.error(f"Raw response: {response.text[:500]}...")
-            raise Exception(f"Invalid JSON response from Gemini: {str(e)}")
+            # Retry loop with JSON validation
+            for attempt in range(1, max_retries + 1):
+                try:
+                    # Configure generation parameters
+                    generation_config = GenerationConfig(
+                        temperature=temperature,
+                        max_output_tokens=max_tokens,
+                        response_mime_type="application/json"  # Force JSON output
+                    )
+                    
+                    logger.info(f"Attempt {attempt}/{max_retries}: Calling Vertex AI Gemini...")
+                    
+                    # Generate content asynchronously (non-blocking)
+                    # Use asyncio.to_thread to run the synchronous Vertex AI call in a separate thread
+                    response = await asyncio.to_thread(
+                        self.model.generate_content,
+                        full_prompt,
+                        generation_config=generation_config
+                    )
+                    
+                    # Parse JSON response
+                    try:
+                        cv_data = json.loads(response.text)
+                        logger.info(f"CV generated successfully on attempt {attempt}")
+                        logger.debug(f"Response length: {len(response.text)} characters")
+                        return cv_data
+                        
+                    except json.JSONDecodeError as e:
+                        last_error = e
+                        logger.warning(
+                            f"Attempt {attempt}/{max_retries}: JSON parsing failed - {str(e)}"
+                        )
+                        logger.debug(f"Malformed JSON response: {response.text[:500]}...")
+                        
+                        # If this is not the last attempt, retry
+                        if attempt < max_retries:
+                            logger.info(f"Retrying... ({max_retries - attempt} attempts remaining)")
+                            continue
+                        else:
+                            # Last attempt failed - raise error
+                            logger.error(f"All {max_retries} attempts failed. Last error: {str(e)}")
+                            logger.error(f"Last malformed response: {response.text[:1000]}...")
+                            raise Exception(
+                                f"Gemini returned invalid JSON after {max_retries} attempts. "
+                                f"Last error: {str(e)}"
+                            )
+                
+                except json.JSONDecodeError:
+                    # Already handled above, continue to next iteration or raise
+                    continue
+                    
         except Exception as e:
             logger.error(f"Failed to generate CV: {str(e)}")
             raise Exception(f"CV generation failed: {str(e)}")
