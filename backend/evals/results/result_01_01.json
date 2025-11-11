@@ -1,0 +1,384 @@
+{
+  "metadata": {
+    "profile_file": "01_junior_dev.json",
+    "offer_file": "01_tech_lead.txt",
+    "generated_at": "2025-11-11T20:05:06.766921Z",
+    "pipeline_version": "1.0.0"
+  },
+  "offer_analysis": {
+    "hard_skills": [
+      {
+        "name": "JavaScript",
+        "level": "Expert",
+        "importance": "Critical"
+      },
+      {
+        "name": "TypeScript",
+        "level": "Expert",
+        "importance": "Critical"
+      },
+      {
+        "name": "React",
+        "level": "Expert",
+        "importance": "Critical"
+      },
+      {
+        "name": "Node.js",
+        "level": "Expert",
+        "importance": "Critical"
+      },
+      {
+        "name": "Express.js",
+        "level": "Expert",
+        "importance": "Critical"
+      },
+      {
+        "name": "NestJS",
+        "level": "Expert",
+        "importance": "Critical"
+      },
+      {
+        "name": "PostgreSQL",
+        "level": "Expert",
+        "importance": "Critical"
+      },
+      {
+        "name": "MongoDB",
+        "level": "Expert",
+        "importance": "Critical"
+      },
+      {
+        "name": "Redis",
+        "level": "Expert",
+        "importance": "Critical"
+      },
+      {
+        "name": "Docker",
+        "level": "Intermediate",
+        "importance": "Important"
+      },
+      {
+        "name": "Kubernetes",
+        "level": "Intermediate",
+        "importance": "Important"
+      },
+      {
+        "name": "CI/CD",
+        "level": "Intermediate",
+        "importance": "Important"
+      },
+      {
+        "name": "GitLab CI",
+        "level": "Intermediate",
+        "importance": "Important"
+      },
+      {
+        "name": "GitHub Actions",
+        "level": "Intermediate",
+        "importance": "Important"
+      },
+      {
+        "name": "AWS",
+        "level": "Intermediate",
+        "importance": "Important"
+      },
+      {
+        "name": "GCP",
+        "level": "Intermediate",
+        "importance": "Nice to have"
+      },
+      {
+        "name": "Microservices",
+        "level": "Intermediate",
+        "importance": "Important"
+      },
+      {
+        "name": "Python",
+        "level": null,
+        "importance": "Nice to have"
+      },
+      {
+        "name": "Java",
+        "level": null,
+        "importance": "Nice to have"
+      },
+      {
+        "name": "Kotlin",
+        "level": null,
+        "importance": "Nice to have"
+      },
+      {
+        "name": "Next.js",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "TailwindCSS",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Zustand",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "GraphQL",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "REST APIs",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "RabbitMQ",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "AWS ECS",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "AWS RDS",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "AWS S3",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "AWS CloudFront",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Terraform",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "SonarQube",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Jest",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Cypress",
+        "level": null,
+        "importance": "Important"
+      }
+    ],
+    "soft_skills": [
+      {
+        "name": "Leadership technique",
+        "level": null,
+        "importance": "Critical"
+      },
+      {
+        "name": "Collaboration",
+        "level": null,
+        "importance": "Critical"
+      },
+      {
+        "name": "Communication claire",
+        "level": null,
+        "importance": "Critical"
+      },
+      {
+        "name": "Empathie",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Agilité",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Pragmatisme",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Gestion des priorités",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Mentorat",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Promotion de l'excellence technique",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Prise de décisions architecturales stratégiques",
+        "level": null,
+        "importance": "Critical"
+      }
+    ],
+    "seniority_level": "Lead",
+    "key_responsibilities": [
+      "Diriger techniquement une équipe de 6 développeurs (seniors et mid-level)",
+      "Architecturer et développer des solutions scalables et performantes (microservices, APIs REST/GraphQL)",
+      "Garantir la qualité du code via code reviews, pair programming et bonnes pratiques CI/CD",
+      "Collaborer étroitement avec le Product Manager et les équipes métier pour définir la roadmap technique",
+      "Mentorer les développeurs juniors et promouvoir une culture d'excellence technique",
+      "Participer aux décisions d'architecture et à la modernisation de notre stack technique",
+      "Assurer la performance, la sécurité et la maintenabilité de nos applications en production"
+    ],
+    "tone": "startup-like"
+  },
+  "generated_cv": {
+    "cv_data": {
+      "personal_info": {
+        "first_name": "Sophie",
+        "last_name": "Martin",
+        "phone": "+33 6 12 34 56 78",
+        "email": "sophie.martin@example.fr",
+        "linkedin": "https://linkedin.com/in/sophie-martin-dev",
+        "address": "Lyon, France"
+      },
+      "summary": "Développeuse Full-Stack Junior passionnée avec une expérience pratique dans le développement d'applications web robustes. Maîtrise de JavaScript et React, avec des bases solides en Node.js et PostgreSQL. J'ai activement contribué à toutes les phases du cycle de développement, de la conception au déploiement, au sein d'équipes agiles. Reconnue pour ma collaboration efficace et ma communication claire, je suis avide de relever des défis techniques complexes pour construire des solutions innovantes et scalables, et de progresser vers des responsabilités accrues.",
+      "selected_experiences": [
+        {
+          "id": "exp_001",
+          "title": "Développeuse Full-Stack Junior",
+          "company": "StartupTech",
+          "start_date": "2023-09",
+          "end_date": null,
+          "location": "Lyon, France",
+          "description": "Développé et maintenu une application web de gestion de projets full-stack, utilisant JavaScript, React pour le frontend et Node.js avec PostgreSQL pour le backend. Activement participé à l'ensemble du cycle de développement, de la conception à l'intégration continue et au déploiement (CI/CD), garantissant la qualité et la performance. Collaboré étroitement avec une équipe de 4 développeurs en méthodologie Agile/Scrum, contribuant à la livraison de fonctionnalités clés.",
+          "highlighted_skills": [
+            "JavaScript",
+            "React",
+            "Node.js",
+            "PostgreSQL",
+            "CI/CD",
+            "Collaboration"
+          ]
+        },
+        {
+          "id": "exp_002",
+          "title": "Stagiaire Développeuse Web",
+          "company": "WebAgency Pro",
+          "start_date": "2023-02",
+          "end_date": "2023-08",
+          "location": "Lyon, France",
+          "description": "Conçu et développé des sites web responsive performants pour divers clients, intégrant React pour des interfaces utilisateur dynamiques et Node.js pour des fonctionnalités backend spécifiques. Rédigé des spécifications techniques détaillées et participé aux réunions clients, assurant une communication claire des besoins et des solutions. Contribué à l'amélioration de l'expérience utilisateur et à la satisfaction client.",
+          "highlighted_skills": [
+            "React",
+            "Node.js",
+            "Communication claire"
+          ]
+        }
+      ],
+      "highlighted_skills": [
+        {
+          "name": "JavaScript",
+          "level": "Intermédiaire",
+          "category": "hard_skill",
+          "importance": "Critical"
+        },
+        {
+          "name": "React",
+          "level": "Intermédiaire",
+          "category": "hard_skill",
+          "importance": "Critical"
+        },
+        {
+          "name": "Node.js",
+          "level": "Débutant",
+          "category": "hard_skill",
+          "importance": "Critical"
+        },
+        {
+          "name": "PostgreSQL",
+          "level": "Débutant",
+          "category": "hard_skill",
+          "importance": "Critical"
+        },
+        {
+          "name": "Collaboration",
+          "level": null,
+          "category": "soft_skill",
+          "importance": "Critical"
+        },
+        {
+          "name": "Communication claire",
+          "level": null,
+          "category": "soft_skill",
+          "importance": "Critical"
+        },
+        {
+          "name": "Docker",
+          "level": "Débutant",
+          "category": "hard_skill",
+          "importance": "Important"
+        }
+      ],
+      "selected_educations": [
+        {
+          "id": "edu_001",
+          "degree": "Master 2 Informatique - Développement Logiciel",
+          "institution": "Université Claude Bernard Lyon 1",
+          "graduation_date": "2023-09",
+          "description": "Spécialisation en développement web et mobile. Projet de fin d'études : Application de suivi de budget personnel (React + Node.js + MongoDB)."
+        },
+        {
+          "id": "edu_002",
+          "degree": "Licence Informatique",
+          "institution": "Université Claude Bernard Lyon 1",
+          "graduation_date": "2021-09",
+          "description": null
+        }
+      ],
+      "selected_projects": [
+        {
+          "id": "proj_001",
+          "name": "BudgetTracker - Application de gestion de budget",
+          "description": "Développé une application web full-stack de gestion de budget, intégrant React pour une interface utilisateur interactive et Node.js avec MongoDB pour un backend robuste et sécurisé (authentification JWT). Démontre des compétences en architecture d'applications et déploiement.",
+          "url": "https://github.com/sophiemartin/budget-tracker",
+          "completion_date": null,
+          "relevant_skills": [
+            "React",
+            "Node.js",
+            "MongoDB",
+            "REST APIs"
+          ]
+        }
+      ],
+      "selected_certifications": [
+        {
+          "id": "cert_001",
+          "name": "JavaScript Algorithms and Data Structures",
+          "issuer": "freeCodeCamp",
+          "issue_date": "2023-01",
+          "url": "https://www.freecodecamp.org/certification/sophiemartin/javascript-algorithms-and-data-structures"
+        },
+        {
+          "id": "cert_002",
+          "name": "Responsive Web Design",
+          "issuer": "freeCodeCamp",
+          "issue_date": "2022-09",
+          "url": "https://www.freecodecamp.org/certification/sophiemartin/responsive-web-design"
+        }
+      ],
+      "optimization_notes": "Le profil du candidat est junior tandis que l'offre cible un poste de Lead. Le CV a été optimisé pour mettre en avant les compétences techniques et soft skills pertinentes du candidat, son potentiel et son ambition, sans inventer d'expérience de leadership. Le résumé et les descriptions d'expérience soulignent sa contribution active et sa capacité à collaborer sur des projets full-stack projects."
+    },
+    "message": "CV generated successfully"
+  }
+}

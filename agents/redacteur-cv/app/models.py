@@ -52,8 +52,11 @@ class Education(BaseModel):
     """Education entry"""
     id: str
     degree: str
+    field: Optional[str] = None  # Field of study
     institution: str
-    graduation_date: str  # YYYY-MM format
+    start_date: Optional[str] = None  # YYYY-MM format
+    end_date: Optional[str] = None  # YYYY-MM format (graduation date)
+    location: Optional[str] = None
     description: Optional[str] = None
 
 
@@ -65,13 +68,22 @@ class Skill(BaseModel):
     level: Optional[str] = None
 
 
+class Language(BaseModel):
+    """Language proficiency from profile"""
+    id: str
+    name: str
+    level: str  # e.g., "Native", "Fluent", "Intermediate", "Basic"
+
+
 class Project(BaseModel):
     """Project entry"""
     id: str
     name: str
     description: str
+    technologies: Optional[List[str]] = None  # List of technologies used
+    start_date: Optional[str] = None  # YYYY-MM format
+    end_date: Optional[str] = None  # YYYY-MM format
     url: Optional[str] = None
-    completion_date: Optional[str] = None  # YYYY-MM format
 
 
 class Certification(BaseModel):
@@ -79,7 +91,8 @@ class Certification(BaseModel):
     id: str
     name: str
     issuer: str
-    issue_date: str  # YYYY-MM format
+    date: Optional[str] = None  # YYYY-MM format (issue date)
+    credential_id: Optional[str] = None  # Certification credential ID
     url: Optional[str] = None
 
 
@@ -92,6 +105,7 @@ class UserProfileData(BaseModel):
     experiences: List[Experience] = []
     educations: List[Education] = []
     skills: List[Skill] = []
+    languages: List[Language] = []  # Language proficiencies
     projects: List[Project] = []
     certifications: List[Certification] = []
 

@@ -1,0 +1,22 @@
+{
+  "user_profile": {
+    "personal_info": {
+      "first_name": "Jean",
+      "last_name": "Dupont",
+      "email": "jean.dupont@example.fr"
+    },
+    "work_experiences": [],
+    "education": [],
+    "skills": [],
+    "languages": [],
+    "projects": [],
+    "certifications": []
+  },
+  "offer_analysis": {
+    "hard_skills": [{"name": "Python", "level": "Expert", "importance": "Critical"}],
+    "soft_skills": [{"name": "Communication", "importance": "Important"}],
+    "seniority_level": "Mid-level",
+    "key_responsibilities": ["Développement backend"],
+    "tone": "professional"
+  }
+}

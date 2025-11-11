@@ -35,9 +35,8 @@ PROFILES_DIR = SCRIPT_DIR / "profiles"
 OFFERS_DIR = SCRIPT_DIR / "offers"
 RESULTS_DIR = SCRIPT_DIR / "results"
 
-# Timeout pour les appels API (en secondes)
-# Increased to 300s (5 min) to account for Gemini retry logic (3 attempts × ~60s each)
-TIMEOUT = 300.0
+# Timeout pour les requêtes HTTP (5 minutes pour accommoder les retry logic + génération Gemini pour profils détaillés)
+TIMEOUT = 600.0  # Increased from 300s to 600s (10 minutes) for senior profiles with extensive data
 
 # ===== COULEURS ANSI POUR LE TERMINAL =====
 class Colors:
@@ -169,12 +168,17 @@ def generate_cv(
     Raises:
         httpx.HTTPError: En cas d'erreur HTTP
     """
+    payload = {
+        "user_profile": profile_data,  # Changed from "profile_data" to "user_profile" to match GenerateRequest model
+        "offer_analysis": offer_analysis
+    }
+    
+    # Debug: Print payload structure
+    print_info(f"📤 Payload keys: user_profile={list(profile_data.keys())[:5]}, offer_analysis={list(offer_analysis.keys())}")
+    
     response = client.post(
         WRITER_URL,
-        json={
-            "profile_data": profile_data,
-            "offer_analysis": offer_analysis
-        },
+        json=payload,
         timeout=TIMEOUT
     )
     response.raise_for_status()
@@ -280,14 +284,15 @@ def run_evals() -> None:
                     
                     # Étape 2 : Générer le CV
                     print_info("Étape 2/2 : Génération du CV optimisé...")
-                    cv_data = generate_cv(client, profile_data, offer_analysis)
+                    cv_response = generate_cv(client, profile_data, offer_analysis)
+                    cv_data = cv_response.get('cv_data', {})  # Extract cv_data from response
                     print_success(
                         f"CV généré : {len(cv_data.get('selected_experiences', []))} "
                         f"expériences, {len(cv_data.get('highlighted_skills', []))} compétences"
                     )
                     
                     # Sauvegarder le résultat
-                    save_result(profile_name, offer_name, cv_data, offer_analysis)
+                    save_result(profile_name, offer_name, cv_response, offer_analysis)
                     
                     success_count += 1
                     

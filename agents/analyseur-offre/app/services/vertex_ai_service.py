@@ -63,7 +63,7 @@ class VertexAIService:
         job_offer_text: str,
         prompt_template: str,
         temperature: float = 0.2,
-        max_output_tokens: int = 4096,  # Increased from 2048 for longer responses
+        max_output_tokens: int = 8192,  # Increased from 4096 to handle detailed job offers with many skills
         max_retries: int = 3  # Number of retry attempts for malformed JSON
     ) -> Dict[str, Any]:
         """

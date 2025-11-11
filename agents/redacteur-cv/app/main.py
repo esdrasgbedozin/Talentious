@@ -127,11 +127,11 @@ async def generate_cv(request: GenerateRequest):
         
         # Generate CV with Vertex AI (async - non-blocking)
         cv_data_dict = await vertex_service.generate_cv(
-            prompt=redacteur_prompt,
+            system_prompt=redacteur_prompt,  # Changed from 'prompt' to 'system_prompt'
             offer_analysis=offer_analysis_dict,
             user_profile=user_profile_dict,
             temperature=0.3,  # Low temperature for consistent, professional output
-            max_tokens=4096    # Large enough for complete CV
+            max_tokens=8192    # Increased from 4096 to handle large CVs with extensive experience
         )
         
         # Validate the response structure with Pydantic
