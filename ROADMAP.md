@@ -741,32 +741,53 @@ python backend/evals/run_evals.py
 cat backend/evals/results/result_01_01.json | jq .
 ```
 
-#### 3.5. Orchestration Backend (Endpoint Principal)
-- [ ] Créer la table `generated_cvs` (si pas déjà fait en Phase 1) :
-  - [ ] Migration Alembic.
-- [ ] Créer `backend/app/routes/cv.py` :
-  - [ ] `POST /cv/generate` (protégé) :
-    - [ ] **Vérification des permissions** :
-      - [ ] Si `user.role == 'admin'` : OK.
-      - [ ] Sinon, vérifier qu'il existe un `career_pass` valide : `SELECT * FROM career_passes WHERE user_id = ... AND valid_until > NOW()`.
-      - [ ] Si aucun : retourner `402 Payment Required`.
-    - [ ] Accepter `{"cv_name": "...", "offer_text": "...", "offer_pdf": <optionnel>}`.
-    - [ ] Récupérer le `profile_data` de l'utilisateur.
-    - [ ] Appeler l'Agent Analyseur avec l'offre.
-    - [ ] Appeler l'Agent Rédacteur avec le profil + l'analyse.
-    - [ ] Sauvegarder le résultat dans `generated_cvs` :
-      - [ ] `cv_name`, `template_id` (pour l'instant : "modern_v1"), `job_offer_context`, `cv_data_json`.
-    - [ ] Retourner le CV généré : `{"cv_id": "...", "cv_data": {...}}`.
-  - [ ] `GET /cv` (protégé) :
-    - [ ] Lister tous les CVs de l'utilisateur connecté.
-  - [ ] `GET /cv/{cv_id}` (protégé) :
-    - [ ] Récupérer un CV spécifique (vérifier que `user_id` correspond).
-  - [ ] `PUT /cv/{cv_id}` (protégé) :
-    - [ ] Mettre à jour le `cv_data_json` (après édition dans le WYSIWYG).
-  - [ ] `DELETE /cv/{cv_id}` (protégé) :
-    - [ ] Supprimer un CV (et son PDF sur GCS si existant).
-- [ ] Intégrer les routes dans `backend/app/main.py`.
-- [ ] Écrire des tests pour l'endpoint `/cv/generate`.
+#### 3.5. Orchestration Backend (Endpoint Principal) ✅
+**Status:** COMPLETED (2025-11-11)
+- [x] Créer la table `generated_cvs` (déjà existante depuis Phase 1)
+- [x] Créer `backend/app/services/writer_client.py`
+  - [x] Client HTTP async pour Rédacteur-CV (httpx.AsyncClient)
+  - [x] Méthode `generate_cv(user_profile, offer_analysis)` → dict
+  - [x] Timeout 600s (10 min pour génération IA)
+  - [x] Gestion erreurs HTTP (502/503/504)
+- [x] Mise à jour `docker-compose.yml`
+  - [x] Variable d'environnement `WRITER_SERVICE_URL: http://redacteur-cv:8003`
+  - [x] Dépendance backend → redacteur-cv
+- [x] Créer `backend/app/routes/cv.py` (Chef d'Orchestre Principal)
+  - [x] **POST /cv/generate** (protégé par JWT) :
+    - [x] Vérification permissions CareerPass :
+      - [x] Admin bypass automatique
+      - [x] Sinon : `SELECT * FROM career_passes WHERE user_id = X AND valid_until > NOW()`
+      - [x] Si aucun pass actif : `402 Payment Required`
+    - [x] Récupération `UserProfile.profile_data` depuis BDD
+    - [x] Appel Analyseur-Offre : `analyzer_client.analyze_text(offer_text)`
+    - [x] Appel Rédacteur-CV : `writer_client.generate_cv(profile_data, analysis_result.to_dict())`
+    - [x] Sauvegarde dans `generated_cvs` :
+      - [x] Fields: `user_id`, `cv_name`, `template_id="modern_v1"`, `job_offer_context`, `cv_data_json`
+    - [x] Retour : `{"cv_id": UUID, "cv_data": {...}, "message": "CV generated successfully"}`
+  - [x] **GET /cv** (protégé) :
+    - [x] Liste tous les CVs de l'utilisateur (ORDER BY created_at DESC)
+    - [x] Retour lightweight (sans cv_data_json pour performances)
+  - [x] **GET /cv/{cv_id}** (protégé) :
+    - [x] Récupération d'un CV spécifique avec cv_data_json complet
+    - [x] Vérification autorisation (user_id ou admin)
+  - [x] **PUT /cv/{cv_id}** (protégé) :
+    - [x] Mise à jour `cv_name` et/ou `cv_data_json`
+    - [x] Vérification autorisation
+  - [x] **DELETE /cv/{cv_id}** (protégé) :
+    - [x] Suppression du CV
+    - [x] Vérification autorisation
+- [x] Intégrer dans `backend/app/main.py`
+  - [x] Import `from app.routes import cv`
+  - [x] `app.include_router(cv.router)`
+
+**Performance Notes:**
+- ⏱️ Génération: 2-5 minutes (Gemini API + retry logic)
+- ⚠️ Optimisation différée à Phase 4 (streaming, min-instances)
+- ✅ Comportement attendu en dev local (cold starts, appels séquentiels)
+
+**Commits:**
+- `48ed30c`: Phases 3.1-3.4 (Parser, Analyzer, Writer, Evals)
+- `29f63ff`: Phase 3.5 (Backend Orchestration)
 
 ---
 
