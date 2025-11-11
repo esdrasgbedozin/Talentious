@@ -24,6 +24,7 @@ services:
       - db
       - parser-pdf
       - analyseur-offre
+      - redacteur-cv
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://talentious:talentious@db:5432/talentious}
       # Use an environment variable for SECRET_KEY in production. Default for local dev only.
@@ -32,6 +33,8 @@ services:
       PARSER_SERVICE_URL: ${PARSER_SERVICE_URL:-http://parser-pdf:8001}
       # Analyseur-Offre Agent URL (local development)
       ANALYZER_SERVICE_URL: ${ANALYZER_SERVICE_URL:-http://analyseur-offre:8002}
+      # Rédacteur-CV Agent URL (local development)
+      WRITER_SERVICE_URL: ${WRITER_SERVICE_URL:-http://redacteur-cv:8003}
 
   parser-pdf:
     build: ./agents/parser-pdf
