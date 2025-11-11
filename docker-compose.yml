@@ -23,12 +23,15 @@ services:
     depends_on:
       - db
       - parser-pdf
+      - analyseur-offre
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://talentious:talentious@db:5432/talentious}
       # Use an environment variable for SECRET_KEY in production. Default for local dev only.
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production-min-32-chars}
       # Parser-PDF Agent URL (local development)
       PARSER_SERVICE_URL: ${PARSER_SERVICE_URL:-http://parser-pdf:8001}
+      # Analyseur-Offre Agent URL (local development)
+      ANALYZER_SERVICE_URL: ${ANALYZER_SERVICE_URL:-http://analyseur-offre:8002}
 
   parser-pdf:
     build: ./agents/parser-pdf
@@ -41,6 +44,30 @@ services:
     environment:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       SERVICE_PORT: 8001
+
+  analyseur-offre:
+    build: ./agents/analyseur-offre
+    container_name: talentious_analyseur_offre
+    restart: always
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./agents/analyseur-offre/app:/app/app
+      - ./agents/analyseur-offre/prompts:/app/prompts
+    depends_on:
+      - parser-pdf
+    environment:
+      # Parser-PDF service URL
+      PARSER_SERVICE_URL: ${PARSER_SERVICE_URL:-http://parser-pdf:8001}
+      # GCP Configuration (required for Vertex AI)
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-your-gcp-project-id}
+      GCP_LOCATION: ${GCP_LOCATION:-europe-west9}
+      # Vertex AI Model
+      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-1.5-flash-002}
+      # Prompt Management (false = local files, true = Secret Manager)
+      USE_SECRET_MANAGER: ${USE_SECRET_MANAGER:-false}
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
 
   frontend:
     build:
