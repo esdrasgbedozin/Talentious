@@ -155,18 +155,46 @@ async def generate_cv(
                 detail="User profile not found. Please create your profile first."
             )
         
-        # 3. Analyze job offer with Analyseur-Offre
-        logger.info("📊 Step 1/2: Analyzing job offer...")
+        # 3. Transform skills structure (Frontend {hard:[], soft:[]} → AI [{name, level, category}])
+        profile_data = dict(user_profile.profile_data)
+        
+        # Check if skills uses old frontend structure {hard: [], soft: []}
+        if isinstance(profile_data.get('skills'), dict) and 'hard' in profile_data.get('skills', {}):
+            logger.info("🔄 Transforming skills from frontend structure to AI structure...")
+            skills_dict = profile_data['skills']
+            transformed_skills = []
+            
+            # Transform hard skills
+            for skill_name in skills_dict.get('hard', []):
+                transformed_skills.append({
+                    "name": skill_name,
+                    "level": "advanced",  # Default level (AI can infer from experience)
+                    "category": "hard_skill"
+                })
+            
+            # Transform soft skills
+            for skill_name in skills_dict.get('soft', []):
+                transformed_skills.append({
+                    "name": skill_name,
+                    "level": "intermediate",  # Default level
+                    "category": "soft_skill"
+                })
+            
+            profile_data['skills'] = transformed_skills
+            logger.info(f"✅ Transformed {len(transformed_skills)} skills to AI format")
+        
+        # 4. Analyze job offer with Analyseur-Offre
+        logger.info("📊 Step 1/3: Analyzing job offer...")
         analysis_result = await analyzer_client.analyze_text(request.offer_text)
         logger.info(
             f"✅ Offer analyzed: {len(analysis_result.hard_skills)} hard skills, "
             f"{len(analysis_result.soft_skills)} soft skills"
         )
         
-        # 4. Generate CV with Rédacteur-CV
-        logger.info("✍️  Step 2/2: Generating optimized CV...")
+        # 5. Generate CV with Rédacteur-CV
+        logger.info("✍️  Step 2/3: Generating optimized CV...")
         generated_response = await writer_client.generate_cv(
-            user_profile=user_profile.profile_data,
+            user_profile=profile_data,  # Use transformed profile
             offer_analysis=analysis_result.to_dict()
         )
         
@@ -175,7 +203,7 @@ async def generate_cv(
         
         logger.info("✅ CV generated successfully by AI pipeline")
         
-        # 5. Save to database
+        # 6. Save to database
         new_cv = GeneratedCV(
             user_id=current_user.id,
             cv_name=request.cv_name,
