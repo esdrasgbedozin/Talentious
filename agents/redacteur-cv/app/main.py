@@ -125,8 +125,8 @@ async def generate_cv(request: GenerateRequest):
         offer_analysis_dict = request.offer_analysis.model_dump()
         user_profile_dict = request.user_profile.model_dump()
         
-        # Generate CV with Vertex AI
-        cv_data_dict = vertex_service.generate_cv(
+        # Generate CV with Vertex AI (async - non-blocking)
+        cv_data_dict = await vertex_service.generate_cv(
             prompt=redacteur_prompt,
             offer_analysis=offer_analysis_dict,
             user_profile=user_profile_dict,

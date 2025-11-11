@@ -5,6 +5,7 @@ Service for generating optimized CVs using Google Vertex AI (Gemini 2.5 Flash)
 
 import os
 import json
+import asyncio
 import logging
 from typing import Dict, Any, Optional
 
@@ -56,7 +57,7 @@ class VertexAIService:
             logger.error(f"Failed to initialize Vertex AI: {str(e)}")
             raise
     
-    def generate_cv(
+    async def generate_cv(
         self, 
         prompt: str,
         offer_analysis: Dict[str, Any],
@@ -65,7 +66,7 @@ class VertexAIService:
         max_tokens: int = 4096
     ) -> Dict[str, Any]:
         """
-        Generate optimized CV using Vertex AI Gemini
+        Generate optimized CV using Vertex AI Gemini (async)
         
         Args:
             prompt: System prompt with instructions for CV generation
@@ -97,8 +98,10 @@ class VertexAIService:
                 response_mime_type="application/json"  # Force JSON output
             )
             
-            # Generate content
-            response = self.model.generate_content(
+            # Generate content asynchronously (non-blocking)
+            # Use asyncio.to_thread to run the synchronous Vertex AI call in a separate thread
+            response = await asyncio.to_thread(
+                self.model.generate_content,
                 full_prompt,
                 generation_config=generation_config
             )
