@@ -622,25 +622,33 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 - [ ] Déployer sur Cloud Run (service privé, région `europe-west9`)
 - [ ] Configurer IAM (requêtes authentifiées uniquement)
 
-#### 3.2. Agent `Analyseur-Offre`
-- [ ] Créer la structure du projet : `agents/analyseur-offre/`.
-- [ ] Installer les dépendances :
-  - [ ] `pip install fastapi uvicorn google-cloud-aiplatform`.
-- [ ] Créer le prompt d'analyse dans Secret Manager :
-  - [ ] Nom du secret : `PROMPT_ANALYSEUR_OFFRE`.
-  - [ ] Contenu : Le prompt détaillé pour analyser une offre (identifier compétences, ton, niveau requis).
-- [ ] Créer `agents/analyseur-offre/app/main.py` :
-  - [ ] Endpoint `POST /analyze` :
-    - [ ] Accepter `{"offer_text": "..."}` ou `{"offer_pdf": <bytes>}`.
-    - [ ] Si PDF, appeler l'Agent Parser-PDF.
-    - [ ] Charger le prompt depuis Secret Manager.
-    - [ ] Appeler Vertex AI (Gemini Pro) avec le prompt + le texte de l'offre.
-    - [ ] Parser la réponse JSON.
-    - [ ] Retourner : `{"skills": [...], "tone": "...", "level": "..."}`.
-- [ ] Créer un Dockerfile.
-- [ ] Déployer sur Cloud Run (service privé, région `europe-west9`).
-- [ ] Intégrer dans le backend principal :
-  - [ ] `backend/app/services/analyzer_client.py`.
+---
+
+### Phase 3.2 : Agent Analyseur-Offre IA (Vertex AI Gemini)
+> **Branche :** `feature/ai-generation-flow`
+> 
+> **Objectif :** Analyser les offres d'emploi (texte ou PDF) et extraire les compétences, responsabilités, niveau de séniorité, ton, etc. via IA.
+
+#### 3.2.1. Choix du modèle et région
+- [x] Modèle utilisé : **gemini-2.5-flash**
+- [x] Région GCP : **europe-west9 (Paris)**
+- [x] Contexte maximal : **1M tokens (~750K caractères)**
+- [x] RGPD : Données traitées en France/EU
+- [x] Performance : Réponse < 40s pour 200K caractères
+
+#### 3.2.2. Configuration technique
+- [x] Mise à jour de tous les fichiers de configuration :
+    - `docker-compose.yml` : modèle/région alignés
+    - `.env.example` : documentation à jour
+    - `vertex_ai_service.py` : lecture dynamique des variables d'environnement
+- [x] Test exhaustif des modèles Gemini 2.0+ dans toutes les régions
+- [x] Validation finale par appel API : extraction structurée des compétences et responsabilités
+
+#### 3.2.3. Validation
+- [x] Test curl : réponse JSON complète, hard/soft skills, responsabilités, ton
+- [x] Commit : "feat(ai): switch to gemini-2.5-flash in europe-west9 (Paris) for Analyseur-Offre agent. RGPD compliant, 1M token context, optimal performance."
+
+---
 
 #### 3.3. Agent `Rédacteur-CV` (Cœur de l'IA)
 - [ ] Créer la structure du projet : `agents/redacteur-cv/`.
@@ -925,6 +933,8 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 - [ ] Tester le parcours d'annulation :
   - [ ] Cliquer sur "Acheter", puis "Annuler" dans le formulaire Stripe.
   - [ ] Vérifier la redirection vers `/payment/cancel`.
+  - [ ] Vérifier que le Pass n'est pas activé.
+  - [ ] Vérifier que le message d'erreur est affiché.
 
 #### 5.4. Tests End-to-End & Tests d'Intégration Complets
 
@@ -1066,6 +1076,7 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
     - [ ] Cliquer sur "Annuler".
     - [ ] Vérifier redirection vers `/payment/cancel`.
     - [ ] Vérifier que le Pass n'est pas activé.
+    - [ ] Vérifier que le message d'erreur est affiché.
   - [ ] **Test : Gestion erreur paiement**
     - [ ] Utiliser une carte refusée (`4000 0000 0000 0002`).
     - [ ] Vérifier message d'erreur.

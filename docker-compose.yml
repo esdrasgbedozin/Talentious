@@ -76,6 +76,33 @@ services:
       # Logging
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
 
+  redacteur-cv:
+    build: ./agents/redacteur-cv
+    container_name: talentious_redacteur_cv
+    restart: always
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./agents/redacteur-cv/app:/app/app
+      - ./agents/redacteur-cv/prompts:/app/prompts
+      # Mount GCP credentials from host for Vertex AI authentication
+      - ~/.config/gcloud/application_default_credentials.json:/tmp/gcp_creds.json:ro
+    environment:
+      # GCP Configuration (required for Vertex AI)
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-talentious-project}
+      # europe-west9 (Paris) - Souveraineté des données française/EU (RGPD)
+      # Gemini 2.5 Flash disponible avec contexte 1M tokens (~750K chars)
+      GCP_LOCATION: ${GCP_LOCATION:-europe-west9}
+      # GCP Authentication (Application Default Credentials)
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp_creds.json
+      # Vertex AI Model
+      # Using gemini-2.5-flash (latest stable, 1M token context, optimized for speed)
+      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-2.5-flash}
+      # Prompt Management (false = local files, true = Secret Manager)
+      USE_SECRET_MANAGER: ${USE_SECRET_MANAGER:-false}
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
   frontend:
     build:
       context: ./frontend

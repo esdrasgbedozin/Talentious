@@ -1,0 +1,15 @@
+# FastAPI & Web Framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20
+
+# Pydantic for data validation
+pydantic==2.10.5
+pydantic-settings==2.7.0
+
+# Google Cloud & Vertex AI
+google-cloud-aiplatform==1.73.0
+google-cloud-secret-manager==2.21.1
+
+# Logging & Monitoring
+python-json-logger==3.2.1
