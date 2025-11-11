@@ -11,6 +11,8 @@ __pycache__/
 *.egg-info/
 *htmlcov/
 *.egg
+.pytest_cache/
+*.log
 # Python lib folders (but not frontend/src/lib/)
 backend/lib/
 backend/lib64/
