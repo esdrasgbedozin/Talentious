@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "")
-# NOTE: europe-west9 (Paris) has limited Gemini support
-# Fallback to europe-west1 (Belgium) for better model availability while staying in EU (GDPR)
-GCP_LOCATION = os.getenv("GCP_LOCATION", "europe-west1")  
-MODEL_NAME = os.getenv("VERTEX_AI_MODEL", "gemini-1.5-flash-002")  # Fast and efficient
+# europe-west9 (Paris) - Souveraineté des données française/EU (RGPD)
+# Gemini 2.5 Flash: 1M token context window (~750K chars), optimized for speed
+GCP_LOCATION = os.getenv("GCP_LOCATION", "europe-west9")  
+MODEL_NAME = os.getenv("VERTEX_AI_MODEL", "gemini-2.5-flash")
 
 
 class VertexAIService:

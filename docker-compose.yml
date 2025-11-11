@@ -63,14 +63,14 @@ services:
       PARSER_SERVICE_URL: ${PARSER_SERVICE_URL:-http://parser-pdf:8001}
       # GCP Configuration (required for Vertex AI)
       GCP_PROJECT_ID: ${GCP_PROJECT_ID:-talentious-project}
-      # europe-west4 (Pays-Bas) - Gemini models availability varies by region
-      # Reste en UE pour conformité RGPD et souveraineté des données
-      GCP_LOCATION: ${GCP_LOCATION:-europe-west4}
+      # europe-west9 (Paris) - Souveraineté des données française/EU (RGPD)
+      # Gemini 2.5 Flash disponible avec contexte 1M tokens (~750K chars)
+      GCP_LOCATION: ${GCP_LOCATION:-europe-west9}
       # GCP Authentication (Application Default Credentials)
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp_creds.json
       # Vertex AI Model
-      # Using simple gemini-pro model name (stable version)
-      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-pro}
+      # Using gemini-2.5-flash (latest stable, 1M token context, optimized for speed)
+      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-2.5-flash}
       # Prompt Management (false = local files, true = Secret Manager)
       USE_SECRET_MANAGER: ${USE_SECRET_MANAGER:-false}
       # Logging
