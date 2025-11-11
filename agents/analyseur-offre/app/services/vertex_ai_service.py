@@ -63,7 +63,7 @@ class VertexAIService:
         job_offer_text: str,
         prompt_template: str,
         temperature: float = 0.2,
-        max_output_tokens: int = 2048
+        max_output_tokens: int = 4096  # Increased from 2048 for longer responses
     ) -> Dict[str, Any]:
         """
         Analyze a job offer using Vertex AI

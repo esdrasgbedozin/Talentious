@@ -118,5 +118,21 @@ services:
     depends_on:
       - backend
 
+  # ===== TESTING & QUALITY ASSURANCE =====
+  evals:
+    build:
+      context: .
+      dockerfile: backend/evals/Dockerfile
+    container_name: talentious_evals
+    profiles:
+      - testing  # Only run when explicitly requested with --profile testing
+    depends_on:
+      - analyseur-offre
+      - redacteur-cv
+    volumes:
+      - ./backend/evals/results:/evals/results  # Persist results locally
+    networks:
+      - default
+
 volumes:
   postgres_data:

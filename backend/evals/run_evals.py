@@ -142,7 +142,7 @@ def analyze_offer(client: httpx.Client, offer_text: str) -> Dict[str, Any]:
     """
     response = client.post(
         ANALYZER_URL,
-        json={"job_description": offer_text},
+        json={"text": offer_text},  # Changed from "job_description" to "text"
         timeout=TIMEOUT
     )
     response.raise_for_status()
