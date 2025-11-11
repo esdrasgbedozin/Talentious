@@ -674,18 +674,72 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
   - [ ] `backend/app/services/writer_client.py`.
 
 #### 3.4. Qualité & Test des Prompts (Evals)
-- [ ] Créer un dossier `backend/evals/`.
-- [ ] Créer des fichiers de test :
-  - [ ] `backend/evals/profiles/` : 5 profils JSON types (junior, senior, reconversion, tech, non-tech).
-  - [ ] `backend/evals/offers/` : 5 offres texte types.
-- [ ] Créer `backend/evals/run_evals.py` :
-  - [ ] Script qui charge tous les profils et offres.
-  - [ ] Pour chaque combinaison (25 au total) :
-    - [ ] Appelle l'Agent Analyseur.
-    - [ ] Appelle l'Agent Rédacteur.
-    - [ ] Sauvegarde le résultat dans `backend/evals/results/<timestamp>/`.
-  - [ ] Génère un rapport simple (nombre de réussites, échecs, avertissements).
-- [ ] Documenter dans le README comment lancer les evals avant de valider un changement de prompt.
+- [x] **Correction Stratégique : Traduction du Prompt Rédacteur**
+  - [x] **Problème identifié** : Prompt en anglais alors que toutes les entrées/sorties sont en français
+  - [x] **Impact** : Risque de "franglais" et tournures maladroites dans les CV générés
+  - [x] **Solution implémentée** :
+    - [x] Traduction complète de `agents/redacteur-cv/prompts/redacteur.txt` en français professionnel
+    - [x] Conservation de la structure technique (schéma JSON, placeholders)
+    - [x] Passage de 6815 → 7767 caractères (prompt plus détaillé en français)
+    - [x] Rebuild du service Docker et validation du chargement
+  - [x] **Résultat** : L'IA "pense" maintenant en français, amélioration attendue du ton et de la qualité linguistique
+
+- [x] **Système d'Évaluation End-to-End**
+  - [x] Créer la structure `backend/evals/` :
+    - [x] `profiles/` : Profils utilisateur JSON (basés sur `UserProfileData`)
+    - [x] `offers/` : Offres d'emploi texte (fichiers `.txt`)
+    - [x] `results/` : Résultats des tests (générés automatiquement)
+  
+  - [x] **Fichiers de test d'exemple** :
+    - [x] `01_junior_dev.json` : Profil développeuse junior avec 3 expériences, 13 compétences, Master Informatique
+    - [x] `01_tech_lead.txt` : Offre Tech Lead Full-Stack fintech Paris (5 ans d'expérience minimum)
+    - [x] Structure réaliste et complète pour servir de modèle
+  
+  - [x] **Script d'évaluation `run_evals.py`** :
+    - [x] Chargement automatique de tous les profils (`.json`) et offres (`.txt`)
+    - [x] Boucle sur toutes les combinaisons (Profil × Offre)
+    - [x] Pour chaque combinaison :
+      - [x] **Étape 1** : Appel `POST http://analyseur-offre:8002/analyze` avec le texte de l'offre
+      - [x] **Étape 2** : Appel `POST http://redacteur-cv:8003/generate` avec profil + analyse
+      - [x] **Sauvegarde** : `backend/evals/results/result_01_01.json` avec métadonnées complètes
+    - [x] Affichage formaté avec couleurs ANSI (✅, ❌, ℹ️, ⚠️)
+    - [x] Rapport final : taux de succès, détail des erreurs, statistiques
+    - [x] Timeout configurable (120s par défaut pour Gemini)
+    - [x] Gestion d'erreurs robuste (HTTP, exceptions, KeyboardInterrupt)
+  
+  - [x] **Documentation complète** :
+    - [x] `backend/evals/README.md` : Guide complet d'utilisation
+    - [x] Prérequis : Docker, services lancés, dépendances Python
+    - [x] Format des données (profils, offres, résultats)
+    - [x] Exemples de commandes d'analyse des résultats (jq, ls, cat)
+    - [x] Section dépannage (Connection refused, Timeout, HTTP 500)
+    - [x] Métriques de qualité futures (score pertinence, cohérence linguistique)
+  
+  - [x] **Dépendances** :
+    - [x] `requirements.txt` : `httpx==0.27.0` pour les appels HTTP asynchrones
+  
+  - [x] **Prêt pour expansion** :
+    - [ ] Ajouter 4 profils supplémentaires (senior backend, data scientist, devops, product manager)
+    - [ ] Ajouter 4 offres supplémentaires (fullstack, ml engineer, infra, pm)
+    - [ ] Total prévu : 25 combinaisons (5 profils × 5 offres)
+
+**🎯 Objectifs des Evals :**
+1. **Validation qualité** : CVs cohérents et pertinents
+2. **Tests de régression** : Détecter les régressions après modifications
+3. **Benchmarking** : Mesurer les performances (temps, taux de succès)
+4. **Analyse qualitative** : Amélioration itérative des prompts
+
+**📊 Utilisation :**
+```bash
+# Installer les dépendances
+pip install -r backend/evals/requirements.txt
+
+# Lancer les tests (services Docker requis)
+python backend/evals/run_evals.py
+
+# Analyser un résultat
+cat backend/evals/results/result_01_01.json | jq .
+```
 
 #### 3.5. Orchestration Backend (Endpoint Principal)
 - [ ] Créer la table `generated_cvs` (si pas déjà fait en Phase 1) :
