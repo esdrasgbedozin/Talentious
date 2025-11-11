@@ -18,7 +18,7 @@ RUN apt-get update && \
 
 # Copy requirements and install dependencies
 COPY requirements.txt .
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /build/wheels -r requirements.txt
+RUN pip wheel --no-cache-dir --wheel-dir /build/wheels -r requirements.txt
 
 # ============================================================================
 # Stage 2: Runtime
@@ -42,7 +42,7 @@ COPY --from=builder /build/wheels /wheels
 COPY --from=builder /build/requirements.txt .
 
 # Install Python packages from wheels
-RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt && \
+RUN pip install --no-cache-dir --find-links=/wheels -r requirements.txt && \
     rm -rf /wheels
 
 # Copy application code
