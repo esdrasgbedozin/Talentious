@@ -35,8 +35,8 @@ PROFILES_DIR = SCRIPT_DIR / "profiles"
 OFFERS_DIR = SCRIPT_DIR / "offers"
 RESULTS_DIR = SCRIPT_DIR / "results"
 
-# Timeout pour les requêtes HTTP (5 minutes pour accommoder les retry logic + génération Gemini pour profils détaillés)
-TIMEOUT = 600.0  # Increased from 300s to 600s (10 minutes) for senior profiles with extensive data
+# Timeout pour les requêtes HTTP (10 minutes pour accommoder les retry logic + génération Gemini pour profils détaillés)
+TIMEOUT = 600.0
 
 # ===== COULEURS ANSI POUR LE TERMINAL =====
 class Colors:

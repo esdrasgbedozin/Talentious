@@ -62,7 +62,7 @@ class VertexAIService:
         offer_analysis: Dict[str, Any],
         user_profile: Dict[str, Any],
         temperature: float = 0.3,
-        max_tokens: int = 8192,
+        max_output_tokens: int = 8192,
         max_retries: int = 3  # Number of retry attempts for malformed JSON
     ) -> Dict[str, Any]:
         """
@@ -73,6 +73,8 @@ class VertexAIService:
             offer_analysis: Analyzed job offer data
             user_profile: User profile data
             temperature: Creativity level (0.0-1.0, higher = more creative)
+            max_output_tokens: Maximum output tokens in response
+            max_retries: Maximum number of retry attempts for malformed JSON
             max_tokens: Maximum output tokens
             max_retries: Maximum number of retry attempts for malformed JSON
             
@@ -100,7 +102,7 @@ class VertexAIService:
                 # Configure generation parameters
                 generation_config = GenerationConfig(
                     temperature=temperature,
-                    max_output_tokens=max_tokens,
+                    max_output_tokens=max_output_tokens,
                     response_mime_type="application/json"  # Force JSON output
                 )
                 

@@ -24,6 +24,17 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/cv", tags=["CV Generation"])
 
 
+# ==================== CONSTANTS ====================
+
+# Default skill levels for transformation from frontend structure to AI structure
+# Hard skills default to "advanced" as they are typically technical competencies
+# that users list only when they have strong proficiency
+DEFAULT_HARD_SKILL_LEVEL = "advanced"
+
+# Soft skills default to "intermediate" as they are more subjective and often
+# listed aspirationally or as areas of ongoing development
+DEFAULT_SOFT_SKILL_LEVEL = "intermediate"
+
 # ==================== REQUEST/RESPONSE MODELS ====================
 
 class GenerateCVRequest(BaseModel):
@@ -87,7 +98,7 @@ async def check_career_pass_or_admin(
     result = await db.execute(
         select(CareerPass)
         .where(CareerPass.user_id == current_user.id)
-        .where(CareerPass.valid_until > datetime.utcnow())
+        .where(CareerPass.valid_until > datetime.now(timezone.utc))
         .order_by(CareerPass.valid_until.desc())
     )
     active_pass = result.scalars().first()
@@ -168,7 +179,7 @@ async def generate_cv(
             for skill_name in skills_dict.get('hard', []):
                 transformed_skills.append({
                     "name": skill_name,
-                    "level": "advanced",  # Default level (AI can infer from experience)
+                    "level": DEFAULT_HARD_SKILL_LEVEL,
                     "category": "hard_skill"
                 })
             
@@ -176,7 +187,7 @@ async def generate_cv(
             for skill_name in skills_dict.get('soft', []):
                 transformed_skills.append({
                     "name": skill_name,
-                    "level": "intermediate",  # Default level
+                    "level": DEFAULT_SOFT_SKILL_LEVEL,
                     "category": "soft_skill"
                 })
             
