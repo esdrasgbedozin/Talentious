@@ -75,8 +75,6 @@ class VertexAIService:
             temperature: Creativity level (0.0-1.0, higher = more creative)
             max_output_tokens: Maximum output tokens in response
             max_retries: Maximum number of retry attempts for malformed JSON
-            max_tokens: Maximum output tokens
-            max_retries: Maximum number of retry attempts for malformed JSON
             
         Returns:
             Generated CV data as dictionary

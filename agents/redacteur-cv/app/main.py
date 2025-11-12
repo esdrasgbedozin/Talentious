@@ -131,7 +131,7 @@ async def generate_cv(request: GenerateRequest):
             offer_analysis=offer_analysis_dict,
             user_profile=user_profile_dict,
             temperature=0.3,  # Low temperature for consistent, professional output
-            max_tokens=8192    # Increased from 4096 to handle large CVs with extensive experience
+            max_output_tokens=8192    # Increased from 4096 to handle large CVs with extensive experience
         )
         
         # Validate the response structure with Pydantic
