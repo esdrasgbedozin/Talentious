@@ -5,7 +5,6 @@ HTTP client for communicating with the Parser-PDF microservice
 
 import os
 import logging
-from typing import Dict, Any
 
 import httpx
 from fastapi import UploadFile, HTTPException, status

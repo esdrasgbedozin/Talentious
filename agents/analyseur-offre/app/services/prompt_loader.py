@@ -6,7 +6,6 @@ Abstraction layer for loading prompts from local files or GCP Secret Manager
 import os
 import logging
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 

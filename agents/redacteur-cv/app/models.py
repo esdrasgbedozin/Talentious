@@ -3,7 +3,6 @@ Pydantic models for CV Generator API request/response validation
 """
 
 from typing import List, Optional
-from datetime import date
 from pydantic import BaseModel, Field
 
 

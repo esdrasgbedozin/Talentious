@@ -8,7 +8,6 @@ import json
 import logging
 from typing import Dict, Any, Optional
 
-from google.cloud import aiplatform
 from vertexai.generative_models import GenerativeModel, GenerationConfig
 import vertexai
 

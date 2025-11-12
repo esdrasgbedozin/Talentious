@@ -3,9 +3,8 @@ Parser-PDF Agent - Main Application
 Microservice for PDF text extraction using PyMuPDF
 """
 
-import io
 import logging
-from typing import Dict, Any
+from typing import Dict
 
 import fitz  # PyMuPDF
 from fastapi import FastAPI, UploadFile, File, HTTPException, status
