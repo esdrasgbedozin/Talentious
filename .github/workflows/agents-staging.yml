@@ -1,0 +1,238 @@
+name: AI Agents Staging - CI/CD
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'agents/**'
+      - '.github/workflows/agents-staging.yml'
+
+env:
+  PROJECT_ID: talentious-project
+  REGION: europe-west9
+  REGISTRY: europe-west9-docker.pkg.dev
+  REPOSITORY: talentious-images
+
+jobs:
+  # ============================================
+  # JOB 1: Deploy Parser-PDF Agent
+  # ============================================
+  deploy-parser-pdf:
+    name: Deploy Parser-PDF to Staging
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+      
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+      
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/parser-pdf:${{ github.sha }} \
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/parser-pdf:latest \
+            ./agents/parser-pdf
+      
+      - name: Push Docker image to Artifact Registry
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/parser-pdf:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/parser-pdf:latest
+      
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy parser-pdf-staging \
+            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/parser-pdf:${{ github.sha }} \
+            --platform=managed \
+            --region=${{ env.REGION }} \
+            --allow-unauthenticated \
+            --port=8001 \
+            --set-env-vars="ENVIRONMENT=staging" \
+            --memory=512Mi \
+            --cpu=1 \
+            --min-instances=0 \
+            --max-instances=10 \
+            --timeout=60
+      
+      - name: Show service URL
+        run: |
+          echo "Parser-PDF Staging deployed at:"
+          gcloud run services describe parser-pdf-staging \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)'
+
+  # ============================================
+  # JOB 2: Deploy Analyseur-Offre Agent
+  # ============================================
+  deploy-analyseur-offre:
+    name: Deploy Analyseur-Offre to Staging
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+      
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+      
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/analyseur-offre:${{ github.sha }} \
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/analyseur-offre:latest \
+            ./agents/analyseur-offre
+      
+      - name: Push Docker image to Artifact Registry
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/analyseur-offre:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/analyseur-offre:latest
+      
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy analyseur-offre-staging \
+            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/analyseur-offre:${{ github.sha }} \
+            --platform=managed \
+            --region=${{ env.REGION }} \
+            --allow-unauthenticated \
+            --port=8002 \
+            --set-env-vars="ENVIRONMENT=staging,GCP_PROJECT_ID=${{ env.PROJECT_ID }},GCP_LOCATION=${{ env.REGION }},VERTEX_AI_MODEL=gemini-2.5-flash,USE_SECRET_MANAGER=false" \
+            --memory=1Gi \
+            --cpu=1 \
+            --min-instances=0 \
+            --max-instances=10 \
+            --timeout=300
+      
+      - name: Show service URL
+        run: |
+          echo "Analyseur-Offre Staging deployed at:"
+          gcloud run services describe analyseur-offre-staging \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)'
+
+  # ============================================
+  # JOB 3: Deploy Rédacteur-CV Agent
+  # ============================================
+  deploy-redacteur-cv:
+    name: Deploy Rédacteur-CV to Staging
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+      
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+      
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/redacteur-cv:${{ github.sha }} \
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/redacteur-cv:latest \
+            ./agents/redacteur-cv
+      
+      - name: Push Docker image to Artifact Registry
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/redacteur-cv:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/redacteur-cv:latest
+      
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy redacteur-cv-staging \
+            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/redacteur-cv:${{ github.sha }} \
+            --platform=managed \
+            --region=${{ env.REGION }} \
+            --allow-unauthenticated \
+            --port=8003 \
+            --set-env-vars="ENVIRONMENT=staging,GCP_PROJECT_ID=${{ env.PROJECT_ID }},GCP_LOCATION=${{ env.REGION }},VERTEX_AI_MODEL=gemini-2.5-flash,USE_SECRET_MANAGER=false" \
+            --memory=1Gi \
+            --cpu=1 \
+            --min-instances=0 \
+            --max-instances=10 \
+            --timeout=600
+      
+      - name: Show service URL
+        run: |
+          echo "Rédacteur-CV Staging deployed at:"
+          gcloud run services describe redacteur-cv-staging \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)'
+
+  # ============================================
+  # JOB 4: Update Backend Staging Config
+  # ============================================
+  update-backend-config:
+    name: Update Backend with Agent URLs
+    needs: [deploy-parser-pdf, deploy-analyseur-offre, deploy-redacteur-cv]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+      
+      - name: Get Agent URLs
+        id: urls
+        run: |
+          PARSER_URL=$(gcloud run services describe parser-pdf-staging --region=${{ env.REGION }} --format='value(status.url)')
+          ANALYZER_URL=$(gcloud run services describe analyseur-offre-staging --region=${{ env.REGION }} --format='value(status.url)')
+          WRITER_URL=$(gcloud run services describe redacteur-cv-staging --region=${{ env.REGION }} --format='value(status.url)')
+          
+          echo "parser_url=$PARSER_URL" >> $GITHUB_OUTPUT
+          echo "analyzer_url=$ANALYZER_URL" >> $GITHUB_OUTPUT
+          echo "writer_url=$WRITER_URL" >> $GITHUB_OUTPUT
+      
+      - name: Update Backend Staging Environment Variables
+        run: |
+          gcloud run services update backend-staging \
+            --region=${{ env.REGION }} \
+            --update-env-vars="PARSER_SERVICE_URL=${{ steps.urls.outputs.parser_url }},ANALYZER_SERVICE_URL=${{ steps.urls.outputs.analyzer_url }},WRITER_SERVICE_URL=${{ steps.urls.outputs.writer_url }}"
+      
+      - name: Summary
+        run: |
+          echo "AI Agents deployed to staging:"
+          echo "  - Parser-PDF:      ${{ steps.urls.outputs.parser_url }}"
+          echo "  - Analyseur-Offre: ${{ steps.urls.outputs.analyzer_url }}"
+          echo "  - Rédacteur-CV:    ${{ steps.urls.outputs.writer_url }}"
+          echo ""
+          echo "Backend staging updated with agent URLs"
