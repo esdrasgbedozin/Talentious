@@ -1,0 +1,38 @@
+TECH LEAD FULL-STACK - PARIS (CDI)
+
+Notre scale-up fintech en pleine croissance recherche un·e Tech Lead Full-Stack passionné·e pour rejoindre notre équipe Engineering de 25 personnes. Vous piloterez une squad de 6 développeurs dans la conception et le développement de notre plateforme de paiement nouvelle génération.
+
+RESPONSABILITÉS :
+- Diriger techniquement une équipe de 6 développeurs (seniors et mid-level)
+- Architecturer et développer des solutions scalables et performantes (microservices, APIs REST/GraphQL)
+- Garantir la qualité du code via code reviews, pair programming et bonnes pratiques CI/CD
+- Collaborer étroitement avec le Product Manager et les équipes métier pour définir la roadmap technique
+- Mentorer les développeurs juniors et promouvoir une culture d'excellence technique
+- Participer aux décisions d'architecture et à la modernisation de notre stack technique
+- Assurer la performance, la sécurité et la maintenabilité de nos applications en production
+
+PROFIL RECHERCHÉ :
+- Minimum 5 ans d'expérience en développement Full-Stack, dont 2 ans en position de leadership technique
+- Expertise solide en JavaScript/TypeScript (React, Node.js, Express/NestJS)
+- Maîtrise des bases de données relationnelles (PostgreSQL) et NoSQL (MongoDB, Redis)
+- Expérience confirmée avec Docker, Kubernetes, et les pipelines CI/CD (GitLab CI, GitHub Actions)
+- Bonne connaissance des architectures cloud (AWS ou GCP) et des patterns microservices
+- Compétences en Python ou Java/Kotlin seraient un plus
+- Leadership technique démontré, capacité à prendre des décisions architecturales stratégiques
+- Excellent esprit de collaboration, communication claire et empathie avec les équipes
+- Agilité, pragmatisme et capacité à gérer les priorités dans un environnement startup exigeant
+
+STACK TECHNIQUE :
+Front : React 18, TypeScript, Next.js, TailwindCSS, Zustand
+Back : Node.js, NestJS, TypeScript, GraphQL, REST APIs
+Data : PostgreSQL, MongoDB, Redis, RabbitMQ
+Infra : Docker, Kubernetes, AWS (ECS, RDS, S3, CloudFront), Terraform
+CI/CD : GitHub Actions, SonarQube, Jest, Cypress
+
+NOUS OFFRONS :
+- Salaire attractif : 65-85K€ selon profil + BSPCE
+- Télétravail flexible (2-3 jours/semaine)
+- Budget formation (3000€/an) et temps dédié à l'apprentissage
+- Équipement haut de gamme (MacBook Pro, écrans, casque)
+- Ambiance startup bienveillante et exigeante, équipe multiculturelle
+- Bureaux modernes au cœur de Paris (Station Châtelet)

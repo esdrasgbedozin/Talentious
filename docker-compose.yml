@@ -22,10 +22,89 @@ services:
       - ./backend:/app
     depends_on:
       - db
+      - parser-pdf
+      - analyseur-offre
+      - redacteur-cv
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://talentious:talentious@db:5432/talentious}
       # Use an environment variable for SECRET_KEY in production. Default for local dev only.
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production-min-32-chars}
+      # Parser-PDF Agent URL (local development)
+      PARSER_SERVICE_URL: ${PARSER_SERVICE_URL:-http://parser-pdf:8001}
+      # Analyseur-Offre Agent URL (local development)
+      ANALYZER_SERVICE_URL: ${ANALYZER_SERVICE_URL:-http://analyseur-offre:8002}
+      # Rédacteur-CV Agent URL (local development)
+      WRITER_SERVICE_URL: ${WRITER_SERVICE_URL:-http://redacteur-cv:8003}
+
+  parser-pdf:
+    build: ./agents/parser-pdf
+    container_name: talentious_parser_pdf
+    restart: always
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./agents/parser-pdf/app:/service/app
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SERVICE_PORT: 8001
+
+  analyseur-offre:
+    build: ./agents/analyseur-offre
+    container_name: talentious_analyseur_offre
+    restart: always
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./agents/analyseur-offre/app:/app/app
+      - ./agents/analyseur-offre/prompts:/app/prompts
+      # Mount GCP credentials from host for Vertex AI authentication
+      - ~/.config/gcloud/application_default_credentials.json:/tmp/gcp_creds.json:ro
+    depends_on:
+      - parser-pdf
+    environment:
+      # Parser-PDF service URL
+      PARSER_SERVICE_URL: ${PARSER_SERVICE_URL:-http://parser-pdf:8001}
+      # GCP Configuration (required for Vertex AI)
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-talentious-project}
+      # europe-west9 (Paris) - Souveraineté des données française/EU (RGPD)
+      # Gemini 2.5 Flash disponible avec contexte 1M tokens (~750K chars)
+      GCP_LOCATION: ${GCP_LOCATION:-europe-west9}
+      # GCP Authentication (Application Default Credentials)
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp_creds.json
+      # Vertex AI Model
+      # Using gemini-2.5-flash (latest stable, 1M token context, optimized for speed)
+      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-2.5-flash}
+      # Prompt Management (false = local files, true = Secret Manager)
+      USE_SECRET_MANAGER: ${USE_SECRET_MANAGER:-false}
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+  redacteur-cv:
+    build: ./agents/redacteur-cv
+    container_name: talentious_redacteur_cv
+    restart: always
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./agents/redacteur-cv/app:/app/app
+      - ./agents/redacteur-cv/prompts:/app/prompts
+      # Mount GCP credentials from host for Vertex AI authentication
+      - ~/.config/gcloud/application_default_credentials.json:/tmp/gcp_creds.json:ro
+    environment:
+      # GCP Configuration (required for Vertex AI)
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-talentious-project}
+      # europe-west9 (Paris) - Souveraineté des données française/EU (RGPD)
+      # Gemini 2.5 Flash disponible avec contexte 1M tokens (~750K chars)
+      GCP_LOCATION: ${GCP_LOCATION:-europe-west9}
+      # GCP Authentication (Application Default Credentials)
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp_creds.json
+      # Vertex AI Model
+      # Using gemini-2.5-flash (latest stable, 1M token context, optimized for speed)
+      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-2.5-flash}
+      # Prompt Management (false = local files, true = Secret Manager)
+      USE_SECRET_MANAGER: ${USE_SECRET_MANAGER:-false}
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
 
   frontend:
     build:
@@ -41,6 +120,22 @@ services:
       - /app/.next
     depends_on:
       - backend
+
+  # ===== TESTING & QUALITY ASSURANCE =====
+  evals:
+    build:
+      context: .
+      dockerfile: backend/evals/Dockerfile
+    container_name: talentious_evals
+    profiles:
+      - testing  # Only run when explicitly requested with --profile testing
+    depends_on:
+      - analyseur-offre
+      - redacteur-cv
+    volumes:
+      - ./backend/evals/results:/evals/results  # Persist results locally
+    networks:
+      - default
 
 volumes:
   postgres_data:
