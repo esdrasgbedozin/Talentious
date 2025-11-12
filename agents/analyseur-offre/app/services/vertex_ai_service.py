@@ -92,8 +92,6 @@ class VertexAIService:
             f"(text length: {len(job_offer_text)} chars, max_retries: {max_retries})"
         )
         
-        last_error = None
-        
         # Retry loop with JSON validation
         for attempt in range(1, max_retries + 1):
             try:
@@ -123,7 +121,6 @@ class VertexAIService:
                     return result
                     
                 except json.JSONDecodeError as e:
-                    last_error = e
                     logger.warning(
                         f"⚠️  Attempt {attempt}/{max_retries}: JSON parsing failed - {str(e)}"
                     )
@@ -133,14 +130,14 @@ class VertexAIService:
                     if attempt < max_retries:
                         logger.info(f"🔄 Retrying... ({max_retries - attempt} attempts remaining)")
                         continue
-                    else:
-                        # Last attempt failed - raise error
-                        logger.error(f"❌ All {max_retries} attempts failed. Last error: {str(e)}")
-                        logger.error(f"Last malformed response: {response_text}")
-                        raise ValueError(
-                            f"Model returned invalid JSON after {max_retries} attempts. "
-                            f"Last error: {str(e)}"
-                        )
+                    
+                    # Last attempt failed - raise error
+                    logger.error(f"❌ All {max_retries} attempts failed. Last error: {str(e)}")
+                    logger.error(f"Last malformed response: {response_text}")
+                    raise ValueError(
+                        f"Model returned invalid JSON after {max_retries} attempts. "
+                        f"Last error: {str(e)}"
+                    )
                 
             except Exception as e:
                 # Non-JSON errors (network, API errors, etc.)
