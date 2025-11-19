@@ -802,23 +802,24 @@ cat backend/evals/results/result_01_01.json | jq .
 > 5. Une fois terminé, créez une Pull Request de `feature/dashboard-and-editor` vers `develop`.
 *Objectif : L'utilisateur peut générer, voir, éditer et télécharger son CV.*
 
-#### 4.1. Dashboard (Écran 3)
-- [ ] Créer `frontend/src/app/dashboard/page.tsx` :
-  - [ ] Titre : "Mes CVs".
-  - [ ] Bouton principal (en haut à droite) : "+ Générer un nouveau CV" (couleur action).
-  - [ ] Si aucun CV n'existe :
-    - [ ] Afficher un état vide avec une illustration et un message encourageant.
-  - [ ] Si des CVs existent :
-    - [ ] Afficher une grille de cartes (3 colonnes sur desktop, 1 sur mobile).
-    - [ ] Pour chaque carte :
-      - [ ] Nom du CV.
-      - [ ] Date de dernière modification.
-      - [ ] Boutons d'action : "Éditer", "Télécharger PDF", "Supprimer".
-- [ ] Implémenter la logique de récupération des CVs :
-  - [ ] Appel à `GET /cv` au chargement de la page.
-  - [ ] Utiliser TanStack Query pour gérer le cache et le state.
+#### 4.1. Dashboard (Écran 3) ✅ TERMINÉ
+- [x] Créer `frontend/src/app/dashboard/page.tsx` :
+  - [x] Titre : "Mes CVs".
+  - [x] Bouton principal (en haut à droite) : "+ Générer un nouveau CV" (couleur action).
+  - [x] Si aucun CV n'existe :
+    - [x] Afficher un état vide avec une illustration et un message encourageant.
+  - [x] Si des CVs existent :
+    - [x] Afficher une grille de cartes (3 colonnes sur desktop, 1 sur mobile).
+    - [x] Pour chaque carte :
+      - [x] Nom du CV.
+      - [x] Date de dernière modification.
+      - [x] Boutons d'action : "Éditer", "Télécharger PDF", "Supprimer".
+- [x] Implémenter la logique de récupération des CVs :
+  - [x] Appel à `GET /cv` au chargement de la page.
+  - [x] Utiliser TanStack Query pour gérer le cache et le state.
+- [x] **BONUS** : Système Toast + ConfirmDialog (remplace alert/confirm).
 
-#### 4.2. Flux de Génération (Pop-up)
+#### 4.2. Flux de Génération (Pop-up) 🚧 EN COURS
 - [ ] Créer un composant `frontend/src/components/GenerateCVModal.tsx` :
   - [ ] S'ouvre quand on clique sur "+ Générer un nouveau CV".
   - [ ] Champs du formulaire :
@@ -850,7 +851,7 @@ cat backend/evals/results/result_01_01.json | jq .
     - [ ] Section "Formations".
     - [ ] Section "Compétences" (deux colonnes : hard, soft).
     - [ ] Sections optionnelles : Projets, Certifications.
-  - [ ] Couleurs du thème (#2D3748, #38A169).
+  - [ ] Couleurs du thème (#2 D3748, #38A169).
   - [ ] Police : Inter.
   - [ ] Mise en page : Maximiser la densité d'information tout en gardant de la respiration.
 - [ ] Créer une fonction `renderCV(cvData: object) -> JSX` :

@@ -141,3 +141,35 @@ export const deleteCV = async (cvId: string): Promise<void> => {
   await apiClient.delete(`/cv/${cvId}`);
 };
 
+// ===== CV Generation API =====
+
+/**
+ * Request payload for CV generation
+ */
+export interface GenerateCVRequest {
+  cv_name: string;
+  offer_text: string;
+}
+
+/**
+ * Response from CV generation
+ */
+export interface GenerateCVResponse {
+  cv_id: string;
+  cv_data: Record<string, unknown>;
+  message: string;
+}
+
+/**
+ * Generate a new CV from job offer text
+ * This may take 30s-3min due to AI processing
+ * 
+ * @throws {AxiosError} 402 if user has no active CareerPass
+ * @throws {AxiosError} 404 if user profile not found
+ * @throws {AxiosError} 500/502/503 for AI service errors
+ */
+export const generateCV = async (data: GenerateCVRequest): Promise<GenerateCVResponse> => {
+  const response = await apiClient.post<GenerateCVResponse>('/cv/generate', data);
+  return response.data;
+};
+

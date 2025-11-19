@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Button from '@/components/ui/Button';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import GenerateCVModal from '@/components/GenerateCVModal';
 import { useToast } from '@/components/ui/Toast';
 import { getCVs, deleteCV, type CVBase } from '@/lib/api';
 import { useState } from 'react';
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const toast = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
 
   // Fetch CVs with TanStack Query
   const { data, isLoading, isError, error } = useQuery({
@@ -67,13 +69,18 @@ export default function DashboardPage() {
   };
 
   const handleGenerateNew = () => {
-    // TODO Phase 4.2: Open GenerateCVModal
-    toast.info('Génération de CV - Modal à implémenter en Phase 4.2');
+    setIsGenerateModalOpen(true);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
       <Navbar variant="authenticated" />
+
+      {/* Generate CV Modal */}
+      <GenerateCVModal
+        isOpen={isGenerateModalOpen}
+        onClose={() => setIsGenerateModalOpen(false)}
+      />
 
       {/* Confirmation Dialog */}
       <ConfirmDialog
