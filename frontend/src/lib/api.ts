@@ -93,3 +93,58 @@ export const getErrorMessage = (error: unknown): string => {
   return 'Une erreur inconnue est survenue';
 };
 
+// ===== CV API Types =====
+
+/**
+ * Base CV information (list view)
+ */
+export interface CVBase {
+  id: string;
+  cv_name: string;
+  template_id: string;
+  job_offer_context: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Full CV with complete data
+ */
+export interface CVFull extends CVBase {
+  cv_data_json: Record<string, unknown>;
+  gcs_pdf_url: string | null;
+}
+
+/**
+ * Response from GET /cv
+ */
+export interface GetCVsResponse {
+  cvs: CVBase[];
+  total: number;
+}
+
+// ===== CV API Functions =====
+
+/**
+ * Get all CVs for the authenticated user
+ */
+export const getCVs = async (): Promise<GetCVsResponse> => {
+  const response = await apiClient.get<GetCVsResponse>('/cv');
+  return response.data;
+};
+
+/**
+ * Get a specific CV by ID
+ */
+export const getCVById = async (cvId: string): Promise<CVFull> => {
+  const response = await apiClient.get<CVFull>(`/cv/${cvId}`);
+  return response.data;
+};
+
+/**
+ * Delete a CV by ID
+ */
+export const deleteCV = async (cvId: string): Promise<void> => {
+  await apiClient.delete(`/cv/${cvId}`);
+};
+
