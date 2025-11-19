@@ -102,7 +102,6 @@ export interface CVBase {
   id: string;
   cv_name: string;
   template_id: string;
-  job_offer_context: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -111,25 +110,19 @@ export interface CVBase {
  * Full CV with complete data
  */
 export interface CVFull extends CVBase {
+  job_offer_context: string | null;
   cv_data_json: Record<string, unknown>;
   gcs_pdf_url: string | null;
-}
-
-/**
- * Response from GET /cv
- */
-export interface GetCVsResponse {
-  cvs: CVBase[];
-  total: number;
 }
 
 // ===== CV API Functions =====
 
 /**
  * Get all CVs for the authenticated user
+ * Returns array of CVs directly (backend returns list, not object)
  */
-export const getCVs = async (): Promise<GetCVsResponse> => {
-  const response = await apiClient.get<GetCVsResponse>('/cv');
+export const getCVs = async (): Promise<CVBase[]> => {
+  const response = await apiClient.get<CVBase[]>('/cv');
   return response.data;
 };
 

@@ -109,7 +109,7 @@ export default function DashboardPage() {
         )}
 
         {/* Empty State */}
-        {!isLoading && !isError && data && data.cvs.length === 0 && (
+        {!isLoading && !isError && data && data.length === 0 && (
           <div className="text-center py-20">
             <div className="mb-8">
               <FileText size={120} className="mx-auto text-gray-300" />
@@ -133,9 +133,9 @@ export default function DashboardPage() {
         )}
 
         {/* CVs Grid */}
-        {!isLoading && !isError && data && data.cvs.length > 0 && (
+        {!isLoading && !isError && data && data.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data.cvs.map((cv) => (
+            {data.map((cv) => (
               <CVCard
                 key={cv.id}
                 cv={cv}
@@ -188,15 +188,6 @@ function CVCard({ cv, onEdit, onDownload, onDelete, isDeleting }: CVCardProps) {
           </p>
         </div>
       </div>
-
-      {/* Job Context (if exists) */}
-      {cv.job_offer_context && (
-        <div className="mb-4">
-          <p className="text-sm text-gray-600 line-clamp-2">
-            {cv.job_offer_context}
-          </p>
-        </div>
-      )}
 
       {/* Action Buttons */}
       <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
