@@ -1251,16 +1251,95 @@ cat backend/evals/results/result_01_01.json | jq .
 - [ ] Ajouter les liens dans le footer de toutes les pages.
 
 #### 5.6. Préparation pour le Déploiement en Production
-- [ ] Vérifier que tous les secrets sont bien dans Secret Manager (pas de `.env` en clair).
+
+##### 5.6.1. Sécurisation des Prompts (Secret Manager)
+**Contexte** : En développement, nos agents IA lisent les prompts depuis des fichiers locaux (`prompts/*.txt`). Pour la production, ces prompts doivent être sécurisés dans GCP Secret Manager pour éviter toute exposition ou modification non autorisée.
+
+- [ ] **Créer les secrets dans GCP Secret Manager** :
+  - [ ] Se connecter à GCP Console > Security > Secret Manager.
+  - [ ] Créer les secrets suivants (un par agent et par langue) :
+    - [ ] `PROMPT_PARSER_PDF_FR` (Parser-PDF en français)
+    - [ ] `PROMPT_ANALYSEUR_OFFRE_FR` (Analyseur-Offre en français)
+    - [ ] `PROMPT_REDACTEUR_CV_FR` (Rédacteur-CV en français)
+  - [ ] Pour chaque secret, créer une première version vide (sera remplie à l'étape suivante).
+
+- [ ] **Copier le contenu des prompts dans Secret Manager** :
+  - [ ] Ouvrir `agents/parser-pdf/prompts/*.txt` (si applicable).
+  - [ ] Copier le contenu complet du fichier.
+  - [ ] Dans GCP Secret Manager, ouvrir le secret `PROMPT_PARSER_PDF_FR`.
+  - [ ] Créer une nouvelle version et coller le contenu du prompt.
+  - [ ] Répéter pour `PROMPT_ANALYSEUR_OFFRE_FR` :
+    - [ ] Source : `agents/analyseur-offre/prompts/analyseur.txt`
+  - [ ] Répéter pour `PROMPT_REDACTEUR_CV_FR` :
+    - [ ] Source : `agents/redacteur-cv/prompts/redacteur.txt`
+  - [ ] **Important** : Vérifier que le contenu copié est identique au fichier local (pas de caractères manquants ou mal encodés).
+
+- [ ] **Configurer les permissions IAM** :
+  - [ ] Identifier les Service Accounts utilisés par les agents en production :
+    - [ ] Exemple : `analyseur-offre-sa@PROJECT_ID.iam.gserviceaccount.com`
+    - [ ] Exemple : `redacteur-cv-sa@PROJECT_ID.iam.gserviceaccount.com`
+  - [ ] Pour chaque Service Account, accorder le rôle `Secret Manager Secret Accessor` :
+    - [ ] GCP Console > IAM & Admin > IAM
+    - [ ] Ou via gcloud CLI :
+      ```bash
+      gcloud secrets add-iam-policy-binding PROMPT_ANALYSEUR_OFFRE_FR \
+        --member="serviceAccount:analyseur-offre-sa@PROJECT_ID.iam.gserviceaccount.com" \
+        --role="roles/secretmanager.secretAccessor"
+      ```
+  - [ ] Répéter pour chaque secret et chaque Service Account concerné.
+
+- [ ] **Mettre à jour les variables d'environnement de production** :
+  - [ ] Dans Cloud Run, éditer les services suivants (PRODUCTION uniquement) :
+    - [ ] `analyseur-offre-production`
+    - [ ] `redacteur-cv-production`
+  - [ ] Ajouter la variable d'environnement :
+    - [ ] Nom : `USE_SECRET_MANAGER`
+    - [ ] Valeur : `true`
+  - [ ] Ajouter les variables d'environnement pour les noms des secrets :
+    - [ ] `SECRET_PROMPT_NAME=PROMPT_ANALYSEUR_OFFRE_FR` (pour analyseur-offre)
+    - [ ] `SECRET_PROMPT_NAME=PROMPT_REDACTEUR_CV_FR` (pour redacteur-cv)
+  - [ ] **Ne PAS activer** `USE_SECRET_MANAGER` en staging/développement (continuer à utiliser les fichiers locaux).
+
+- [ ] **Vérifier le code de chargement des prompts** :
+  - [ ] S'assurer que les agents vérifient la variable `USE_SECRET_MANAGER` :
+    ```python
+    if os.getenv("USE_SECRET_MANAGER") == "true":
+        # Charger depuis Secret Manager
+        prompt = load_prompt_from_secret_manager(secret_name)
+    else:
+        # Charger depuis fichier local
+        prompt = load_prompt_from_file("prompts/xxx.txt")
+    ```
+  - [ ] Tester en local avec `USE_SECRET_MANAGER=false` (comportement par défaut).
+
+- [ ] **Tester en production** :
+  - [ ] Déployer les agents en production avec les nouvelles variables d'environnement.
+  - [ ] Vérifier les logs Cloud Run pour confirmer que les prompts sont bien chargés depuis Secret Manager.
+  - [ ] Générer un CV de test pour valider le bon fonctionnement.
+  - [ ] En cas d'erreur, vérifier :
+    - [ ] Les permissions IAM (Secret Accessor).
+    - [ ] Le nom du secret (sensible à la casse).
+    - [ ] Le contenu du secret (caractères spéciaux, encodage UTF-8).
+
+**Documentation** :
+- [ ] Documenter dans `README.md` ou `DEPLOYMENT.md` la procédure de mise à jour des prompts en production :
+  - [ ] Comment modifier un prompt : Créer une nouvelle version du secret dans Secret Manager.
+  - [ ] Comment rollback : Activer une version précédente du secret.
+  - [ ] Comment tester : Utiliser une variable d'environnement différente en staging (`PROMPT_ANALYSEUR_OFFRE_FR_STAGING`).
+
+##### 5.6.2. Vérifications Pré-Déploiement
+- [ ] Vérifier que tous les autres secrets sont bien dans Secret Manager (pas de `.env` en clair).
 - [ ] Vérifier que les variables d'environnement de production sont configurées dans Cloud Run.
 - [ ] Vérifier que le webhook Stripe pointe vers l'URL de production.
 - [ ] Tester le déploiement avec GitHub Actions :
   - [ ] Créer une branche `release/v1.0`.
   - [ ] Merger dans `main`.
   - [ ] Vérifier que le pipeline se lance et déploie correctement.
+
+##### 5.6.3. Tests Finaux en Production
 - [ ] Tester l'application en production :
   - [ ] Inscription d'un utilisateur.
-  - [ ] Génération d'un CV.
+  - [ ] Génération d'un CV (vérifier que les prompts Secret Manager fonctionnent).
   - [ ] Achat d'un Pass avec une vraie carte Stripe (mode live).
 - [ ] Configurer les logs et monitoring (Cloud Logging, Cloud Monitoring).
 - [ ] Configurer des alertes pour :

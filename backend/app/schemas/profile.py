@@ -80,7 +80,7 @@ class Certification(BaseModel):
 class ProfileData(BaseModel):
     """Complete profile data schema - matches frontend UserProfile interface."""
     personal_info: PersonalInfo = Field(..., description="Personal information")
-    summary: str = Field(..., description="Professional summary")
+    summary: str = Field(default="", description="Professional summary")
     experiences: List[Experience] = Field(default_factory=list, description="Work experiences")
     educations: List[Education] = Field(default_factory=list, description="Education history")
     skills: Skills = Field(default_factory=Skills, description="Hard and soft skills")
