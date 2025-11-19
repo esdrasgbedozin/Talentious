@@ -13,7 +13,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { X, FileText, Sparkles, CheckCircle2 } from 'lucide-react';
+import { X, FileText, Sparkles, CheckCircle2, Upload } from 'lucide-react';
 import Button from './ui/Button';
 import { useToast } from './ui/Toast';
 import { generateCV, type GenerateCVRequest } from '@/lib/api';
@@ -255,12 +255,37 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
                     onChange={(e) => setOfferText(e.target.value)}
                     placeholder="Collez ici le texte complet de l'offre d'emploi (description du poste, compétences requises, responsabilités...)"
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#38A169] focus:outline-none transition-colors resize-none text-gray-900"
-                    rows={12}
+                    rows={10}
                     required
                   />
                   <p className="mt-1 text-xs text-gray-500">
                     Minimum 50 caractères · {offerText.length} caractères saisis
                   </p>
+                </div>
+
+                {/* PDF Upload (Disabled for V1) */}
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-semibold text-gray-400">
+                      Ou uploadez l&apos;offre en PDF
+                    </label>
+                    <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">
+                      Bientôt disponible
+                    </span>
+                  </div>
+                  <div className="relative opacity-50 cursor-not-allowed">
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center bg-gray-50">
+                      <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-sm text-gray-500 mb-1">
+                        Cliquez pour uploader ou glissez-déposez
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        PDF jusqu&apos;à 10MB (fonctionnalité à venir)
+                      </p>
+                    </div>
+                    {/* Overlay to prevent clicks */}
+                    <div className="absolute inset-0 cursor-not-allowed" />
+                  </div>
                 </div>
 
                 {/* Info Box */}
