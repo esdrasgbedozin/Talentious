@@ -9,6 +9,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Button from '@/components/ui/Button';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
 import { getCVs, deleteCV, type CVBase } from '@/lib/api';
 import { useState } from 'react';
 import { FileText, Edit, Download, Trash2, Plus } from 'lucide-react';
@@ -16,7 +18,9 @@ import { FileText, Edit, Download, Trash2, Plus } from 'lucide-react';
 export default function DashboardPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Fetch CVs with TanStack Query
   const { data, isLoading, isError, error } = useQuery({
@@ -31,18 +35,25 @@ export default function DashboardPage() {
       // Invalidate and refetch CVs list
       queryClient.invalidateQueries({ queryKey: ['cvs'] });
       setDeletingId(null);
+      setConfirmDelete(null);
+      toast.success('CV supprimé avec succès');
     },
     onError: (error) => {
       console.error('Failed to delete CV:', error);
       setDeletingId(null);
-      alert('Erreur lors de la suppression du CV');
+      setConfirmDelete(null);
+      toast.error('Erreur lors de la suppression du CV');
     },
   });
 
   const handleDelete = (cvId: string, cvName: string) => {
-    if (confirm(`Êtes-vous sûr de vouloir supprimer "${cvName}" ?`)) {
-      setDeletingId(cvId);
-      deleteMutation.mutate(cvId);
+    setConfirmDelete({ id: cvId, name: cvName });
+  };
+
+  const confirmDeleteAction = () => {
+    if (confirmDelete) {
+      setDeletingId(confirmDelete.id);
+      deleteMutation.mutate(confirmDelete.id);
     }
   };
 
@@ -50,19 +61,31 @@ export default function DashboardPage() {
     router.push(`/cv/${cvId}/edit`);
   };
 
-  const handleDownload = (cvId: string) => {
+  const handleDownload = (_cvId: string) => {
     // TODO Phase 4.5: Implement PDF download
-    alert('Téléchargement PDF - Fonctionnalité en cours de développement');
+    toast.info('Téléchargement PDF - Fonctionnalité en cours de développement');
   };
 
   const handleGenerateNew = () => {
     // TODO Phase 4.2: Open GenerateCVModal
-    alert('Génération de CV - Modal à implémenter en Phase 4.2');
+    toast.info('Génération de CV - Modal à implémenter en Phase 4.2');
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
       <Navbar variant="authenticated" />
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDelete !== null}
+        title="Supprimer ce CV ?"
+        message={`Êtes-vous sûr de vouloir supprimer "${confirmDelete?.name}" ? Cette action est irréversible.`}
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        variant="danger"
+        onConfirm={confirmDeleteAction}
+        onCancel={() => setConfirmDelete(null)}
+      />
 
       <main className="max-w-7xl mx-auto px-6 py-12">
         {/* Header */}
