@@ -4,7 +4,7 @@ Orchestrates the full AI pipeline: Analyzer → Writer
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -98,7 +98,7 @@ async def check_career_pass_or_admin(
     result = await db.execute(
         select(CareerPass)
         .where(CareerPass.user_id == current_user.id)
-        .where(CareerPass.valid_until > datetime.now(timezone.utc))
+        .where(CareerPass.valid_until > datetime.utcnow())
         .order_by(CareerPass.valid_until.desc())
     )
     active_pass = result.scalars().first()

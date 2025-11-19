@@ -851,7 +851,7 @@ cat backend/evals/results/result_01_01.json | jq .
     - [ ] Section "Formations".
     - [ ] Section "Compétences" (deux colonnes : hard, soft).
     - [ ] Sections optionnelles : Projets, Certifications.
-  - [ ] Couleurs du thème (#2 D3748, #38A169).
+  - [ ] Couleurs du thème (#2D3748, #38A169).
   - [ ] Police : Inter.
   - [ ] Mise en page : Maximiser la densité d'information tout en gardant de la respiration.
 - [ ] Créer une fonction `renderCV(cvData: object) -> JSX` :
