@@ -85,12 +85,8 @@ function LoginForm() {
     try {
       await login(formData.email, formData.password);
       
-      // Login successful - wait for cookie to be set, then redirect
-      // Small delay ensures the cookie is written before navigation
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Force hard navigation to trigger middleware
-      window.location.replace('/onboarding');
+      // Login successful - redirect will be handled by useEffect
+      // when isAuthenticated becomes true
     } catch (error: unknown) {
       // Handle API errors
       const apiError = error as { response?: { data?: { detail?: string } }; message?: string };
