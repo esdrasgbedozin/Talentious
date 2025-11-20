@@ -123,6 +123,11 @@ services:
     environment:
       - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=http://localhost:8000
+      # Force Webpack instead of Turbopack (Turbopack unstable in Docker)
+      - TURBOPACK=0
+      # Enable polling for file watching in Docker
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
     depends_on:
       - backend
 

@@ -854,7 +854,7 @@ cat backend/evals/results/result_01_01.json | jq .
   - [ ] Couleurs du thème (#2D3748, #38A169).
   - [ ] Police : Inter.
   - [ ] Mise en page : Maximiser la densité d'information tout en gardant de la respiration.
-- [ ] Créer une fonction `renderCV(cvData: object) -> JSX` :
+- [ ] Créer une fonction `renderCV(cvData: object) -> JSX` :docker
   - [ ] Prend le JSON `cv_data` et le transforme en HTML.
 
 #### 4.4. Éditeur WYSIWYG (Tâche Complexe)
