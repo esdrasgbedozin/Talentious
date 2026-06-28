@@ -1,0 +1,21 @@
+# Analyseur-Offre Agent Dependencies
+# FastAPI microservice for job offer analysis using Vertex AI
+
+# Core Framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+
+# Google Cloud AI Platform
+google-cloud-aiplatform==1.73.0
+
+# HTTP Client (for calling Parser-PDF)
+httpx==0.28.1
+
+# File Upload Handling
+python-multipart==0.0.19
+
+# Environment Variables
+python-dotenv==1.0.1
+
+# JSON validation
+pydantic==2.10.5

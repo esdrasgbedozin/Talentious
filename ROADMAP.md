@@ -45,74 +45,109 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 ## 2. Roadmap Détaillée par Phases
 
 ### Phase 0 : Fondations & Infrastructure (Durée estimée : 3-4 jours)
+> **Branche pour cette phase :** `feature/project-foundations` (à créer depuis `develop`)
+> 
+> **Workflow :**
+> 1. `git checkout develop`
+> 2. `git pull`
+> 3. `git checkout -b feature/project-foundations`
+> 4. Effectuez toutes les tâches de la Phase 0 dans cette branche.
+> 5. Une fois terminé, créez une Pull Request de `feature/project-foundations` vers `develop`.
 *Objectif : Mettre en place un squelette de projet fonctionnel et automatisé.*
 
 #### 0.1. Gestion de Projet & Versioning
-- [ ] Créer le dépôt GitHub privé `Talentious`.
-- [ ] Initialiser le dépôt localement avec `git init`.
-- [ ] Créer la structure de branches initiale :
-  - [ ] Créer la branche `main`.
-  - [ ] Créer la branche `develop` à partir de `main`.
-- [ ] Configurer les protections de branches sur GitHub :
-  - [ ] Bloquer les pushs directs sur `main` (require PR).
-  - [ ] Bloquer les pushs directs sur `develop` (require PR).
-- [ ] Ajouter les fichiers de documentation :
-  - [ ] Copier `PROJECT_CONTEXT.md` à la racine.
-  - [ ] Copier `ROADMAP.md` à la racine.
-  - [ ] Créer un fichier `README.md` avec la description du projet.
-- [ ] Créer un fichier `.gitignore` global pour Python et Node.js.
+- [x] Créer le dépôt GitHub privé `Talentious`.
+- [x] Initialiser le dépôt localement avec `git init`.
+- [x] Créer la structure de branches initiale :
+  - [x] Créer la branche `main`.
+  - [x] Créer la branche `develop` à partir de `main`.
+- [x] Configurer les protections de branches sur GitHub :
+  - [x] Bloquer les pushs directs sur `main` (require PR).
+  - [x] Bloquer les pushs directs sur `develop` (require PR).
+- [x] Ajouter les fichiers de documentation :
+  - [x] Copier `PROJECT_CONTEXT.md` à la racine.
+  - [x] Copier `ROADMAP.md` à la racine.
+  - [x] Créer un fichier `README.md` avec la description du projet.
+- [x] Créer un fichier `.gitignore` global pour Python et Node.js.
 
 #### 0.2. Environnement de Développement Local (Docker Compose)
-- [ ] Créer un fichier `docker-compose.yml` à la racine du projet.
-- [ ] Configurer le service PostgreSQL local :
-  - [ ] Utiliser l'image officielle `postgres:15`.
-  - [ ] Définir les variables d'environnement (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB).
-  - [ ] Mapper le port `5432` pour l'accès local.
-  - [ ] Créer un volume pour persister les données localement.
-- [ ] Configurer le service Backend (FastAPI) :
-  - [ ] Définir le Dockerfile pour le backend (image Python 3.11).
-  - [ ] Configurer le hot-reload avec `uvicorn --reload`.
-  - [ ] Mapper le port `8000` pour l'API.
-  - [ ] Lier le service à PostgreSQL local.
-- [ ] Configurer le service Frontend (Next.js) :
-  - [ ] Définir le Dockerfile pour le frontend (image Node 20).
-  - [ ] Configurer le hot-reload avec `next dev`.
-  - [ ] Mapper le port `3000` pour l'interface.
-- [ ] Tester le lancement de l'ensemble avec `docker-compose up`.
-- [ ] Créer un fichier `Makefile` ou un script `dev.sh` pour simplifier les commandes courantes.
+- [x] Créer un fichier `docker-compose.yml` à la racine du projet.
+- [x] Configurer le service PostgreSQL local :
+  - [x] Utiliser l'image officielle `postgres:15`.
+  - [x] Définir les variables d'environnement (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB).
+  - [x] Mapper le port `5432` pour l'accès local.
+  - [x] Créer un volume pour persister les données localement.
+- [x] Configurer le service Backend (FastAPI) :
+  - [x] Définir le Dockerfile pour le backend (image Python 3.11).
+  - [x] Configurer le hot-reload avec `uvicorn --reload`.
+  - [x] Mapper le port `8000` pour l'API.
+  - [x] Lier le service à PostgreSQL local.
+- [x] Configurer le service Frontend (Next.js) :
+  - [x] Définir le Dockerfile pour le frontend (image Node 20).
+  - [x] Configurer le hot-reload avec `next dev`.
+  - [x] Mapper le port `3000` pour l'interface.
+- [x] Tester le lancement de l'ensemble avec `docker-compose up`.
+- [x] Créer un fichier `Makefile` ou un script `dev.sh` pour simplifier les commandes courantes.
 
-#### 0.3. Infrastructure GCP
-- [ ] Créer un nouveau projet GCP via la console (ex: `talentious-prod`).
-- [ ] Activer la facturation sur le projet.
-- [ ] Activer les APIs nécessaires :
-  - [ ] Cloud Run API.
-  - [ ] Cloud SQL Admin API.
-  - [ ] Cloud Storage API.
-  - [ ] Artifact Registry API.
-  - [ ] Secret Manager API.
-  - [ ] Vertex AI API.
-- [ ] Installer et configurer le CLI `gcloud` sur votre machine locale.
-- [ ] Authentifier `gcloud` : `gcloud auth login`.
-- [ ] Définir le projet par défaut : `gcloud config set project talentious-prod`.
-- [ ] Créer l'instance PostgreSQL sur Cloud SQL :
-  - [ ] Choisir PostgreSQL 15.
-  - [ ] Région : `europe-west9` (Paris).
-  - [ ] Type d'instance : choisir une config économique pour le dev (ex: `db-f1-micro` pour commencer).
-  - [ ] Activer le chiffrement au repos.
-  - [ ] Noter les identifiants de connexion (host, user, password).
-- [ ] Créer le bucket sur Cloud Storage :
-  - [ ] Nom du bucket (ex: `talentious-cvs-prod`).
-  - [ ] Type : Regional.
-  - [ ] Région : `europe-west9`.
-  - [ ] Classe de stockage : Standard.
-  - [ ] Activer le chiffrement par défaut.
-- [ ] Créer le dépôt sur Artifact Registry :
-  - [ ] Format : Docker.
-  - [ ] Nom (ex: `talentious-images`).
-  - [ ] Région : `europe-west9`.
+#### 0.3. Infrastructure GCP (via Terraform)
+
+**Pré-requis manuels :**
+- [x] Créer un nouveau projet GCP via la console (ex: `talentious-project`).
+- [x] Activer la facturation sur le projet.
+- [x] Activer les APIs nécessaires (Cloud Run, Cloud SQL, Storage, Artifact Registry, Secret Manager, Vertex AI).
+- [x] Installer Terraform sur votre machine locale.
+- [x] Installer et configurer le CLI `gcloud` sur votre machine locale.
+- [x] Authentifier `gcloud` : `gcloud auth login`.
+- [x] Définir le projet par défaut : `gcloud config set project talentious-project`.
+- [x] Créer manuellement un bucket GCS pour stocker l'état Terraform :
+  - [x] Nom : `talentious-tf-state` (doit être globalement unique).
+  - [x] Région : `europe-west9`.
+  - [x] Activer le versioning sur ce bucket.
+  - [x] Commande : `gcloud storage buckets create gs://talentious-tf-state-1000 --location=europe-west9 --uniform-bucket-level-access`.
+  - [x] Activer le versioning : `gcloud storage buckets update gs://talentious-tf-state-1000 --versioning`.
+
+**Configuration Terraform :**
+- [x] Créer le dossier `infra/` à la racine du projet.
+- [x] Créer le fichier `infra/variables.tf` :
+  - [x] Définir les variables : `project_id`, `region` (default: `europe-west9`), `db_password` (sensitive).
+- [x] Créer le fichier `infra/terraform.tfvars` :
+  - [x] Définir `project_id = "talentious-project"`.
+  - [x] Définir `region = "europe-west9"`.
+  - [x] Définir `db_password` avec un mot de passe fort.
+  - [x] Ajouter `*.tfvars` au `.gitignore` pour ne pas commiter les secrets.
+- [x] Créer le fichier `infra/main.tf` :
+  - [x] Configurer le provider Google Cloud.
+  - [x] Configurer le backend GCS pour l'état Terraform (utiliser le bucket `talentious-tf-state`).
+  - [x] Activer les APIs nécessaires via `google_project_service`.
+  - [x] Créer l'instance Cloud SQL PostgreSQL 15 :
+    - [x] Nom : `talentious-db-prod`.
+    - [x] Région : `europe-west9`.
+    - [x] Tier : `db-f1-micro`.
+    - [x] `deletion_protection = false` pour le dev (passer à `true` en production).
+  - [x] Créer la base de données `talentious` dans l'instance SQL.
+  - [x] Créer l'utilisateur `talentious-app` avec le mot de passe de `var.db_password`.
+  - [x] Créer le bucket Cloud Storage :
+    - [x] Nom : `${var.project_id}-cvs` pour garantir l'unicité.
+    - [x] Région : `europe-west9`.
+    - [x] Activer le versioning.
+    - [x] `uniform_bucket_level_access = true`.
+    - [x] `force_destroy = true` pour le dev (passer à `false` en production).
+  - [x] Créer le repository Artifact Registry :
+    - [x] Nom : `talentious-images`.
+    - [x] Format : `DOCKER`.
+    - [x] Région : `europe-west9`.
+- [x] Créer le fichier `infra/outputs.tf` :
+  - [x] Définir des outputs pour : connection string de la BDD, nom du bucket, URL du registry.
+
+**Déploiement de l'infrastructure :**
+- [x] Dans le dossier `infra/`, exécuter `terraform init`.
+- [x] Exécuter `terraform plan` et vérifier la liste des ressources à créer.
+- [x] Exécuter `terraform apply` et confirmer pour créer l'infrastructure.
+- [x] Noter les outputs affichés (connection string, etc.) dans un gestionnaire de mots de passe sécurisé.
+- [x] Vérifier dans la console GCP que toutes les ressources sont bien créées.
 
 #### 0.4. Initialisation des Projets (Code)
-- [ ] Créer la structure du monorepo :
+- [x] Créer la structure du monorepo :
   ```
   /
   ├── backend/
@@ -126,11 +161,8 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
   ├── ROADMAP.md
   └── README.md
   ```
-- [ ] Initialiser le projet **Backend (FastAPI)** :
-  - [ ] `cd backend && python -m venv venv`.
-  - [ ] Activer l'environnement virtuel.
-  - [ ] Installer FastAPI et Uvicorn : `pip install fastapi uvicorn[standard]`.
-  - [ ] Créer la structure de base :
+- [x] Initialiser le projet **Backend (FastAPI)** :
+  - [x] Créer la structure de base :
     ```
     backend/
     ├── app/
@@ -147,181 +179,229 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
     ├── requirements.txt
     └── .env.example
     ```
-  - [ ] Créer un endpoint de test `GET /health` dans `main.py`.
-  - [ ] Générer le fichier `requirements.txt` : `pip freeze > requirements.txt`.
-- [ ] Initialiser le projet **Frontend (Next.js)** :
-  - [ ] `npx create-next-app@latest frontend --typescript --tailwind --app`.
-  - [ ] Installer les dépendances de base : `cd frontend && npm install`.
-  - [ ] Configurer Tailwind CSS avec les couleurs du projet (#2D3748, #38A169).
-  - [ ] Créer la structure de base :
+  - [x] Créer un endpoint de test `GET /health` dans `main.py`.
+  - [x] Mettre à jour le fichier `requirements.txt` avec toutes les dépendances nécessaires.
+  - [x] Créer `config.py` avec Pydantic Settings pour la configuration.
+  - [x] Créer `.env.example` avec les variables d'environnement.
+  - [x] Créer les fichiers `__init__.py` pour tous les packages Python.
+  - [x] Créer `tests/test_main.py` avec un test basique du endpoint health.
+  - [x] Créer `pytest.ini` pour la configuration des tests.
+- [x] Initialiser le projet **Frontend (Next.js)** :
+  - [x] La structure Next.js est déjà créée avec TypeScript et Tailwind.
+  - [x] Installer les dépendances utilitaires : `clsx` et `tailwind-merge`.
+  - [x] Créer la structure de base :
     ```
     frontend/
     ├── src/
     │   ├── app/
-    │   ├── components/
+    │   ├── components/ui/
     │   ├── lib/
-    │   └── styles/
+    │   └── context/
     ├── public/
     ├── Dockerfile
     ├── package.json
     └── .env.local.example
     ```
-  - [ ] Créer une page de test à la racine.
+  - [x] Créer `.env.local.example` avec les variables d'environnement.
+  - [x] Créer `src/lib/api.ts` pour le client API.
+  - [x] Créer `src/lib/utils.ts` pour les fonctions utilitaires.
+- [x] Créer le dossier `agents/` avec les sous-dossiers :
+  - [x] `parser-pdf/` avec README.md
+  - [x] `analyseur-offre/` avec README.md
+  - [x] `redacteur-cv/` avec README.md
+  - [x] `agents/README.md` pour la documentation générale
+- [x] Reconstruire et tester les containers Docker.
+- [x] Vérifier que tous les services fonctionnent correctement.
 
 #### 0.5. CI/CD (GitHub Actions)
-- [ ] Créer le dossier `.github/workflows/` à la racine.
-- [ ] Créer le workflow `backend-staging.yml` :
-  - [ ] Déclencher sur push vers `develop` (uniquement si des fichiers dans `/backend` ont changé).
-  - [ ] Étapes :
-    - [ ] Checkout du code.
-    - [ ] Setup Python 3.11.
-    - [ ] Installation des dépendances : `pip install -r backend/requirements.txt`.
-    - [ ] Lancer les tests : `pytest backend/tests/`.
-    - [ ] Authentification GCP (via un Service Account).
-    - [ ] Configurer Docker pour utiliser Artifact Registry.
-    - [ ] Construire l'image Docker : `docker build -t europe-west9-docker.pkg.dev/talentious-prod/talentious-images/backend:$GITHUB_SHA ./backend`.
-    - [ ] Pousser l'image vers Artifact Registry.
-    - [ ] Déployer sur Cloud Run (service `backend-staging`, région `europe-west9`).
-- [ ] Créer le workflow `frontend-staging.yml` (même logique pour le frontend).
-- [ ] Créer un Service Account GCP dédié au CI/CD :
-  - [ ] Créer le compte : `ci-cd-deployer@talentious-prod.iam.gserviceaccount.com`.
-  - [ ] Lui attribuer les rôles nécessaires (Cloud Run Admin, Artifact Registry Writer, Storage Admin).
-  - [ ] Générer une clé JSON.
-  - [ ] Ajouter cette clé comme secret GitHub (`GCP_SA_KEY`).
-- [ ] Tester le pipeline en poussant un commit sur `develop`.
+- [x] Créer le dossier `.github/workflows/` à la racine.
+- [x] Créer le workflow `backend-staging.yml` :
+  - [x] Déclencher sur push vers `develop` (uniquement si des fichiers dans `/backend` ont changé).
+  - [x] Étapes :
+    - [x] Checkout du code.
+    - [x] Setup Python 3.11.
+    - [x] Installation des dépendances : `pip install -r backend/requirements.txt`.
+    - [x] Lancer les tests : `pytest backend/tests/`.
+    - [x] Authentification GCP (via un Service Account).
+    - [x] Configurer Docker pour utiliser Artifact Registry.
+    - [x] Construire l'image Docker : `docker build -t europe-west9-docker.pkg.dev/talentious-project/talentious-images/backend:$GITHUB_SHA ./backend`.
+    - [x] Pousser l'image vers Artifact Registry.
+    - [x] Déployer sur Cloud Run (service `backend-staging`, région `europe-west9`).
+- [x] Créer le workflow `frontend-staging.yml` (même logique pour le frontend).
+- [x] Créer un Service Account GCP dédié au CI/CD :
+  - [x] Créer le compte : `ci-cd-deployer@talentious-project.iam.gserviceaccount.com`.
+  - [x] Lui attribuer les rôles nécessaires (Cloud Run Admin, Artifact Registry Writer, Storage Admin).
+  - [x] Générer une clé JSON.
+  - [x] Ajouter cette clé comme secret GitHub (`GCP_SA_KEY`).
+- [x] Mettre à jour le Dockerfile du frontend pour supporter les build arguments.
+- [x] Créer le guide de configuration `.github/CICD_SETUP.md`.
+- [x] Configurer les secrets GitHub (DATABASE_URL, SECRET_KEY, GCP_SA_KEY).
+- [x] Tester le pipeline en poussant un commit sur `develop`.
 
 ---
 
 ### Phase 1 : Cœur Backend - Utilisateurs & Profils (Durée estimée : 5-6 jours)
+> **Branche pour cette phase :** `feature/backend-auth-profile` (à créer depuis `develop`)
+> 
+> **Workflow :**
+> 1. `git checkout develop`
+> 2. `git pull`
+> 3. `git checkout -b feature/backend-auth-profile`
+> 4. Effectuez toutes les tâches de la Phase 1.
+> 5. Une fois terminé, créez une Pull Request de `feature/backend-auth-profile` vers `develop`.
 *Objectif : Avoir un backend capable de gérer des utilisateurs et leurs données de profil de manière sécurisée.*
 
 #### 1.1. Configuration de la Base de Données
-- [ ] Installer les dépendances nécessaires :
-  - [ ] `pip install sqlalchemy psycopg2-binary alembic python-dotenv`.
-  - [ ] Mettre à jour `requirements.txt`.
-- [ ] Créer le fichier `backend/app/database.py` :
-  - [ ] Configurer la connexion à PostgreSQL avec SQLAlchemy.
-  - [ ] Créer un engine asynchrone (`create_async_engine`).
-  - [ ] Créer une session factory.
-  - [ ] Définir une dépendance FastAPI `get_db()` pour injecter la session.
-- [ ] Configurer Alembic pour les migrations :
-  - [ ] `cd backend && alembic init alembic`.
-  - [ ] Modifier `alembic/env.py` pour utiliser le modèle SQLAlchemy.
-  - [ ] Configurer la connexion DB dans `alembic.ini`.
+- [x] Installer les dépendances nécessaires :
+  - [x] `pip install sqlalchemy psycopg2-binary alembic python-dotenv`.
+  - [x] Mettre à jour `requirements.txt`.
+- [x] Créer le fichier `backend/app/database.py` :
+  - [x] Configurer la connexion à PostgreSQL avec SQLAlchemy.
+  - [x] Créer un engine asynchrone (`create_async_engine`).
+  - [x] Créer une session factory.
+  - [x] Définir une dépendance FastAPI `get_db()` pour injecter la session.
+- [x] Configurer Alembic pour les migrations :
+  - [x] `cd backend && alembic init alembic`.
+  - [x] Modifier `alembic/env.py` pour utiliser le modèle SQLAlchemy.
+  - [x] Configurer la connexion DB dans `alembic.ini`.
 
 #### 1.2. Modèles de Données (SQLAlchemy)
-- [ ] Créer `backend/app/models/user.py` :
-  - [ ] Définir le modèle `User` avec les colonnes : `id (UUID)`, `email`, `hashed_password`, `role`, `stripe_customer_id`, `created_at`.
-  - [ ] Ajouter les contraintes (UNIQUE sur email, DEFAULT pour role).
-- [ ] Créer `backend/app/models/user_profile.py` :
-  - [ ] Définir le modèle `UserProfile` avec : `user_id (PK, FK)`, `profile_data (JSONB)`, `updated_at`.
-- [ ] Créer `backend/app/models/career_pass.py` :
-  - [ ] Définir le modèle `CareerPass` avec : `id`, `user_id`, `stripe_payment_id`, `pass_type`, `valid_until`, `purchased_at`.
-- [ ] Créer `backend/app/models/generated_cv.py` :
-  - [ ] Définir le modèle `GeneratedCV` avec : `id`, `user_id`, `cv_name`, `template_id`, `job_offer_context`, `cv_data_json (JSONB)`, `gcs_pdf_url`, `created_at`, `updated_at`.
-- [ ] Créer le fichier `backend/app/models/__init__.py` pour exporter tous les modèles.
+- [x] Créer `backend/app/models/user.py` :
+  - [x] Définir le modèle `User` avec les colonnes : `id (UUID)`, `email`, `hashed_password`, `role` (USER/ADMIN), `stripe_customer_id`, `created_at`.
+  - [x] Ajouter les contraintes (UNIQUE sur email, DEFAULT pour role).
+- [x] Créer `backend/app/models/user_profile.py` :
+  - [x] Définir le modèle `UserProfile` avec : `user_id (PK, FK)`, `profile_data (JSONB)`, `updated_at`.
+- [x] Créer `backend/app/models/career_pass.py` :
+  - [x] Définir le modèle `CareerPass` avec : `id`, `user_id`, `stripe_payment_id`, `pass_type` (PASS_30_DAYS/PASS_90_DAYS), `valid_until`, `purchased_at`.
+  - [x] Ajouter la méthode `is_active()` pour vérifier la validité du pass.
+- [x] Créer `backend/app/models/generated_cv.py` :
+  - [x] Définir le modèle `GeneratedCV` avec : `id`, `user_id`, `cv_name`, `template_id`, `job_offer_context`, `cv_data_json (JSONB)`, `gcs_pdf_url`, `created_at`, `updated_at`.
+  - [x] Ajouter un index sur `created_at` pour optimiser les requêtes.
+- [x] Créer le fichier `backend/app/models/__init__.py` pour exporter tous les modèles.
 
 #### 1.3. Schémas Pydantic
-- [ ] Créer `backend/app/schemas/user.py` :
-  - [ ] Schéma `UserCreate` (email, password).
-  - [ ] Schéma `UserLogin` (email, password).
-  - [ ] Schéma `UserResponse` (id, email, role, created_at).
-  - [ ] Schéma `Token` (access_token, token_type).
-- [ ] Créer `backend/app/schemas/profile.py` :
-  - [ ] Schéma `PersonalInfo` (first_name, last_name, phone, email, linkedin, address).
-  - [ ] Schéma `Experience` (id, title, company, start_date, end_date, description, location).
-  - [ ] Schéma `Education` (id, degree, institution, date).
-  - [ ] Schéma `ProfileData` (personal_info, summary, experiences, educations, skills, projects, certifications).
-  - [ ] Schéma `ProfileResponse` (user_id, profile_data, updated_at).
+- [x] Créer `backend/app/schemas/user.py` :
+  - [x] Schéma `UserCreate` (email, password).
+  - [x] Schéma `UserLogin` (email, password).
+  - [x] Schéma `UserResponse` (id, email, role avec UserRole enum, created_at).
+  - [x] Schéma `Token` (access_token, token_type).
+  - [x] Schéma `TokenData` (user_id, email).
+- [x] Créer `backend/app/schemas/profile.py` :
+  - [x] Schéma `PersonalInfo` (first_name, last_name, phone, email, linkedin, address).
+  - [x] Schéma `Experience` (id, title, company, start_date, end_date, description, location).
+  - [x] Schéma `Education` (id, degree, institution, graduation_date).
+  - [x] Schéma `Skill` (name, level).
+  - [x] Schéma `Project` (id, name, description, url, completion_date).
+  - [x] Schéma `Certification` (id, name, issuer, issue_date, url).
+  - [x] Schéma `ProfileData` (personal_info, summary, experiences, educations, skills, projects, certifications).
+  - [x] Schéma `ProfileResponse` (user_id, profile_data, updated_at).
+  - [x] Schéma `ProfileUpdate` (profile_data).
+- [x] Upgradé Pydantic à 2.10.5 pour compatibilité Python 3.11.
+- [x] Ajouté email-validator pour validation EmailStr.
 
 #### 1.4. Migrations de Base de Données
-- [ ] Créer la première migration :
-  - [ ] `cd backend && alembic revision --autogenerate -m "Initial tables"`.
-  - [ ] Vérifier le fichier de migration généré.
-- [ ] Appliquer la migration localement (Docker Compose) :
-  - [ ] `alembic upgrade head`.
-- [ ] Vérifier que les tables sont créées dans PostgreSQL local.
-- [ ] **Automatisation CD** : Ajouter une étape au pipeline de déploiement pour exécuter `alembic upgrade head` avant de déployer le nouveau code :
-  - [ ] Modifier `.github/workflows/backend-staging.yml`.
-  - [ ] Ajouter une étape pour se connecter à Cloud SQL via le proxy.
-  - [ ] Exécuter la commande `alembic upgrade head`.
+- [x] Créer la migration initiale :
+  - [x] `docker exec -it talentious_backend alembic revision --autogenerate -m "Initial schema"`.
+  - [x] Vérifier le fichier de migration généré.
+- [x] Appliquer la migration localement (Docker Compose) :
+  - [x] `docker exec -it talentious_backend alembic upgrade head`.
+- [x] Vérifier que les tables sont créées dans PostgreSQL local :
+  - [x] Tables créées : `users`, `user_profiles`, `career_passes`, `generated_cvs`.
+  - [x] Enums PostgreSQL : `UserRole` (USER, ADMIN), `PassType` (PASS_30_DAYS, PASS_90_DAYS).
+  - [x] Relations CASCADE configurées.
+- [x] **Automatisation CD** : Ajouter une étape au pipeline de déploiement pour exécuter `alembic upgrade head` avant de déployer le nouveau code :
+  - [x] Modifier `.github/workflows/backend-staging.yml`.
+  - [x] Ajouter une étape pour se connecter à Cloud SQL via le proxy.
+  - [x] Exécuter la commande `alembic upgrade head`.
+  - [x] Documenter le secret `CLOUD_SQL_CONNECTION_NAME`.
 
 #### 1.5. Authentification & Sécurité
-- [ ] Installer les dépendances :
-  - [ ] `pip install python-jose[cryptography] passlib[bcrypt] python-multipart`.
-- [ ] Créer `backend/app/services/auth.py` :
-  - [ ] Fonction `hash_password(password: str) -> str` (utilise bcrypt).
-  - [ ] Fonction `verify_password(plain_password: str, hashed_password: str) -> bool`.
-  - [ ] Fonction `create_access_token(data: dict) -> str` (génère un JWT).
-  - [ ] Fonction `decode_access_token(token: str) -> dict` (valide et décode le JWT).
-- [ ] Créer `backend/app/config.py` :
-  - [ ] Charger les variables d'environnement (SECRET_KEY, DATABASE_URL, etc.).
-  - [ ] Utiliser `python-dotenv` pour le développement local.
-- [ ] Créer la dépendance `get_current_user` dans `backend/app/services/dependencies.py` :
-  - [ ] Extraire le token du header `Authorization: Bearer <token>`.
-  - [ ] Décoder le token et récupérer l'utilisateur depuis la DB.
-  - [ ] Lever une exception `HTTPException(401)` si invalide.
+- [x] Installer les dépendances :
+  - [x] `pip install python-jose[cryptography] passlib bcrypt python-multipart`.
+  - [x] Fixer la compatibilité bcrypt (version 4.0.1).
+- [x] Créer `backend/app/services/auth.py` :
+  - [x] Fonction `hash_password(password: str) -> str` (utilise bcrypt).
+  - [x] Fonction `verify_password(plain_password: str, hashed_password: str) -> bool`.
+  - [x] Fonction `create_access_token(data: dict) -> str` (génère un JWT).
+  - [x] Fonction `decode_access_token(token: str) -> dict` (valide et décode le JWT).
+- [x] Mettre à jour `backend/app/config.py` :
+  - [x] Ajouter CORS origins configuration.
+  - [x] Ajouter Stripe placeholders pour future intégration.
+  - [x] Exposer instance settings globale.
+- [x] Créer la dépendance `get_current_user` dans `backend/app/services/dependencies.py` :
+  - [x] Extraire le token du header `Authorization: Bearer <token>`.
+  - [x] Décoder le token et récupérer l'utilisateur depuis la DB.
+  - [x] Lever une exception `HTTPException(401)` si invalide.
+  - [x] Créer `get_current_active_user` pour extension future.
 
 #### 1.6. Endpoints d'Authentification
-- [ ] Créer `backend/app/routes/auth.py` :
-  - [ ] `POST /auth/register` :
-    - [ ] Vérifier que l'email n'existe pas déjà.
-    - [ ] Hasher le mot de passe.
-    - [ ] Créer l'utilisateur dans la DB (rôle par défaut : `user`).
-    - [ ] Créer un profil vide associé.
-    - [ ] Retourner un message de succès.
-  - [ ] `POST /auth/login` :
-    - [ ] Vérifier que l'email existe.
-    - [ ] Vérifier le mot de passe avec `verify_password`.
-    - [ ] Générer un token JWT.
-    - [ ] Retourner le token.
-  - [ ] `GET /auth/me` (protégé) :
-    - [ ] Utiliser la dépendance `get_current_user`.
-    - [ ] Retourner les informations de l'utilisateur connecté.
-- [ ] Intégrer les routes dans `backend/app/main.py`.
+- [x] Créer `backend/app/routes/auth.py` :
+  - [x] `POST /auth/register` :
+    - [x] Vérifier que l'email n'existe pas déjà.
+    - [x] Hasher le mot de passe.
+    - [x] Créer l'utilisateur dans la DB (rôle par défaut : `user`).
+    - [x] Créer un profil vide associé.
+    - [x] Retourner un message de succès.
+  - [x] `POST /auth/login` :
+    - [x] Vérifier que l'email existe.
+    - [x] Vérifier le mot de passe avec `verify_password`.
+    - [x] Générer un token JWT.
+    - [x] Retourner le token.
+  - [x] `GET /auth/me` (protégé) :
+    - [x] Utiliser la dépendance `get_current_user`.
+    - [x] Retourner les informations de l'utilisateur connecté.
+- [x] Intégrer les routes dans `backend/app/main.py`.
 
 #### 1.7. Endpoints de Gestion du Profil
-- [ ] Créer `backend/app/routes/profile.py` :
-  - [ ] `GET /profile` (protégé) :
-    - [ ] Récupérer le profil de l'utilisateur connecté.
-    - [ ] Retourner `profile_data` (JSONB).
-  - [ ] `PUT /profile` (protégé) :
-    - [ ] Valider les données entrantes avec le schéma `ProfileData`.
-    - [ ] Mettre à jour le champ `profile_data` dans la DB.
-    - [ ] Mettre à jour `updated_at`.
-    - [ ] Retourner le profil mis à jour.
-- [ ] Intégrer les routes dans `backend/app/main.py`.
+- [x] Créer `backend/app/routes/profile.py` :
+  - [x] `GET /profile` (protégé) :
+    - [x] Récupérer le profil de l'utilisateur connecté.
+    - [x] Retourner `profile_data` (JSONB).
+  - [x] `PUT /profile` (protégé) :
+    - [x] Valider les données entrantes avec le schéma `ProfileData`.
+    - [x] Mettre à jour le champ `profile_data` dans la DB.
+    - [x] Mettre à jour `updated_at`.
+    - [x] Retourner le profil mis à jour.
+- [x] Intégrer les routes dans `backend/app/main.py`.
 
 #### 1.8. Tests & Validation
-- [ ] Installer pytest et les plugins :
-  - [ ] `pip install pytest pytest-asyncio httpx`.
-- [ ] Créer `backend/tests/test_auth.py` :
-  - [ ] Test de l'endpoint `/auth/register` (succès).
-  - [ ] Test de l'endpoint `/auth/register` (email déjà existant).
-  - [ ] Test de l'endpoint `/auth/login` (succès).
-  - [ ] Test de l'endpoint `/auth/login` (mauvais mot de passe).
-  - [ ] Test de l'endpoint `/auth/me` (avec et sans token valide).
-- [ ] Créer `backend/tests/test_profile.py` :
-  - [ ] Test de `GET /profile` (utilisateur authentifié).
-  - [ ] Test de `PUT /profile` (mise à jour valide).
-- [ ] Lancer les tests localement : `pytest backend/tests/`.
-- [ ] Vérifier que le pipeline CI/CD exécute les tests correctement.
+- [x] Installer pytest et les plugins :
+  - [x] `pip install pytest pytest-asyncio httpx`.
+- [x] Créer `backend/tests/test_auth.py` :
+  - [x] Test de l'endpoint `/auth/register` (succès).
+  - [x] Test de l'endpoint `/auth/register` (email déjà existant).
+  - [x] Test de l'endpoint `/auth/login` (succès).
+  - [x] Test de l'endpoint `/auth/login` (mauvais mot de passe).
+  - [x] Test de l'endpoint `/auth/me` (avec et sans token valide).
+- [x] Créer `backend/tests/test_profile.py` :
+  - [x] Test de `GET /profile` (utilisateur authentifié).
+  - [x] Test de `PUT /profile` (mise à jour valide).
+- [x] Lancer les tests localement : `pytest backend/tests/`.
+- [x] Vérifier que le pipeline CI/CD exécute les tests correctement.
 
 #### 1.9. Gestion des Secrets (GCP Secret Manager)
-- [ ] Créer les secrets dans Secret Manager :
-  - [ ] `JWT_SECRET_KEY` : Une clé aléatoire forte.
-  - [ ] `DATABASE_URL` : URL de connexion à Cloud SQL.
-- [ ] Configurer Cloud Run pour charger ces secrets comme variables d'environnement.
-- [ ] Tester le déploiement sur l'environnement staging.
+- [x] Créer les secrets dans Secret Manager :
+  - [x] `JWT_SECRET_KEY` : Une clé aléatoire forte.
+  - [x] `DATABASE_URL` : URL de connexion à Cloud SQL.
+- [x] Configurer Cloud Run pour charger ces secrets comme variables d'environnement.
+- [x] Tester le déploiement sur l'environnement staging.
 
 ---
 
 ### Phase 2 : Frontend - Authentification & Gestion du Profil (Durée estimée : 5-6 jours)
+> **Branche pour cette phase :** `feature/frontend-auth-profile` (à créer depuis `develop`)
+> 
+> **Workflow :**
+> 1. `git checkout develop`
+> 2. `git pull`
+> 3. `git checkout -b feature/frontend-auth-profile`
+> 4. Effectuez toutes les tâches de la Phase 2.
+> 5. Une fois terminé, créez une Pull Request de `feature/frontend-auth-profile` vers `develop`.
 *Objectif : Permettre à un utilisateur de créer un compte, se connecter et modifier son profil.*
 
 #### 2.1. Configuration de Base & Design System
-- [ ] Configurer Tailwind CSS avec les couleurs du projet :
-  - [ ] Ajouter dans `tailwind.config.js` :
+- [x] Configurer Tailwind CSS avec les couleurs du projet :
+  - [x] Ajouter dans `tailwind.config.js` :
     ```js
     colors: {
       primary: '#2D3748',
@@ -331,145 +411,244 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
       'text-primary': '#1A202C'
     }
     ```
-- [ ] Installer la police "Inter" :
-  - [ ] Ajouter via Google Fonts dans `layout.tsx`.
-  - [ ] Configurer comme police par défaut dans Tailwind.
-- [ ] Créer un fichier de composants réutilisables :
-  - [ ] `frontend/src/components/ui/Button.tsx` (variants: primary, secondary, danger).
-  - [ ] `frontend/src/components/ui/Input.tsx`.
-  - [ ] `frontend/src/components/ui/Card.tsx`.
-  - [ ] `frontend/src/components/ui/Modal.tsx`.
+- [x] Installer la police "Inter" :
+  - [x] Ajouter via Google Fonts dans `layout.tsx`.
+  - [x] Configurer comme police par défaut dans Tailwind.
+- [x] Créer un fichier de composants réutilisables :
+  - [x] `frontend/src/components/ui/Button.tsx` (variants: primary, secondary, danger).
+  - [x] `frontend/src/components/ui/Input.tsx`.
+  - [x] `frontend/src/components/ui/Card.tsx`.
+  - [x] `frontend/src/components/ui/Modal.tsx`.
 
-#### 2.2. Gestion de l'État & API
-- [ ] Installer les dépendances :
-  - [ ] `npm install @tanstack/react-query axios`.
-- [ ] Créer `frontend/src/lib/api.ts` :
-  - [ ] Configurer une instance Axios avec la base URL du backend.
-  - [ ] Ajouter un intercepteur pour injecter le token JWT dans les headers.
-- [ ] Créer `frontend/src/lib/auth.ts` :
-  - [ ] Fonctions `login(email, password)`, `register(email, password)`.
-  - [ ] Fonction `getMe()` pour récupérer l'utilisateur connecté.
-  - [ ] Fonction `logout()`.
-- [ ] Créer un Context React pour l'authentification :
-  - [ ] `frontend/src/context/AuthContext.tsx`.
-  - [ ] Stocker l'utilisateur connecté et le token.
-  - [ ] Fournir des méthodes pour login, logout, et vérifier l'état.
+##### 2.1.1. Assets & Logos - COMPLÉTÉ
 
-#### 2.3. Pages Publiques (Landing Page & Auth)
-- [ ] Créer `frontend/src/app/page.tsx` (Landing Page - Écran 0) :
-  - [ ] Section hero avec le nom "Talentious" et un slogan accrocheur.
-  - [ ] Description des fonctionnalités clés.
-  - [ ] Boutons "Se connecter" et "S'inscrire" (liens vers `/login` et `/register`).
-  - [ ] Design épuré avec beaucoup d'espace blanc.
-- [ ] Créer `frontend/src/app/register/page.tsx` :
-  - [ ] Formulaire d'inscription (email, password, confirmation password).
-  - [ ] Validation des champs côté client.
-  - [ ] Appel à l'API `/auth/register`.
-  - [ ] Redirection vers `/login` en cas de succès.
-  - [ ] Affichage des erreurs (email déjà existant, etc.).
-- [ ] Créer `frontend/src/app/login/page.tsx` :
-  - [ ] Formulaire de connexion (email, password).
-  - [ ] Appel à l'API `/auth/login`.
-  - [ ] Stockage du token dans le Context.
-  - [ ] Redirection vers `/dashboard` en cas de succès.
+- [x] Logos créés et optimisés dans `frontend/public/logos/`
+- [x] Favicons générés pour toutes les plateformes (ico, svg, png)
+- [x] PWA manifest configuré avec thème Talentious
+- [x] Layout Next.js mis à jour avec métadonnées complètes
+
+#### 2.2. Gestion de l'État & API - COMPLÉTÉ ✅
+- [x] Installer les dépendances :
+  - [x] `npm install @tanstack/react-query axios`.
+- [x] Créer `frontend/src/lib/api.ts` :
+  - [x] Configurer une instance Axios avec la base URL du backend.
+  - [x] Ajouter un intercepteur pour injecter le token JWT dans les headers.
+  - [x] Intercepteur de réponse pour gérer les erreurs 401 (auto-logout).
+- [x] Créer `frontend/src/lib/auth.ts` :
+  - [x] Fonctions `login(email, password)`, `register(email, password)`.
+  - [x] Fonction `getMe()` pour récupérer l'utilisateur connecté.
+  - [x] Fonction `logout()`.
+  - [x] Fonctions utilitaires `isAuthenticated()`, `getStoredUser()`.
+- [x] Créer un Context React pour l'authentification :
+  - [x] `frontend/src/context/AuthContext.tsx`.
+  - [x] Stocker l'utilisateur connecté et le token (localStorage).
+  - [x] Fournir des méthodes pour login, logout, register, refreshUser.
+  - [x] Hook personnalisé `useAuth()`.
+- [x] Créer `frontend/src/components/providers/QueryProvider.tsx` :
+  - [x] Configuration TanStack Query avec staleTime 5min, retry 1.
+- [x] Intégrer les providers dans `layout.tsx` :
+  - [x] QueryProvider > AuthProvider wrapping children.
+
+> **NOTE SÉCURITÉ (Dette Technique)** :  
+> Pour le MVP, le token JWT est stocké dans `localStorage` pour simplicité et rapidité de développement.  
+> **Vulnérabilité** : Sensible aux attaques XSS si une dépendance npm malveillante injecte du code.  
+> **Recommandation V1 publique** : Migrer vers des **cookies HttpOnly** gérés côté backend pour une sécurité renforcée.  
+> Le token ne sera plus accessible au JavaScript, éliminant le risque XSS.  
+> **Action requise** : Modifier le backend FastAPI pour renvoyer le token dans un cookie `Set-Cookie: HttpOnly; Secure; SameSite=Strict`.
+
+#### 2.3. Pages Publiques (Landing Page & Auth) - COMPLÉTÉ ✅
+- [x] Améliorer `frontend/src/app/page.tsx` (Landing Page - Écran 0) :
+  - [x] Section hero avec le nom "Talentious" et un slogan accrocheur.
+  - [x] Description des fonctionnalités clés (3 cartes: IA, Rapidité, Sécurité).
+  - [x] Boutons "Créer un compte" et "Se connecter" (liens vers `/register` et `/login`).
+  - [x] Design épuré avec beaucoup d'espace blanc et gradient.
+- [x] Créer `frontend/src/app/register/page.tsx` :
+  - [x] Formulaire d'inscription (email, password, confirmation password).
+  - [x] Validation des champs côté client (email format, password min 8 chars, matching passwords).
+  - [x] Appel à l'API via `useAuth().register()`.
+  - [x] Redirection vers `/login?registered=true` en cas de succès.
+  - [x] Affichage des erreurs API (email déjà existant, etc.).
+  - [x] Écran de succès avec animation avant redirection.
+- [x] Créer `frontend/src/app/login/page.tsx` :
+  - [x] Formulaire de connexion (email, password).
+  - [x] Appel à l'API via `useAuth().login()`.
+  - [x] Stockage du token dans AuthContext (automatique).
+  - [x] Redirection vers `/onboarding` en cas de succès.
+  - [x] Message de succès si arrivée depuis `/register`.
+  - [x] Gestion des erreurs (credentials invalides).
+  - [x] Wrapping dans Suspense pour `useSearchParams()` (Next.js requirement).
   - [ ] Affichage des erreurs (identifiants incorrects).
 
 #### 2.4. Routes Protégées & Navigation
-- [ ] Créer un middleware pour protéger les routes :
-  - [ ] `frontend/src/middleware.ts`.
-  - [ ] Vérifier la présence d'un token valide.
-  - [ ] Rediriger vers `/login` si non authentifié.
-- [ ] Créer un composant de navigation :
-  - [ ] `frontend/src/components/Navbar.tsx`.
-  - [ ] Logo "Talentious" à gauche.
-  - [ ] Menu utilisateur à droite (icône de profil, déconnexion).
-  - [ ] Visible uniquement sur les pages authentifiées.
+- [x] Créer un middleware pour protéger les routes :
+  - [x] `frontend/src/middleware.ts`.
+  - [x] Vérifier la présence d'un cookie de session valide (talentious_session).
+  - [x] Rediriger vers `/login` avec paramètre `?redirect` si non authentifié.
+  - [x] Protéger `/onboarding`, `/profile`, `/dashboard`.
+- [x] Créer un composant de navigation authentifié :
+  - [x] `frontend/src/components/Navbar.tsx` - variant `authenticated`.
+  - [x] Logo "Talentious" à gauche avec lien vers `/profile`.
+  - [x] Navigation desktop : liens vers "Mon Profil" et "Mes CV".
+  - [x] Menu utilisateur à droite :
+    - [x] Avatar avec initiales depuis l'email.
+    - [x] Affichage du nom d'utilisateur et email (desktop).
+    - [x] Menu déroulant avec : profil, paramètres, déconnexion.
+    - [x] Version mobile responsive avec navigation dans le menu.
+    - [x] Click-outside handler pour fermer le dropdown.
+- [x] Intégration cookie de session :
+  - [x] AuthContext gère le cookie `talentious_session` (max-age 30 jours).
+  - [x] Cookie set sur login/init, removed sur logout/error.
+
+**Note de sécurité** : Le système actuel utilise JWT dans localStorage + cookie de session pour le middleware. Migration vers HttpOnly cookies recommandée avant V1 (voir Phase Pré-V1).
 
 #### 2.5. Page d'Onboarding (Écran 1)
-- [ ] Créer `frontend/src/app/onboarding/page.tsx` :
-  - [ ] Message d'accueil : "Bienvenue sur Talentious. Importons votre profil pour commencer."
-  - [ ] Trois options de cartes cliquables :
-    - [ ] **Option 1** : "Importer un CV (PDF)" (mise en avant visuelle).
-    - [ ] **Option 2** : "Importer un profil LinkedIn (PDF)" (avec info-bulle).
-    - [ ] **Option 3** : "Commencer manuellement" (discret).
-  - [ ] Pour l'Option 1 et 2 :
-    - [ ] Bouton d'upload de fichier.
-    - [ ] Prévisualisation du nom du fichier.
-    - [ ] Bouton "Continuer" qui appelle l'API de parsing (Phase 3).
-  - [ ] Pour l'Option 3 :
-    - [ ] Redirection directe vers `/profile`.
+- [x] Créer `frontend/src/app/onboarding/page.tsx` :
+  - [x] Message d'accueil : "Bienvenue sur Talentious. Importons votre profil pour commencer."
+  - [x] Trois options de cartes cliquables :
+    - [x] **Option 1** : "Importer un CV (PDF)" (mise en avant visuelle avec badge "Recommandé").
+    - [x] **Option 2** : "Importer un profil LinkedIn (PDF)" (avec info-bulle explicative).
+    - [x] **Option 3** : "Commencer manuellement" (discret).
+  - [x] Pour l'Option 1 et 2 :
+    - [x] Zone d'upload drag & drop avec feedback visuel.
+    - [x] Validation du fichier : PDF uniquement, max 10MB.
+    - [x] Prévisualisation du nom du fichier et taille.
+    - [x] Gestion des erreurs avec messages clairs.
+    - [x] Bouton "Continuer" qui simulera l'API de parsing (Phase 3 : connexion réelle).
+  - [x] Pour l'Option 3 :
+    - [x] Redirection directe vers `/profile`.
+  - [x] Design ultra-professionnel avec gradients, ombres, animations.
+  - [x] Navbar authentifiée intégrée.
+  - [x] Route protégée par middleware.
+
+**Note technique** : L'intégration avec l'API de parsing CV (`POST /profile/parse-cv`) sera implémentée en Phase 3.
 
 #### 2.6. Page de Profil (Écran 2)
-- [ ] Créer `frontend/src/app/profile/page.tsx` :
-  - [ ] Formulaire structuré par sections (accordéon ou onglets) :
-    - [ ] **Informations Personnelles** : Prénom, nom, téléphone, email, LinkedIn, adresse.
-    - [ ] **Résumé** : Textarea pour le résumé professionnel.
-    - [ ] **Expériences** : Liste dynamique (ajout/suppression).
-      - [ ] Pour chaque expérience : Poste, entreprise, dates, description.
-    - [ ] **Formations** : Liste dynamique.
-      - [ ] Pour chaque formation : Diplôme, institution, date.
-    - [ ] **Compétences** : Deux sections (hard skills, soft skills).
-      - [ ] Input avec tags pour ajouter/supprimer des compétences.
-    - [ ] **Projets** : Liste dynamique (optionnel).
-    - [ ] **Certifications** : Liste dynamique (optionnel).
-  - [ ] Bouton "Sauvegarder" :
-    - [ ] Appel à `PUT /profile`.
-    - [ ] Affichage d'un message de confirmation.
-  - [ ] Si le profil est pré-rempli (via parsing), afficher les données existantes.
+
+- [x] Créer `frontend/src/app/profile/page.tsx` :
+  - [x] Formulaire structuré par sections (accordéon ou onglets) :
+    - [x] **Informations Personnelles** : Prénom, nom, téléphone, email, LinkedIn, adresse.
+    - [x] **Résumé** : Textarea pour le résumé professionnel.
+    - [x] **Expériences** : Liste dynamique (ajout/suppression/édition).
+      - [x] Pour chaque expérience : Poste, entreprise, dates, description, poste actuel.
+    - [x] **Formations** : Liste dynamique (ajout/suppression/édition).
+      - [x] Pour chaque formation : Diplôme, institution, dates, domaine, mention, description.
+    - [x] **Compétences** : Deux sections (hard skills, soft skills).
+      - [x] Input avec tags pour ajouter/supprimer des compétences.
+    - [x] **Projets** : Liste dynamique (ajout/suppression/édition).
+    - [x] **Certifications** : Liste dynamique (ajout/suppression/édition).
+  - [x] Bouton "Sauvegarder" :
+    - [x] Appel à `PUT /profile`.
+    - [x] Affichage d'un message de confirmation.
+  - [x] Si le profil est pré-rempli (via parsing), afficher les données existantes.
+  - [x] Conformité stricte avec le schéma backend (types TypeScript synchronisés avec Pydantic, structure JSONB, tests backend et frontend validés).
 
 #### 2.7. Tests Frontend
-- [ ] Installer les dépendances de test :
-  - [ ] `npm install --save-dev @testing-library/react @testing-library/jest-dom jest`.
-- [ ] Créer des tests pour les composants critiques :
-  - [ ] Test du formulaire de login.
-  - [ ] Test du formulaire de profil (sauvegarde).
-- [ ] Lancer les tests : `npm test`.
+
+- [x] Installer les dépendances de test :
+  - [x] `npm install --save-dev @testing-library/react @testing-library/jest-dom @testing-library/user-event jest jest-environment-jsdom @types/jest`.
+  - [x] Configuration Jest avec Next.js (@next/jest wrapper).
+  - [x] Configuration du test environment (jsdom).
+- [x] Créer des tests pour les composants critiques :
+  - [x] Tests de smoke pour le formulaire de login.
+  - [x] Tests de smoke pour la page de profil.
+  - [x] Tests unitaires pour les helpers de types profile.
+- [x] Lancer les tests : `npm test` (20 tests passés, 3 suites).
+- [x] Tests fonctionnels dans l'environnement Docker.
 
 ---
 
 ### Phase 3 : Magie IA - Agents & Flux de Génération (Durée estimée : 7-9 jours)
+> **Branche pour cette phase :** `feature/ai-generation-flow`
+> 
+> **Status**: 🟢 **EN COURS** (Phase 3.1 ✅ Complétée - 10 Nov 2025)
+> 
+> **Workflow :**
+> 1. `git checkout develop`
+> 2. `git pull`
+> 3. `git checkout -b feature/ai-generation-flow`
+> 4. Effectuez toutes les tâches de la Phase 3.
+> 5. Une fois terminé, créez une Pull Request de `feature/ai-generation-flow` vers `develop`.
 *Objectif : Construire les microservices IA et le flux backend qui génère le contenu d'un CV.*
 
-#### 3.1. Agent `Parser-PDF`
-- [ ] Créer la structure du projet :
-  - [ ] `agents/parser-pdf/` avec la même structure qu'un projet FastAPI.
-- [ ] Installer les dépendances :
-  - [ ] `pip install fastapi uvicorn PyMuPDF`.
-- [ ] Créer `agents/parser-pdf/app/main.py` :
-  - [ ] Endpoint `POST /parse` :
-    - [ ] Accepter un fichier PDF en multipart/form-data.
-    - [ ] Utiliser PyMuPDF pour extraire le texte.
-    - [ ] Retourner le texte brut en JSON : `{"text": "..."}`.
-- [ ] Créer un Dockerfile pour cet agent.
-- [ ] Déployer sur Cloud Run (service privé) :
-  - [ ] Configurer pour n'accepter que les requêtes authentifiées (IAM).
-  - [ ] Région : `europe-west9`.
-- [ ] Intégrer cet agent dans le backend principal :
-  - [ ] Créer `backend/app/services/parser_client.py` :
-    - [ ] Fonction `parse_pdf(file_bytes: bytes) -> str`.
-    - [ ] Utilise un HTTP client pour appeler le service Cloud Run.
-    - [ ] Gère l'authentification IAM.
-- [ ] Tester l'intégration avec un PDF de test.
+#### 3.1. Agent `Parser-PDF` ✅ **COMPLÉTÉ (10 Nov 2025)**
+> **Commits**: `333443a`, `fd4afeb`  
+> **Documentation**: `agents/parser-pdf/PHASE_3.1_COMPLETION_REPORT.md`
 
-#### 3.2. Agent `Analyseur-Offre`
-- [ ] Créer la structure du projet : `agents/analyseur-offre/`.
-- [ ] Installer les dépendances :
-  - [ ] `pip install fastapi uvicorn google-cloud-aiplatform`.
-- [ ] Créer le prompt d'analyse dans Secret Manager :
-  - [ ] Nom du secret : `PROMPT_ANALYSEUR_OFFRE`.
-  - [ ] Contenu : Le prompt détaillé pour analyser une offre (identifier compétences, ton, niveau requis).
-- [ ] Créer `agents/analyseur-offre/app/main.py` :
-  - [ ] Endpoint `POST /analyze` :
-    - [ ] Accepter `{"offer_text": "..."}` ou `{"offer_pdf": <bytes>}`.
-    - [ ] Si PDF, appeler l'Agent Parser-PDF.
-    - [ ] Charger le prompt depuis Secret Manager.
-    - [ ] Appeler Vertex AI (Gemini Pro) avec le prompt + le texte de l'offre.
-    - [ ] Parser la réponse JSON.
-    - [ ] Retourner : `{"skills": [...], "tone": "...", "level": "..."}`.
-- [ ] Créer un Dockerfile.
-- [ ] Déployer sur Cloud Run (service privé, région `europe-west9`).
-- [ ] Intégrer dans le backend principal :
-  - [ ] `backend/app/services/analyzer_client.py`.
+- [x] Créer la structure du projet :
+  - [x] `agents/parser-pdf/` avec structure FastAPI complète
+  - [x] `app/main.py`, `app/__init__.py`
+  - [x] `Dockerfile` (multi-stage optimisé)
+  - [x] `requirements.txt`, `.env.example`, `.gitignore`
+  - [x] `README.md` (documentation complète)
+- [x] Installer les dépendances :
+  - [x] `fastapi==0.115.5`
+  - [x] `uvicorn[standard]==0.32.1`
+  - [x] `pymupdf==1.24.13` (PyMuPDF)
+  - [x] `python-multipart==0.0.19`
+  - [x] `httpx==0.28.1`
+- [x] Créer `agents/parser-pdf/app/main.py` :
+  - [x] Endpoint `GET /health` : Health check pour Cloud Run
+  - [x] Endpoint `POST /parse` :
+    - [x] Accepter fichier PDF via `UploadFile`
+    - [x] Validation MIME type strict (`application/pdf`)
+    - [x] Validation taille (max 10MB)
+    - [x] Gestion fichiers corrompus (PyMuPDF error handling)
+    - [x] Utiliser PyMuPDF (fitz) pour extraction texte
+    - [x] Retourner JSON: `{"text": "...", "page_count": N, "character_count": N, "filename": "..."}`
+- [x] Créer un Dockerfile multi-stage (optimisé ~200MB vs 1.2GB)
+  - [x] Utilisateur non-root (UID 1000)
+  - [x] Health check intégré
+- [x] Intégration environnement local :
+  - [x] Ajout dans `docker-compose.yml` (port 8001)
+  - [x] Backend dépend de parser-pdf
+  - [x] Variable `PARSER_SERVICE_URL` configurée
+  - [x] Hot-reload activé
+- [x] Intégrer dans le backend principal :
+  - [x] Créer `backend/app/services/parser_client.py`
+  - [x] Client HTTP asynchrone (`httpx.AsyncClient`)
+  - [x] Fonction `parse_pdf(file: UploadFile) -> Dict`
+  - [x] Support IAM authentication (Google Service Account)
+  - [x] Gestion d'erreurs complète (400/422/500/503/504)
+  - [x] Pattern singleton
+- [x] Ajouter `google-auth==2.36.0` au backend
+- [x] Tester l'intégration :
+  - [x] Build Docker: ✅ SUCCESS (254s initial, 11s rebuild)
+  - [x] Health check: ✅ `{"status":"healthy","service":"parser-pdf"}`
+  - [x] Validation MIME: ✅ Rejette fichiers non-PDF
+  - [x] **Test PDF réel**: ✅ PDF 4 pages, 88KB, 3,505 caractères extraits
+  - [x] Logs service: ✅ Confirmation extraction complète
+
+**À venir (Déploiement Cloud Run)** :
+- [ ] Déployer sur Cloud Run (service privé, région `europe-west9`)
+- [ ] Configurer IAM (requêtes authentifiées uniquement)
+
+---
+
+### Phase 3.2 : Agent Analyseur-Offre IA (Vertex AI Gemini)
+> **Branche :** `feature/ai-generation-flow`
+> 
+> **Objectif :** Analyser les offres d'emploi (texte ou PDF) et extraire les compétences, responsabilités, niveau de séniorité, ton, etc. via IA.
+
+#### 3.2.1. Choix du modèle et région
+- [x] Modèle utilisé : **gemini-2.5-flash**
+- [x] Région GCP : **europe-west9 (Paris)**
+- [x] Contexte maximal : **1M tokens (~750K caractères)**
+- [x] RGPD : Données traitées en France/EU
+- [x] Performance : Réponse < 40s pour 200K caractères
+
+#### 3.2.2. Configuration technique
+- [x] Mise à jour de tous les fichiers de configuration :
+    - `docker-compose.yml` : modèle/région alignés
+    - `.env.example` : documentation à jour
+    - `vertex_ai_service.py` : lecture dynamique des variables d'environnement
+- [x] Test exhaustif des modèles Gemini 2.0+ dans toutes les régions
+- [x] Validation finale par appel API : extraction structurée des compétences et responsabilités
+
+#### 3.2.3. Validation
+- [x] Test curl : réponse JSON complète, hard/soft skills, responsabilités, ton
+- [x] Commit : "feat(ai): switch to gemini-2.5-flash in europe-west9 (Paris) for Analyseur-Offre agent. RGPD compliant, 1M token context, optimal performance."
+
+---
 
 #### 3.3. Agent `Rédacteur-CV` (Cœur de l'IA)
 - [ ] Créer la structure du projet : `agents/redacteur-cv/`.
@@ -495,49 +674,132 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
   - [ ] `backend/app/services/writer_client.py`.
 
 #### 3.4. Qualité & Test des Prompts (Evals)
-- [ ] Créer un dossier `backend/evals/`.
-- [ ] Créer des fichiers de test :
-  - [ ] `backend/evals/profiles/` : 5 profils JSON types (junior, senior, reconversion, tech, non-tech).
-  - [ ] `backend/evals/offers/` : 5 offres texte types.
-- [ ] Créer `backend/evals/run_evals.py` :
-  - [ ] Script qui charge tous les profils et offres.
-  - [ ] Pour chaque combinaison (25 au total) :
-    - [ ] Appelle l'Agent Analyseur.
-    - [ ] Appelle l'Agent Rédacteur.
-    - [ ] Sauvegarde le résultat dans `backend/evals/results/<timestamp>/`.
-  - [ ] Génère un rapport simple (nombre de réussites, échecs, avertissements).
-- [ ] Documenter dans le README comment lancer les evals avant de valider un changement de prompt.
+- [x] **Correction Stratégique : Traduction du Prompt Rédacteur**
+  - [x] **Problème identifié** : Prompt en anglais alors que toutes les entrées/sorties sont en français
+  - [x] **Impact** : Risque de "franglais" et tournures maladroites dans les CV générés
+  - [x] **Solution implémentée** :
+    - [x] Traduction complète de `agents/redacteur-cv/prompts/redacteur.txt` en français professionnel
+    - [x] Conservation de la structure technique (schéma JSON, placeholders)
+    - [x] Passage de 6815 → 7767 caractères (prompt plus détaillé en français)
+    - [x] Rebuild du service Docker et validation du chargement
+  - [x] **Résultat** : L'IA "pense" maintenant en français, amélioration attendue du ton et de la qualité linguistique
 
-#### 3.5. Orchestration Backend (Endpoint Principal)
-- [ ] Créer la table `generated_cvs` (si pas déjà fait en Phase 1) :
-  - [ ] Migration Alembic.
-- [ ] Créer `backend/app/routes/cv.py` :
-  - [ ] `POST /cv/generate` (protégé) :
-    - [ ] **Vérification des permissions** :
-      - [ ] Si `user.role == 'admin'` : OK.
-      - [ ] Sinon, vérifier qu'il existe un `career_pass` valide : `SELECT * FROM career_passes WHERE user_id = ... AND valid_until > NOW()`.
-      - [ ] Si aucun : retourner `402 Payment Required`.
-    - [ ] Accepter `{"cv_name": "...", "offer_text": "...", "offer_pdf": <optionnel>}`.
-    - [ ] Récupérer le `profile_data` de l'utilisateur.
-    - [ ] Appeler l'Agent Analyseur avec l'offre.
-    - [ ] Appeler l'Agent Rédacteur avec le profil + l'analyse.
-    - [ ] Sauvegarder le résultat dans `generated_cvs` :
-      - [ ] `cv_name`, `template_id` (pour l'instant : "modern_v1"), `job_offer_context`, `cv_data_json`.
-    - [ ] Retourner le CV généré : `{"cv_id": "...", "cv_data": {...}}`.
-  - [ ] `GET /cv` (protégé) :
-    - [ ] Lister tous les CVs de l'utilisateur connecté.
-  - [ ] `GET /cv/{cv_id}` (protégé) :
-    - [ ] Récupérer un CV spécifique (vérifier que `user_id` correspond).
-  - [ ] `PUT /cv/{cv_id}` (protégé) :
-    - [ ] Mettre à jour le `cv_data_json` (après édition dans le WYSIWYG).
-  - [ ] `DELETE /cv/{cv_id}` (protégé) :
-    - [ ] Supprimer un CV (et son PDF sur GCS si existant).
-- [ ] Intégrer les routes dans `backend/app/main.py`.
-- [ ] Écrire des tests pour l'endpoint `/cv/generate`.
+- [x] **Système d'Évaluation End-to-End**
+  - [x] Créer la structure `backend/evals/` :
+    - [x] `profiles/` : Profils utilisateur JSON (basés sur `UserProfileData`)
+    - [x] `offers/` : Offres d'emploi texte (fichiers `.txt`)
+    - [x] `results/` : Résultats des tests (générés automatiquement)
+  
+  - [x] **Fichiers de test d'exemple** :
+    - [x] `01_junior_dev.json` : Profil développeuse junior avec 3 expériences, 13 compétences, Master Informatique
+    - [x] `01_tech_lead.txt` : Offre Tech Lead Full-Stack fintech Paris (5 ans d'expérience minimum)
+    - [x] Structure réaliste et complète pour servir de modèle
+  
+  - [x] **Script d'évaluation `run_evals.py`** :
+    - [x] Chargement automatique de tous les profils (`.json`) et offres (`.txt`)
+    - [x] Boucle sur toutes les combinaisons (Profil × Offre)
+    - [x] Pour chaque combinaison :
+      - [x] **Étape 1** : Appel `POST http://analyseur-offre:8002/analyze` avec le texte de l'offre
+      - [x] **Étape 2** : Appel `POST http://redacteur-cv:8003/generate` avec profil + analyse
+      - [x] **Sauvegarde** : `backend/evals/results/result_01_01.json` avec métadonnées complètes
+    - [x] Affichage formaté avec couleurs ANSI (✅, ❌, ℹ️, ⚠️)
+    - [x] Rapport final : taux de succès, détail des erreurs, statistiques
+    - [x] Timeout configurable (120s par défaut pour Gemini)
+    - [x] Gestion d'erreurs robuste (HTTP, exceptions, KeyboardInterrupt)
+  
+  - [x] **Documentation complète** :
+    - [x] `backend/evals/README.md` : Guide complet d'utilisation
+    - [x] Prérequis : Docker, services lancés, dépendances Python
+    - [x] Format des données (profils, offres, résultats)
+    - [x] Exemples de commandes d'analyse des résultats (jq, ls, cat)
+    - [x] Section dépannage (Connection refused, Timeout, HTTP 500)
+    - [x] Métriques de qualité futures (score pertinence, cohérence linguistique)
+  
+  - [x] **Dépendances** :
+    - [x] `requirements.txt` : `httpx==0.27.0` pour les appels HTTP asynchrones
+  
+  - [x] **Prêt pour expansion** :
+    - [ ] Ajouter 4 profils supplémentaires (senior backend, data scientist, devops, product manager)
+    - [ ] Ajouter 4 offres supplémentaires (fullstack, ml engineer, infra, pm)
+    - [ ] Total prévu : 25 combinaisons (5 profils × 5 offres)
+
+**🎯 Objectifs des Evals :**
+1. **Validation qualité** : CVs cohérents et pertinents
+2. **Tests de régression** : Détecter les régressions après modifications
+3. **Benchmarking** : Mesurer les performances (temps, taux de succès)
+4. **Analyse qualitative** : Amélioration itérative des prompts
+
+**📊 Utilisation :**
+```bash
+# Installer les dépendances
+pip install -r backend/evals/requirements.txt
+
+# Lancer les tests (services Docker requis)
+python backend/evals/run_evals.py
+
+# Analyser un résultat
+cat backend/evals/results/result_01_01.json | jq .
+```
+
+#### 3.5. Orchestration Backend (Endpoint Principal) ✅
+**Status:** COMPLETED (2025-11-11)
+- [x] Créer la table `generated_cvs` (déjà existante depuis Phase 1)
+- [x] Créer `backend/app/services/writer_client.py`
+  - [x] Client HTTP async pour Rédacteur-CV (httpx.AsyncClient)
+  - [x] Méthode `generate_cv(user_profile, offer_analysis)` → dict
+  - [x] Timeout 600s (10 min pour génération IA)
+  - [x] Gestion erreurs HTTP (502/503/504)
+- [x] Mise à jour `docker-compose.yml`
+  - [x] Variable d'environnement `WRITER_SERVICE_URL: http://redacteur-cv:8003`
+  - [x] Dépendance backend → redacteur-cv
+- [x] Créer `backend/app/routes/cv.py` (Chef d'Orchestre Principal)
+  - [x] **POST /cv/generate** (protégé par JWT) :
+    - [x] Vérification permissions CareerPass :
+      - [x] Admin bypass automatique
+      - [x] Sinon : `SELECT * FROM career_passes WHERE user_id = X AND valid_until > NOW()`
+      - [x] Si aucun pass actif : `402 Payment Required`
+    - [x] Récupération `UserProfile.profile_data` depuis BDD
+    - [x] Appel Analyseur-Offre : `analyzer_client.analyze_text(offer_text)`
+    - [x] Appel Rédacteur-CV : `writer_client.generate_cv(profile_data, analysis_result.to_dict())`
+    - [x] Sauvegarde dans `generated_cvs` :
+      - [x] Fields: `user_id`, `cv_name`, `template_id="modern_v1"`, `job_offer_context`, `cv_data_json`
+    - [x] Retour : `{"cv_id": UUID, "cv_data": {...}, "message": "CV generated successfully"}`
+  - [x] **GET /cv** (protégé) :
+    - [x] Liste tous les CVs de l'utilisateur (ORDER BY created_at DESC)
+    - [x] Retour lightweight (sans cv_data_json pour performances)
+  - [x] **GET /cv/{cv_id}** (protégé) :
+    - [x] Récupération d'un CV spécifique avec cv_data_json complet
+    - [x] Vérification autorisation (user_id ou admin)
+  - [x] **PUT /cv/{cv_id}** (protégé) :
+    - [x] Mise à jour `cv_name` et/ou `cv_data_json`
+    - [x] Vérification autorisation
+  - [x] **DELETE /cv/{cv_id}** (protégé) :
+    - [x] Suppression du CV
+    - [x] Vérification autorisation
+- [x] Intégrer dans `backend/app/main.py`
+  - [x] Import `from app.routes import cv`
+  - [x] `app.include_router(cv.router)`
+
+**Performance Notes:**
+- ⏱️ Génération: 2-5 minutes (Gemini API + retry logic)
+- ⚠️ Optimisation différée à Phase 4 (streaming, min-instances)
+- ✅ Comportement attendu en dev local (cold starts, appels séquentiels)
+
+**Commits:**
+- `48ed30c`: Phases 3.1-3.4 (Parser, Analyzer, Writer, Evals)
+- `29f63ff`: Phase 3.5 (Backend Orchestration)
 
 ---
 
 ### Phase 4 : Cœur de l'Application - Dashboard & Éditeur (Durée estimée : 8-11 jours)
+> **Branche pour cette phase :** `feature/dashboard-and-editor` (à créer depuis `develop`)
+> 
+> **Workflow :**
+> 1. `git checkout develop`
+> 2. `git pull`
+> 3. `git checkout -b feature/dashboard-and-editor`
+> 4. Effectuez toutes les tâches de la Phase 4.
+> 5. Une fois terminé, créez une Pull Request de `feature/dashboard-and-editor` vers `develop`.
 *Objectif : L'utilisateur peut générer, voir, éditer et télécharger son CV.*
 
 #### 4.1. Dashboard (Écran 3)
@@ -640,6 +902,16 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 ---
 
 ### Phase 5 : Monétisation & Lancement (Durée estimée : 4-5 jours)
+> **Branche pour cette phase :** `feature/monetization-stripe` (à créer depuis `develop`)
+> 
+> **Workflow :**
+> 1. `git checkout develop`
+> 2. `git pull`
+> 3. `git checkout -b feature/monetization-stripe`
+> 4. Effectuez toutes les tâches de la Phase 5.
+> 5. Une fois terminé, créez une Pull Request de `feature/monetization-stripe` vers `develop`.
+>
+> **Mise en production :** Une fois cette PR fusionnée et testée sur staging, créez une PR de `develop` vers `main` pour le lancement.
 *Objectif : L'utilisateur peut acheter le Pass 30 Jours pour continuer à générer des CVs. L'application est prête pour la production.*
 
 #### 5.1. Intégration Stripe (Backend)
@@ -736,30 +1008,234 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 - [ ] Tester le parcours d'annulation :
   - [ ] Cliquer sur "Acheter", puis "Annuler" dans le formulaire Stripe.
   - [ ] Vérifier la redirection vers `/payment/cancel`.
+  - [ ] Vérifier que le Pass n'est pas activé.
+  - [ ] Vérifier que le message d'erreur est affiché.
 
-#### 5.4. Test End-to-End "Golden Path"
-- [ ] Installer Playwright :
-  - [ ] `npm install -D @playwright/test`.
-  - [ ] `npx playwright install`.
+#### 5.4. Tests End-to-End & Tests d'Intégration Complets
+
+**Objectif** : Valider l'ensemble des flux utilisateurs critiques avec Playwright et atteindre minimum 70% de couverture de code.
+
+##### 5.4.1. Configuration Playwright
+- [ ] Installer Playwright et ses dépendances :
+  ```bash
+  cd frontend
+  npm install -D @playwright/test
+  npx playwright install
+  npx playwright install-deps
+  ```
+- [ ] Créer `frontend/playwright.config.ts` :
+  - [ ] Configuration des navigateurs (Chromium, Firefox, WebKit).
+  - [ ] Configuration de la base URL (`http://localhost:3000` en dev).
+  - [ ] Configuration des retries (2 tentatives en cas d'échec).
+  - [ ] Configuration des timeouts (30s par défaut).
+  - [ ] Configuration des traces et screenshots en cas d'échec.
+- [ ] Créer la structure de dossiers de tests :
+  ```
+  frontend/tests/
+  ├── e2e/                    # Tests end-to-end
+  │   ├── auth.spec.ts
+  │   ├── onboarding.spec.ts
+  │   ├── profile.spec.ts
+  │   ├── cv-generation.spec.ts
+  │   ├── payment.spec.ts
+  │   └── golden-path.spec.ts
+  ├── integration/            # Tests d'intégration
+  │   ├── api/
+  │   │   ├── auth.test.ts
+  │   │   └── profile.test.ts
+  │   └── components/
+  │       ├── login-flow.test.ts
+  │       └── profile-forms.test.ts
+  └── fixtures/               # Données de test
+      ├── users.json
+      ├── profiles.json
+      └── test-cv.pdf
+  ```
+
+##### 5.4.2. Tests d'Authentification E2E
+- [ ] Créer `frontend/tests/e2e/auth.spec.ts` :
+  - [ ] **Test : Inscription utilisateur**
+    - [ ] Naviguer vers `/register`.
+    - [ ] Remplir email, mot de passe, confirmation.
+    - [ ] Vérifier validation frontend (email format, mot de passe fort).
+    - [ ] Soumettre le formulaire.
+    - [ ] Vérifier redirection vers `/onboarding`.
+    - [ ] Vérifier que le token JWT est stocké.
+  - [ ] **Test : Connexion utilisateur**
+    - [ ] Naviguer vers `/login`.
+    - [ ] Remplir identifiants valides.
+    - [ ] Vérifier connexion réussie.
+    - [ ] Vérifier redirection vers `/dashboard` ou `/onboarding`.
+  - [ ] **Test : Gestion erreurs authentification**
+    - [ ] Tester email invalide → message d'erreur affiché.
+    - [ ] Tester mot de passe incorrect → message d'erreur.
+    - [ ] Tester compte inexistant → message d'erreur.
+  - [ ] **Test : Déconnexion**
+    - [ ] Se connecter.
+    - [ ] Cliquer sur "Déconnexion".
+    - [ ] Vérifier redirection vers `/login`.
+    - [ ] Vérifier suppression du token.
+
+##### 5.4.3. Tests Onboarding E2E
+- [ ] Créer `frontend/tests/e2e/onboarding.spec.ts` :
+  - [ ] **Test : Parcours complet onboarding**
+    - [ ] Écran 1 : Informations personnelles (nom, prénom, téléphone).
+    - [ ] Écran 2 : Objectifs professionnels (titre souhaité, salaire).
+    - [ ] Écran 3 : Upload CV (optionnel) ou saisie manuelle.
+    - [ ] Vérifier la progression (barre de progression).
+    - [ ] Vérifier sauvegarde à chaque étape.
+    - [ ] Vérifier redirection finale vers `/dashboard`.
+  - [ ] **Test : Validation des champs obligatoires**
+    - [ ] Tenter de passer à l'étape suivante sans remplir les champs.
+    - [ ] Vérifier messages d'erreur.
+  - [ ] **Test : Upload PDF parsing**
+    - [ ] Upload un CV PDF de test.
+    - [ ] Vérifier appel API `/profile/parse-cv`.
+    - [ ] Vérifier pré-remplissage du profil.
+
+##### 5.4.4. Tests Profil E2E
+- [ ] Créer `frontend/tests/e2e/profile.spec.ts` :
+  - [ ] **Test : Affichage du profil**
+    - [ ] Naviguer vers `/profile`.
+    - [ ] Vérifier affichage des informations personnelles.
+    - [ ] Vérifier affichage des expériences, formations, compétences.
+  - [ ] **Test : Modification du profil**
+    - [ ] Cliquer sur "Modifier" pour chaque section.
+    - [ ] Modifier les champs.
+    - [ ] Sauvegarder.
+    - [ ] Vérifier appel API `PUT /profile`.
+    - [ ] Vérifier affichage du message de confirmation.
+    - [ ] Recharger la page → vérifier persistance des données.
+  - [ ] **Test : Ajout d'expérience**
+    - [ ] Cliquer sur "+ Ajouter une expérience".
+    - [ ] Remplir titre, entreprise, dates, description.
+    - [ ] Ajouter des achievements.
+    - [ ] Sauvegarder.
+    - [ ] Vérifier ajout dans la liste.
+  - [ ] **Test : Suppression d'expérience**
+    - [ ] Supprimer une expérience existante.
+    - [ ] Confirmer la suppression.
+    - [ ] Vérifier retrait de la liste.
+  - [ ] **Test : Validation des dates**
+    - [ ] Tenter d'entrer date de fin < date de début.
+    - [ ] Vérifier message d'erreur.
+
+##### 5.4.5. Tests Génération CV E2E
+- [ ] Créer `frontend/tests/e2e/cv-generation.spec.ts` :
+  - [ ] **Test : Génération sans Pass (erreur 402)**
+    - [ ] Naviguer vers dashboard.
+    - [ ] Cliquer sur "+ Générer un nouveau CV".
+    - [ ] Remplir l'offre d'emploi.
+    - [ ] Soumettre.
+    - [ ] Vérifier affichage popup paiement (402 Payment Required).
+  - [ ] **Test : Génération avec Pass valide**
+    - [ ] Simuler achat de Pass (injecter pass_expires_at dans le profil).
+    - [ ] Cliquer sur "+ Générer un nouveau CV".
+    - [ ] Remplir l'offre d'emploi.
+    - [ ] Soumettre.
+    - [ ] Vérifier appel aux agents IA.
+    - [ ] Vérifier redirection vers `/editor/[cv_id]`.
+    - [ ] Vérifier affichage du CV généré.
+
+##### 5.4.6. Tests Paiement Stripe E2E
+- [ ] Créer `frontend/tests/e2e/payment.spec.ts` :
+  - [ ] **Test : Parcours d'achat complet (mode test Stripe)**
+    - [ ] Déclencher popup paiement.
+    - [ ] Remplir carte de test Stripe (`4242 4242 4242 4242`).
+    - [ ] Valider le paiement.
+    - [ ] Vérifier redirection vers `/payment/success`.
+    - [ ] Vérifier mise à jour du profil (pass_expires_at).
+    - [ ] Vérifier possibilité de générer un CV.
+  - [ ] **Test : Annulation du paiement**
+    - [ ] Déclencher popup paiement.
+    - [ ] Cliquer sur "Annuler".
+    - [ ] Vérifier redirection vers `/payment/cancel`.
+    - [ ] Vérifier que le Pass n'est pas activé.
+    - [ ] Vérifier que le message d'erreur est affiché.
+  - [ ] **Test : Gestion erreur paiement**
+    - [ ] Utiliser une carte refusée (`4000 0000 0000 0002`).
+    - [ ] Vérifier message d'erreur.
+
+##### 5.4.7. Test Golden Path Complet
 - [ ] Créer `frontend/tests/e2e/golden-path.spec.ts` :
-  - [ ] Scénario complet :
-    1. [ ] Naviguer vers la landing page.
-    2. [ ] Cliquer sur "Créer mon compte".
-    3. [ ] Remplir le formulaire d'inscription et soumettre.
-    4. [ ] Vérifier la redirection vers `/onboarding`.
-    5. [ ] Remplir les 3 écrans d'onboarding.
-    6. [ ] Arriver sur le dashboard.
-    7. [ ] Cliquer sur "+ Générer un nouveau CV".
-    8. [ ] Remplir l'offre d'emploi (en texte).
-    9. [ ] Vérifier la popup de paiement (402).
-    10. [ ] Simuler l'achat (ou passer par Stripe en mode test).
-    11. [ ] Regénérer un CV après achat.
-    12. [ ] Vérifier la redirection vers l'éditeur.
-    13. [ ] Éditer un texte dans le CV.
-    14. [ ] Télécharger le PDF.
-  - [ ] Commande pour lancer le test :
-    - [ ] `npx playwright test`.
-- [ ] Documenter les résultats du test.
+  - [ ] **Scénario complet de bout en bout** :
+    1. [ ] Inscription d'un nouvel utilisateur.
+    2. [ ] Complétion des 3 écrans d'onboarding.
+    3. [ ] Arrivée sur le dashboard.
+    4. [ ] Modification du profil (ajout expérience + compétences).
+    5. [ ] Tentative de génération CV → popup paiement (402).
+    6. [ ] Achat du Pass avec carte de test Stripe.
+    7. [ ] Vérification webhook Stripe (attendre 5s).
+    8. [ ] Génération d'un CV avec une offre d'emploi.
+    9. [ ] Édition du CV dans l'éditeur.
+    10. [ ] Téléchargement du PDF final.
+    11. [ ] Déconnexion.
+  - [ ] Durée estimée du test : ~2-3 minutes.
+  - [ ] Prendre des screenshots à chaque étape critique.
+
+##### 5.4.8. Tests d'Intégration API
+- [ ] Créer `frontend/tests/integration/api/auth.test.ts` :
+  - [ ] Tester `POST /auth/register` avec données valides/invalides.
+  - [ ] Tester `POST /auth/login` avec credentials valides/invalides.
+  - [ ] Tester `POST /auth/logout` avec/sans token.
+  - [ ] Tester `GET /auth/me` avec token valide/invalide/expiré.
+- [ ] Créer `frontend/tests/integration/api/profile.test.ts` :
+  - [ ] Tester `GET /profile` avec utilisateur authentifié.
+  - [ ] Tester `PUT /profile` avec données valides.
+  - [ ] Tester validation des données (schéma Pydantic).
+  - [ ] Tester `POST /profile/parse-cv` avec PDF valide/invalide.
+
+##### 5.4.9. Tests de Composants avec Interactions
+- [ ] Créer `frontend/tests/integration/components/login-flow.test.ts` :
+  - [ ] Test complet du flux de connexion avec React Testing Library.
+  - [ ] Mock des appels API avec MSW (Mock Service Worker).
+  - [ ] Vérifier gestion des états (loading, success, error).
+  - [ ] Vérifier redirections après connexion.
+- [ ] Créer `frontend/tests/integration/components/profile-forms.test.ts` :
+  - [ ] Tester ExperienceForm avec toutes les interactions.
+  - [ ] Tester EducationForm avec validation des dates.
+  - [ ] Tester SkillsInput avec ajout/suppression.
+  - [ ] Tester sauvegarde et gestion des erreurs.
+
+##### 5.4.10. Configuration CI/CD pour les Tests
+- [ ] Mettre à jour `.github/workflows/ci.yml` :
+  - [ ] Ajouter job pour tests Playwright :
+    ```yaml
+    playwright-tests:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v3
+        - uses: actions/setup-node@v3
+        - name: Install dependencies
+          run: cd frontend && npm ci
+        - name: Install Playwright
+          run: cd frontend && npx playwright install --with-deps
+        - name: Run E2E tests
+          run: cd frontend && npx playwright test
+        - name: Upload test results
+          if: always()
+          uses: actions/upload-artifact@v3
+          with:
+            name: playwright-report
+            path: frontend/playwright-report/
+    ```
+  - [ ] Configurer execution des tests sur PR et push vers develop/main.
+  - [ ] Bloquer les merges si les tests échouent.
+
+##### 5.4.11. Rapport de Couverture et Documentation
+- [ ] Générer rapport de couverture :
+  - [ ] `npm test -- --coverage` pour tests Jest.
+  - [ ] Générer rapport HTML : `npm test -- --coverage --coverageReporters=html`.
+  - [ ] Viser minimum **70% de couverture** globale.
+- [ ] Créer `frontend/tests/README.md` :
+  - [ ] Documentation de la stratégie de test.
+  - [ ] Instructions pour lancer les tests localement.
+  - [ ] Liste des scénarios couverts.
+  - [ ] Instructions pour déboguer les tests qui échouent.
+- [ ] Documenter les résultats des tests E2E :
+  - [ ] Capturer screenshots/vidéos du Golden Path.
+  - [ ] Documenter les temps d'exécution.
+  - [ ] Identifier les points d'amélioration.
 
 #### 5.5. CGU, Mentions Légales & Politique de Confidentialité
 - [ ] Créer `frontend/src/app/legal/terms.tsx` (CGU) :
@@ -803,6 +1279,9 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 ---
 
 ### Phase 6 : Post-Lancement & Itérations (Continu)
+> **Branches pour cette phase :** `fix/nom-du-bug` ou `feature/nom-de-l-iteration` (à créer depuis `develop`)
+> 
+> **Workflow :** Le cycle de développement normal reprend. Chaque bug ou petite amélioration a sa propre branche et sa propre PR vers `develop`. Les mises en production se font en groupant plusieurs fonctionnalités/corrections dans une PR de `develop` vers `main`.
 *Objectif : Surveiller la production, recueillir les retours utilisateurs et préparer les évolutions futures.*
 
 #### 6.1. Monitoring & Alertes

@@ -1,0 +1,167 @@
+{
+  "personal_info": {
+    "first_name": "Sophie",
+    "last_name": "Martin",
+    "email": "sophie.martin@example.fr",
+    "phone": "+33 6 12 34 56 78",
+    "linkedin": "https://linkedin.com/in/sophie-martin-dev",
+    "address": "Lyon, France"
+  },
+  "experiences": [
+    {
+      "id": "exp_001",
+      "title": "Développeuse Full-Stack Junior",
+      "company": "StartupTech",
+      "start_date": "2023-09",
+      "end_date": null,
+      "location": "Lyon, France",
+      "description": "Développement d'une application web de gestion de projets pour PME. Participation à toutes les phases du cycle de développement (conception, développement, tests, déploiement). Collaboration avec une équipe de 4 développeurs en méthodologie Agile/Scrum."
+    },
+    {
+      "id": "exp_002",
+      "title": "Stagiaire Développeuse Web",
+      "company": "WebAgency Pro",
+      "start_date": "2023-02",
+      "end_date": "2023-08",
+      "location": "Lyon, France",
+      "description": "Stage de fin d'études de 6 mois. Développement de sites web responsive pour des clients variés (e-commerce, vitrine). Utilisation de WordPress, React, et Node.js. Participation aux réunions clients et rédaction de spécifications techniques."
+    },
+    {
+      "id": "exp_003",
+      "title": "Développeuse Front-End (Freelance)",
+      "company": "Freelance",
+      "start_date": "2022-06",
+      "end_date": "2023-01",
+      "location": "Remote",
+      "description": "Missions ponctuelles de développement front-end pour des associations et petites entreprises. Création de landing pages, refonte de sites existants, optimisation des performances. Technologies : HTML5, CSS3, JavaScript, Bootstrap."
+    }
+  ],
+  "skills": [
+    {
+      "id": "skill_001",
+      "name": "JavaScript",
+      "category": "hard_skill",
+      "level": "Intermédiaire"
+    },
+    {
+      "id": "skill_002",
+      "name": "React",
+      "category": "hard_skill",
+      "level": "Intermédiaire"
+    },
+    {
+      "id": "skill_003",
+      "name": "Node.js",
+      "category": "hard_skill",
+      "level": "Débutant"
+    },
+    {
+      "id": "skill_004",
+      "name": "Python",
+      "category": "hard_skill",
+      "level": "Débutant"
+    },
+    {
+      "id": "skill_005",
+      "name": "HTML5",
+      "category": "hard_skill",
+      "level": "Avancé"
+    },
+    {
+      "id": "skill_006",
+      "name": "CSS3",
+      "category": "hard_skill",
+      "level": "Avancé"
+    },
+    {
+      "id": "skill_007",
+      "name": "Git",
+      "category": "hard_skill",
+      "level": "Intermédiaire"
+    },
+    {
+      "id": "skill_008",
+      "name": "PostgreSQL",
+      "category": "hard_skill",
+      "level": "Débutant"
+    },
+    {
+      "id": "skill_009",
+      "name": "Docker",
+      "category": "hard_skill",
+      "level": "Débutant"
+    },
+    {
+      "id": "skill_010",
+      "name": "Travail d'équipe",
+      "category": "soft_skill",
+      "level": null
+    },
+    {
+      "id": "skill_011",
+      "name": "Communication",
+      "category": "soft_skill",
+      "level": null
+    },
+    {
+      "id": "skill_012",
+      "name": "Adaptabilité",
+      "category": "soft_skill",
+      "level": null
+    },
+    {
+      "id": "skill_013",
+      "name": "Curiosité technique",
+      "category": "soft_skill",
+      "level": null
+    }
+  ],
+  "educations": [
+    {
+      "id": "edu_001",
+      "degree": "Master 2 Informatique - Développement Logiciel",
+      "institution": "Université Claude Bernard Lyon 1",
+      "graduation_date": "2023-06",
+      "description": "Spécialisation en développement web et mobile. Projet de fin d'études : Application de suivi de budget personnel (React + Node.js + MongoDB)."
+    },
+    {
+      "id": "edu_002",
+      "degree": "Licence Informatique",
+      "institution": "Université Claude Bernard Lyon 1",
+      "graduation_date": "2021-06",
+      "description": null
+    }
+  ],
+  "projects": [
+    {
+      "id": "proj_001",
+      "name": "BudgetTracker - Application de gestion de budget",
+      "description": "Application web full-stack permettant de suivre ses dépenses et revenus. Interface utilisateur intuitive avec graphiques interactifs. Backend sécurisé avec authentification JWT. Déploiement sur Heroku.",
+      "url": "https://github.com/sophiemartin/budget-tracker",
+      "completion_date": "2023-05"
+    },
+    {
+      "id": "proj_002",
+      "name": "Portfolio Personnel",
+      "description": "Site web personnel responsive présentant mes projets et compétences. Design moderne avec animations CSS. Optimisé pour le SEO et les performances (score Lighthouse > 95).",
+      "url": "https://sophie-martin.dev",
+      "completion_date": "2023-08"
+    }
+  ],
+  "certifications": [
+    {
+      "id": "cert_001",
+      "name": "JavaScript Algorithms and Data Structures",
+      "issuer": "freeCodeCamp",
+      "issue_date": "2022-12",
+      "url": "https://www.freecodecamp.org/certification/sophiemartin/javascript-algorithms-and-data-structures"
+    },
+    {
+      "id": "cert_002",
+      "name": "Responsive Web Design",
+      "issuer": "freeCodeCamp",
+      "issue_date": "2022-10",
+      "url": "https://www.freecodecamp.org/certification/sophiemartin/responsive-web-design"
+    }
+  ]
+}

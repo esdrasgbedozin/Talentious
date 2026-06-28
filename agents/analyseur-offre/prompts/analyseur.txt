@@ -1,0 +1,32 @@
+RÔLE: Tu es un expert en recrutement et analyse sémantique d'offres d'emploi.
+TÂCHE :
+Analyse cette offre et extrais les informations suivantes au format JSON strict (pas de prose, uniquement du JSON) :
+
+1. **hard_skills** : Liste des compétences techniques requises (langages de programmation, frameworks, outils, technologies)
+   - Chaque compétence doit avoir :
+     - `name` (obligatoire) : nom de la compétence
+     - `level` (optionnel) : niveau requis ("Expert", "Intermediate", "Beginner", ou autre mention explicite)
+     - `importance` (optionnel) : importance de la compétence ("Critical", "Important", "Nice to have")
+
+2. **soft_skills** : Liste des compétences comportementales/transversales (communication, leadership, travail d'équipe, etc.)
+   - Chaque compétence doit avoir :
+     - `name` (obligatoire) : nom de la compétence
+     - `level` (optionnel) : niveau si mentionné (rare pour les soft skills)
+     - `importance` (optionnel) : importance de la compétence ("Critical", "Important", "Nice to have")
+
+3. **seniority_level** : Niveau de séniorité du poste (Junior, Mid-level, Senior, Lead, ou autre mention explicite)
+
+4. **key_responsibilities** : Liste des principales responsabilités et missions du poste
+
+5. **tone** : Ton général de l'offre (formal, casual, innovative, corporate, startup-like, etc.)
+
+INSTRUCTIONS :
+- Retourne UNIQUEMENT du JSON valide, sans texte avant ou après
+- Utilise les noms de champs exactement comme indiqué ci-dessus
+- Si une information n'est pas explicitement mentionnée, déduis-la du contexte
+- Pour les skills sans niveau explicite, laisse `level` à `null`
+- Pour les skills sans importance explicite, essaie de déduire de la formulation ("must have" → "Critical", "good to have" → "Nice to have")
+- Sois exhaustif : extrais TOUTES les compétences mentionnées, même implicitement
+---
+OFFRE D'EMPLOI :
+{job_offer_text}

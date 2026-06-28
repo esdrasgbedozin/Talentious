@@ -1,0 +1,298 @@
+{
+  "personal_info": {
+    "first_name": "Alexandre",
+    "last_name": "Dubois",
+    "email": "alexandre.dubois@example.fr",
+    "phone": "+33 6 98 76 54 32",
+    "linkedin": "https://linkedin.com/in/alexandre-dubois-tech",
+    "address": "Paris, France"
+  },
+  "experiences": [
+    {
+      "id": "exp_001",
+      "title": "Tech Lead Full-Stack",
+      "company": "FinanceHub SAS",
+      "start_date": "2021-03",
+      "end_date": null,
+      "location": "Paris, France",
+      "description": "Leadership technique d'une équipe de 5 développeurs (3 seniors, 2 mid-level) pour la refonte complète de notre plateforme de trading. Architecture microservices avec Node.js/NestJS et React. Mise en place de la CI/CD avec GitHub Actions et déploiement sur AWS (ECS, RDS). Réduction du time-to-market de 40% grâce à l'automatisation. Mentoring technique et code reviews quotidiennes."
+    },
+    {
+      "id": "exp_002",
+      "title": "Développeur Full-Stack Senior",
+      "company": "PayTech Solutions",
+      "start_date": "2018-06",
+      "end_date": "2021-02",
+      "location": "Lyon, France",
+      "description": "Développement d'une plateforme de paiement en ligne (React, Node.js, PostgreSQL, Redis). Gestion de 50K+ transactions/jour avec haute disponibilité (99.9% SLA). Migration progressive vers une architecture microservices avec Docker et Kubernetes. Optimisation des performances backend (réduction de 60% du temps de réponse API). Collaboration étroite avec les Product Managers pour la roadmap produit."
+    },
+    {
+      "id": "exp_003",
+      "title": "Développeur Full-Stack",
+      "company": "WebStartup",
+      "start_date": "2016-09",
+      "end_date": "2018-05",
+      "location": "Paris, France",
+      "description": "Développement d'applications web SaaS pour des clients B2B (React, Angular, Node.js, MongoDB). Participation active aux décisions d'architecture. Mise en place de tests automatisés (Jest, Cypress) et bonnes pratiques DevOps. Gestion de projets en Agile/Scrum avec équipes distribuées."
+    },
+    {
+      "id": "exp_004",
+      "title": "Développeur Back-End",
+      "company": "TechCorp",
+      "start_date": "2014-02",
+      "end_date": "2016-08",
+      "location": "Bordeaux, France",
+      "description": "Développement d'APIs REST en Node.js et Python/Django. Gestion de bases de données PostgreSQL et MySQL. Intégration de services tiers (Stripe, SendGrid, AWS S3). Première expérience avec Docker et les architectures cloud."
+    }
+  ],
+  "skills": [
+    {
+      "id": "skill_001",
+      "name": "JavaScript",
+      "category": "hard_skill",
+      "level": "Expert"
+    },
+    {
+      "id": "skill_002",
+      "name": "TypeScript",
+      "category": "hard_skill",
+      "level": "Expert"
+    },
+    {
+      "id": "skill_003",
+      "name": "React",
+      "category": "hard_skill",
+      "level": "Expert"
+    },
+    {
+      "id": "skill_004",
+      "name": "Node.js",
+      "category": "hard_skill",
+      "level": "Expert"
+    },
+    {
+      "id": "skill_005",
+      "name": "NestJS",
+      "category": "hard_skill",
+      "level": "Avancé"
+    },
+    {
+      "id": "skill_006",
+      "name": "Next.js",
+      "category": "hard_skill",
+      "level": "Avancé"
+    },
+    {
+      "id": "skill_007",
+      "name": "PostgreSQL",
+      "category": "hard_skill",
+      "level": "Avancé"
+    },
+    {
+      "id": "skill_008",
+      "name": "MongoDB",
+      "category": "hard_skill",
+      "level": "Avancé"
+    },
+    {
+      "id": "skill_009",
+      "name": "Redis",
+      "category": "hard_skill",
+      "level": "Intermédiaire"
+    },
+    {
+      "id": "skill_010",
+      "name": "Docker",
+      "category": "hard_skill",
+      "level": "Avancé"
+    },
+    {
+      "id": "skill_011",
+      "name": "Kubernetes",
+      "category": "hard_skill",
+      "level": "Intermédiaire"
+    },
+    {
+      "id": "skill_012",
+      "name": "AWS",
+      "category": "hard_skill",
+      "level": "Avancé"
+    },
+    {
+      "id": "skill_013",
+      "name": "CI/CD",
+      "category": "hard_skill",
+      "level": "Avancé"
+    },
+    {
+      "id": "skill_014",
+      "name": "GraphQL",
+      "category": "hard_skill",
+      "level": "Intermédiaire"
+    },
+    {
+      "id": "skill_015",
+      "name": "REST API",
+      "category": "hard_skill",
+      "level": "Expert"
+    },
+    {
+      "id": "skill_016",
+      "name": "Python",
+      "category": "hard_skill",
+      "level": "Intermédiaire"
+    },
+    {
+      "id": "skill_017",
+      "name": "Terraform",
+      "category": "hard_skill",
+      "level": "Intermédiaire"
+    },
+    {
+      "id": "skill_018",
+      "name": "GitHub Actions",
+      "category": "hard_skill",
+      "level": "Avancé"
+    },
+    {
+      "id": "skill_019",
+      "name": "Jest",
+      "category": "hard_skill",
+      "level": "Avancé"
+    },
+    {
+      "id": "skill_020",
+      "name": "Cypress",
+      "category": "hard_skill",
+      "level": "Intermédiaire"
+    },
+    {
+      "id": "skill_021",
+      "name": "Leadership",
+      "category": "soft_skill",
+      "level": null
+    },
+    {
+      "id": "skill_022",
+      "name": "Communication",
+      "category": "soft_skill",
+      "level": null
+    },
+    {
+      "id": "skill_023",
+      "name": "Mentoring",
+      "category": "soft_skill",
+      "level": null
+    },
+    {
+      "id": "skill_024",
+      "name": "Gestion de projet",
+      "category": "soft_skill",
+      "level": null
+    },
+    {
+      "id": "skill_025",
+      "name": "Résolution de problèmes",
+      "category": "soft_skill",
+      "level": null
+    },
+    {
+      "id": "skill_026",
+      "name": "Travail en équipe",
+      "category": "soft_skill",
+      "level": null
+    },
+    {
+      "id": "skill_027",
+      "name": "Agilité",
+      "category": "soft_skill",
+      "level": null
+    }
+  ],
+  "educations": [
+    {
+      "id": "edu_001",
+      "degree": "Master",
+      "field": "Informatique et Systèmes d'Information",
+      "institution": "École Centrale de Lyon",
+      "start_date": "2011-09",
+      "end_date": "2014-06",
+      "location": "Lyon, France"
+    },
+    {
+      "id": "edu_002",
+      "degree": "Licence",
+      "field": "Informatique",
+      "institution": "Université Claude Bernard Lyon 1",
+      "start_date": "2008-09",
+      "end_date": "2011-06",
+      "location": "Lyon, France"
+    }
+  ],
+  "languages": [
+    {
+      "id": "lang_001",
+      "name": "Français",
+      "level": "Langue maternelle"
+    },
+    {
+      "id": "lang_002",
+      "name": "Anglais",
+      "level": "Courant (C1)"
+    },
+    {
+      "id": "lang_003",
+      "name": "Espagnol",
+      "level": "Intermédiaire (B1)"
+    }
+  ],
+  "projects": [
+    {
+      "id": "proj_001",
+      "name": "Migration Cloud AWS",
+      "description": "Leadership de la migration complète de l'infrastructure on-premise vers AWS (ECS, RDS, S3, CloudFront). Infrastructure as Code avec Terraform. Réduction des coûts d'infrastructure de 35%.",
+      "technologies": ["AWS", "Terraform", "Docker", "Kubernetes"],
+      "start_date": "2022-01",
+      "end_date": "2022-08"
+    },
+    {
+      "id": "proj_002",
+      "name": "Refonte Architecture Microservices",
+      "description": "Conception et implémentation d'une architecture microservices pour remplacer un monolithe legacy. 12 services déployés avec orchestration Kubernetes. Amélioration de la scalabilité et de la maintenabilité.",
+      "technologies": ["Node.js", "NestJS", "PostgreSQL", "RabbitMQ", "Docker", "Kubernetes"],
+      "start_date": "2021-06",
+      "end_date": "2022-12"
+    },
+    {
+      "id": "proj_003",
+      "name": "Plateforme de Monitoring",
+      "description": "Développement d'un dashboard de monitoring temps réel avec alerting automatique. Stack moderne avec React, GraphQL, et WebSockets. Utilisé quotidiennement par 50+ utilisateurs internes.",
+      "technologies": ["React", "GraphQL", "Node.js", "WebSocket", "PostgreSQL"],
+      "start_date": "2020-03",
+      "end_date": "2020-09"
+    }
+  ],
+  "certifications": [
+    {
+      "id": "cert_001",
+      "name": "AWS Certified Solutions Architect - Associate",
+      "issuer": "Amazon Web Services",
+      "date": "2022-05",
+      "credential_id": "AWS-SA-2022-0543"
+    },
+    {
+      "id": "cert_002",
+      "name": "Certified Kubernetes Application Developer (CKAD)",
+      "issuer": "Cloud Native Computing Foundation",
+      "date": "2021-11",
+      "credential_id": "CKAD-2021-8976"
+    },
+    {
+      "id": "cert_003",
+      "name": "Professional Scrum Master I (PSM I)",
+      "issuer": "Scrum.org",
+      "date": "2019-03",
+      "credential_id": "PSM-2019-4521"
+    }
+  ]
+}
