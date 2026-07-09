@@ -48,7 +48,12 @@ class CareerPass(Base):
     )
     # Nullable so admin-granted passes (seed / support) can exist without a Stripe payment.
     stripe_payment_id = Column(String(255), nullable=True, unique=True)
-    pass_type = Column(Enum(PassType), nullable=False)
+    # values_callable: store enum VALUES ("pass_30_days"/...) to match the
+    # Alembic-created Postgres enum (see UserRole note in user.py).
+    pass_type = Column(
+        Enum(PassType, values_callable=lambda e: [m.value for m in e]),
+        nullable=False,
+    )
     valid_until = Column(
         DateTime(timezone=True), nullable=False
     )  # Always required for our temporary passes

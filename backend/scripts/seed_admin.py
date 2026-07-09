@@ -10,7 +10,7 @@ Usage:
         python -m scripts.seed_admin
 
 Environment variables:
-    ADMIN_EMAIL     (default: admin@talentious.local)
+    ADMIN_EMAIL     (default: admin@talentious.fr)
     ADMIN_PASSWORD  (default: adminpassword — CHANGE for anything shared)
 """
 
@@ -28,7 +28,7 @@ from app.schemas.profile import PersonalInfo, ProfileData, Skills
 from app.models.user_profile import UserProfile
 from app.services.auth import hash_password
 
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@talentious.local")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@talentious.fr")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "adminpassword")
 
 

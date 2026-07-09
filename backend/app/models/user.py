@@ -46,7 +46,14 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
-    role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
+    # values_callable: store the enum VALUES ("user"/"admin") to match the
+    # Alembic-created Postgres enum (lowercase). Without it SQLAlchemy sends the
+    # member NAMES ("USER"/"ADMIN"), which are invalid on a migrated database.
+    role = Column(
+        Enum(UserRole, values_callable=lambda e: [m.value for m in e]),
+        default=UserRole.USER,
+        nullable=False,
+    )
     stripe_customer_id = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
