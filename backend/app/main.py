@@ -1,10 +1,13 @@
 """
 Talentious API - Main application entry point.
 """
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
+from app.core.problem import http_exception_handler
 from app.routes import auth, profile, cv
 
 # Create FastAPI application
@@ -13,7 +16,7 @@ app = FastAPI(
     description="API for AI-powered CV generation and career management",
     version="0.1.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # Configure CORS
@@ -24,6 +27,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# RFC 7807 error responses for all HTTPExceptions
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 
 # Include routers
 app.include_router(auth.router)
@@ -38,14 +44,11 @@ def root():
         "message": "Welcome to Talentious API",
         "version": "0.1.0",
         "docs": "/docs",
-        "redoc": "/redoc"
+        "redoc": "/redoc",
     }
 
 
 @app.get("/health")
 def health_check():
     """Health check endpoint for monitoring."""
-    return {
-        "status": "healthy",
-        "environment": settings.environment
-    }
+    return {"status": "healthy", "environment": settings.environment}

@@ -1,8 +1,9 @@
 """
 GeneratedCV model for storing AI-generated CVs.
 """
+
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, DateTime, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
@@ -10,10 +11,15 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 
 
+def _utcnow() -> datetime:
+    """Timezone-aware UTC now."""
+    return datetime.now(timezone.utc)
+
+
 class GeneratedCV(Base):
     """
     GeneratedCV model for tracking user-generated CVs.
-    
+
     Attributes:
         id: Unique identifier (UUID)
         user_id: Foreign key to users table
@@ -25,26 +31,30 @@ class GeneratedCV(Base):
         created_at: Creation timestamp
         updated_at: Last update timestamp
     """
+
     __tablename__ = "generated_cvs"
-    
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
-        index=True
+        index=True,
     )
     cv_name = Column(String(255), nullable=False)
     template_id = Column(String(100), nullable=False)
     job_offer_context = Column(Text, nullable=True)
     cv_data_json = Column(JSONB, nullable=False)
     gcs_pdf_url = Column(String(500), nullable=True)
-    # TODO: Migrate to TIMESTAMP WITH TIME ZONE for timezone-aware storage
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
+    created_at = Column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+    updated_at = Column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
     # Relationship
     user = relationship("User", backref="generated_cvs")
-    
+
     def __repr__(self):
         return f"<GeneratedCV(id={self.id}, cv_name={self.cv_name}, user_id={self.user_id})>"
