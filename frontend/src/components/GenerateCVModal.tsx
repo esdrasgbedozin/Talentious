@@ -31,6 +31,9 @@ const GENERATION_STEPS = [
   { message: 'Finalisation du document...', delay: 45000 },
 ];
 
+// Minimum offer length for a meaningful AI analysis (kept in sync with the hint).
+const MIN_OFFER_CHARS = 50;
+
 export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -191,9 +194,15 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!cvName.trim() || !offerText.trim()) {
       toast.warning('Veuillez remplir tous les champs');
+      return;
+    }
+    if (offerText.trim().length < MIN_OFFER_CHARS) {
+      toast.warning(
+        `L'offre doit contenir au moins ${MIN_OFFER_CHARS} caractères pour une analyse pertinente.`,
+      );
       return;
     }
 
@@ -205,7 +214,8 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
     });
   };
 
-  const isFormValid = cvName.trim().length > 0 && offerText.trim().length > 0;
+  const isFormValid =
+    cvName.trim().length > 0 && offerText.trim().length >= MIN_OFFER_CHARS;
 
   if (!isOpen || dismissed) return null;
 
@@ -331,8 +341,16 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
                     rows={10}
                     required
                   />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Minimum 50 caractères · {offerText.length} caractères saisis
+                  <p
+                    className={`mt-1 text-xs ${
+                      offerText.trim().length > 0 &&
+                      offerText.trim().length < MIN_OFFER_CHARS
+                        ? 'text-error'
+                        : 'text-gray-500'
+                    }`}
+                  >
+                    Minimum {MIN_OFFER_CHARS} caractères · {offerText.length}{' '}
+                    caractères saisis
                   </p>
                 </div>
 
