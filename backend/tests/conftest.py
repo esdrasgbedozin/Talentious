@@ -13,6 +13,11 @@ from app.database import get_db, get_session_factory, Base
 from app.models.user import User, UserRole
 from app.services.auth import hash_password
 
+# Disable rate limiting during tests (the login fixture is called many times).
+from app.core.rate_limit import limiter as _limiter
+
+_limiter.enabled = False
+
 # Test database URL (configurable via environment variable)
 import os
 

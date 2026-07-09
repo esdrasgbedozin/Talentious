@@ -64,6 +64,10 @@ class Settings(BaseSettings):
     # Public base URL of the frontend (for Checkout success/cancel redirects)
     app_base_url: str = "http://localhost:3000"
 
+    # Rate limiting (in-memory / single-instance; use a shared store for multi-instance prod).
+    rate_limit_enabled: bool = True
+    login_rate_limit: str = "5/minute"
+
     @model_validator(mode="after")
     def _enforce_production_safety(self):
         """Refuse insecure defaults outside local development, and never run debug in prod."""

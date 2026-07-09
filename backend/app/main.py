@@ -7,12 +7,15 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from slowapi.errors import RateLimitExceeded
+
 from app.config import settings
 from app.core.problem import (
     http_exception_handler,
     unhandled_exception_handler,
     validation_exception_handler,
 )
+from app.core.rate_limit import limiter, rate_limit_handler
 from app.routes import auth, billing, profile, cv
 
 # Create FastAPI application
@@ -33,9 +36,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Rate limiting (slowapi) — the limiter must be on app.state.
+app.state.limiter = limiter
+
 # RFC 7807 error responses (problem+json) for every error path.
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
 
 # Include routers
