@@ -2,7 +2,7 @@
   "metadata": {
     "profile_file": "01_junior_dev.json",
     "offer_file": "01_tech_lead.txt",
-    "generated_at": "2026-07-09T12:28:13.227139Z",
+    "generated_at": "2026-07-09T12:23:27.797687Z",
     "pipeline_version": "1.0.0"
   },
   "offer_analysis": {
@@ -26,6 +26,11 @@
         "name": "Node.js",
         "level": "Expert",
         "importance": "Critical"
+      },
+      {
+        "name": "Express",
+        "level": "Expert",
+        "importance": "Important"
       },
       {
         "name": "NestJS",
@@ -63,48 +68,23 @@
         "importance": "Critical"
       },
       {
-        "name": "AWS",
+        "name": "Cloud architectures",
         "level": "Intermediate",
         "importance": "Important"
       },
       {
-        "name": "Microservices Architecture",
+        "name": "AWS",
         "level": "Intermediate",
         "importance": "Important"
       },
       {
         "name": "GCP",
         "level": "Intermediate",
-        "importance": "Important"
+        "importance": "Nice to have"
       },
       {
-        "name": "Express",
-        "level": null,
-        "importance": "Important"
-      },
-      {
-        "name": "GitHub Actions",
-        "level": null,
-        "importance": "Important"
-      },
-      {
-        "name": "Next.js",
-        "level": null,
-        "importance": "Important"
-      },
-      {
-        "name": "GraphQL",
-        "level": null,
-        "importance": "Important"
-      },
-      {
-        "name": "REST APIs",
-        "level": null,
-        "importance": "Important"
-      },
-      {
-        "name": "Terraform",
-        "level": null,
+        "name": "Microservices",
+        "level": "Intermediate",
         "importance": "Important"
       },
       {
@@ -123,55 +103,80 @@
         "importance": "Nice to have"
       },
       {
+        "name": "Next.js",
+        "level": null,
+        "importance": "Important"
+      },
+      {
         "name": "TailwindCSS",
         "level": null,
-        "importance": "Nice to have"
+        "importance": "Important"
       },
       {
         "name": "Zustand",
         "level": null,
-        "importance": "Nice to have"
+        "importance": "Important"
+      },
+      {
+        "name": "GraphQL",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "REST APIs",
+        "level": null,
+        "importance": "Important"
       },
       {
         "name": "RabbitMQ",
         "level": null,
-        "importance": "Nice to have"
+        "importance": "Important"
+      },
+      {
+        "name": "Terraform",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "GitHub Actions",
+        "level": null,
+        "importance": "Important"
       },
       {
         "name": "SonarQube",
         "level": null,
-        "importance": "Nice to have"
+        "importance": "Important"
       },
       {
         "name": "Jest",
         "level": null,
-        "importance": "Nice to have"
+        "importance": "Important"
       },
       {
         "name": "Cypress",
         "level": null,
-        "importance": "Nice to have"
+        "importance": "Important"
       }
     ],
     "soft_skills": [
       {
-        "name": "Technical Leadership",
-        "level": null,
-        "importance": "Critical"
-      },
-      {
-        "name": "Strategic architectural decision-making",
+        "name": "Leadership technique",
         "level": null,
         "importance": "Critical"
       },
       {
         "name": "Collaboration",
-        "level": "Excellent",
+        "level": null,
         "importance": "Critical"
       },
       {
         "name": "Communication",
-        "level": "Clear",
+        "level": null,
+        "importance": "Critical"
+      },
+      {
+        "name": "Prise de décision architecturale",
+        "level": null,
         "importance": "Critical"
       },
       {
@@ -180,29 +185,29 @@
         "importance": "Important"
       },
       {
-        "name": "Agility",
+        "name": "Agilité",
         "level": null,
         "importance": "Important"
       },
       {
-        "name": "Pragmatism",
+        "name": "Pragmatisme",
         "level": null,
         "importance": "Important"
       },
       {
-        "name": "Priority Management",
+        "name": "Gestion des priorités",
         "level": null,
         "importance": "Important"
       },
       {
-        "name": "Empathy",
+        "name": "Empathie",
         "level": null,
         "importance": "Important"
       },
       {
-        "name": "Passion for technology",
+        "name": "Promotion d'une culture d'excellence technique",
         "level": null,
-        "importance": "Nice to have"
+        "importance": "Important"
       }
     ],
     "seniority_level": "Lead",
@@ -230,7 +235,7 @@
         "postal_code": null,
         "country": null
       },
-      "summary": "Développeuse Full-Stack passionnée avec une solide expertise en JavaScript, React, Node.js et PostgreSQL. Forte d'une expérience dans la conception et le déploiement d'applications web robustes au sein d'équipes Agile, j'ai contribué activement à l'ensemble du cycle de vie des produits. Je suis motivée à l'idée de mettre à profit mes compétences en développement et mon esprit de collaboration pour architecturer des solutions performantes et participer à la culture d'excellence technique d'une équipe innovante.",
+      "summary": "Développeuse Full-Stack avec plus de 2 ans d'expérience dans la conception et le développement d'applications web performantes. Expertise en JavaScript, React et Node.js, avec une solide maîtrise de PostgreSQL, MongoDB et Docker. Passionnée par la construction de solutions robustes et la collaboration au sein d'équipes agiles. Je cherche à mettre à profit mes compétences techniques et ma capacité d'adaptation pour contribuer à des projets d'envergure et évoluer vers des responsabilités techniques accrues.",
       "selected_experiences": [
         {
           "id": "exp_001",
@@ -239,16 +244,13 @@
           "start_date": "2023-09",
           "end_date": null,
           "location": "Lyon, France",
-          "description": "Développement et maintenance d'une application web de gestion de projets en utilisant React, Node.js et PostgreSQL. Conception d'API REST et implémentation de nouvelles fonctionnalités en collaboration directe avec une équipe de 4 développeurs. Participation active aux rituels Agile/Scrum pour la planification et l'amélioration continue. Contribution à la mise en place de conteneurs avec Docker pour standardiser les environnements de développement.",
+          "description": "Développement et maintenance d'une application web full-stack en utilisant React, Node.js et PostgreSQL. Contribution active à l'ensemble du cycle de vie du produit, de la conception à la mise en production, dans un environnement Agile. Collaboration étroite au sein d'une équipe de 4 développeurs pour garantir la qualité et la performance du code. Implémentation de nouvelles fonctionnalités et participation aux processus de tests et de déploiement.",
           "highlighted_skills": [
             "React",
             "Node.js",
             "PostgreSQL",
-            "JavaScript",
-            "Docker",
-            "REST APIs",
-            "Collaboration",
-            "Agility"
+            "Agilité",
+            "Collaboration"
           ]
         },
         {
@@ -258,24 +260,12 @@
           "start_date": "2023-02",
           "end_date": "2023-08",
           "location": "Lyon, France",
-          "description": "Contribué au développement de plusieurs sites web responsives pour des clients e-commerce, en utilisant principalement React et Node.js. Collaboré avec les chefs de projet pour traduire les besoins clients en spécifications techniques fonctionnelles. Optimisé les composants front-end pour améliorer les performances et l'expérience utilisateur.",
+          "description": "Conception et développement de solutions web responsives pour divers clients en utilisant React et Node.js. Contribution à la création d'APIs REST pour les fonctionnalités back-end. Participation active aux phases de recueil des besoins clients et à la rédaction des spécifications techniques, assurant l'alignement entre les exigences métier et la solution technique.",
           "highlighted_skills": [
             "React",
             "Node.js",
-            "JavaScript",
+            "REST APIs",
             "Communication"
-          ]
-        },
-        {
-          "id": "exp_003",
-          "title": "Développeuse Front-End (Freelance)",
-          "company": "Freelance",
-          "start_date": "2022-06",
-          "end_date": "2023-01",
-          "location": "Remote",
-          "description": "Conception et développement de solutions front-end sur mesure pour des PME, incluant la création de landing pages et la refonte de sites existants. Mise en œuvre de designs responsives avec HTML5, CSS3 et JavaScript pour assurer une compatibilité multi-navigateurs et une expérience utilisateur optimale.",
-          "highlighted_skills": [
-            "JavaScript"
           ]
         }
       ],
@@ -305,6 +295,12 @@
           "importance": "Critical"
         },
         {
+          "name": "MongoDB",
+          "level": null,
+          "category": "hard_skill",
+          "importance": "Critical"
+        },
+        {
           "name": "Docker",
           "level": null,
           "category": "hard_skill",
@@ -329,7 +325,7 @@
           "importance": "Important"
         },
         {
-          "name": "Agility",
+          "name": "Agilité",
           "level": null,
           "category": "soft_skill",
           "importance": "Important"
@@ -341,9 +337,9 @@
           "importance": "Nice to have"
         },
         {
-          "name": "Passion for technology",
+          "name": "Git",
           "level": null,
-          "category": "soft_skill",
+          "category": "hard_skill",
           "importance": "Nice to have"
         }
       ],
@@ -354,7 +350,7 @@
           "institution": "Université Claude Bernard Lyon 1",
           "end_date": "2023-06",
           "field": "Développement web et mobile",
-          "description": "Projet de fin d'études : Développement d'une application full-stack (React, Node.js, MongoDB) pour le suivi budgétaire, démontrant une maîtrise de l'architecture d'applications modernes."
+          "description": "Projet de fin d'études : Application de suivi de budget personnel (React + Node.js + MongoDB)."
         },
         {
           "id": "edu_002",
@@ -369,14 +365,24 @@
         {
           "id": "proj_001",
           "name": "BudgetTracker - Application de gestion de budget",
-          "description": "Application web full-stack permettant le suivi des dépenses et revenus. Développement d'un backend sécurisé avec Node.js et MongoDB, et d'une interface utilisateur dynamique en React. Déploiement sur Heroku.",
+          "description": "Application web full-stack permettant de suivre ses dépenses et revenus. Backend sécurisé avec authentification JWT et déploiement sur Heroku. Démontre des compétences en architecture d'application et en développement de bout en bout.",
           "url": "https://github.com/sophiemartin/budget-tracker",
           "completion_date": null,
           "relevant_skills": [
             "React",
             "Node.js",
-            "MongoDB",
-            "JavaScript"
+            "MongoDB"
+          ]
+        },
+        {
+          "id": "proj_002",
+          "name": "Portfolio Personnel",
+          "description": "Site web personnel responsive présentant mes projets et compétences. Design moderne avec animations CSS. Optimisé pour le SEO et les performances (score Lighthouse > 95), démontrant une attention particulière à la qualité du front-end.",
+          "url": "https://sophie-martin.dev",
+          "completion_date": null,
+          "relevant_skills": [
+            "JavaScript",
+            "React"
           ]
         }
       ],

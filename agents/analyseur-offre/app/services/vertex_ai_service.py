@@ -87,8 +87,9 @@ class VertexAIService:
         if not self.model:
             raise ValueError("Vertex AI model not initialized")
 
-        # Format the prompt with the job offer text
-        prompt = prompt_template.format(job_offer_text=job_offer_text)
+        # Inject the offer text via replace (NOT str.format): the offer may contain
+        # literal braces { } (code, JSON), which would break str.format().
+        prompt = prompt_template.replace("{job_offer_text}", job_offer_text)
 
         logger.info(
             f"Analyzing job offer with Vertex AI "

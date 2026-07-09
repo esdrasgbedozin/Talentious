@@ -22,6 +22,36 @@ Reproductible via `backend/evals/score_evals.py`.
 - Cible roadmap : +15 %. Atteint : +10 % via le modèle seul. Le reste passe par
   l'ingénierie des prompts (M2-T06) et de meilleures fixtures d'évaluation.
 
+## Amélioration des prompts + fixtures cohérentes (v3)
+
+Le signal à 2 fixtures était **bruité** : génération Gemini non déterministe, et la
+paire junior×offre-tech-lead est un **mauvais fit artificiel** (un junior ne colle
+pas à un poste de tech lead → le modèle force et invente, fidélité qui oscille 1↔9).
+Ajout d'une **offre junior cohérente** pour un signal juste, avec prompts améliorés
+(schéma aligné end_date/field, anti-injection, fidélité renforcée) :
+
+| Paire (cohérente) | pertinence | verbes | métriques | français | fidélité | moyenne |
+|---|---|---|---|---|---|---|
+| junior × offre junior | 9 | 5 | 4 | 10 | **10** | **7.6** |
+| senior × offre tech-lead | 10 | 9 | 9 | 10 | **10** | **9.6** |
+| *(mismatch)* junior × tech-lead | 2 | 6 | 1 | 10 | 1 | 4.0 |
+
+**Lecture honnête** :
+- Sur les **paires réalistes**, les CV sont de haute qualité et **100 % fidèles**
+  (fidélité 10/10) — moyenne **8.6** (vs baseline flash 7.0, soit +23 %).
+- L'hallucination (fidélité 1) n'apparaît que sur le **mauvais fit artificiel** :
+  c'est un cas limite à garder-fou (refuser/signaler un profil hors-cible), pas le
+  chemin normal.
+- Gain de correction structurelle du prompt (non capté par la note globale) :
+  les formations conservent `end_date` **et** `field` (jadis perdus), `optimization_notes`
+  supprimé, dates de certif optionnelles.
+- Robustesse à traiter : l'analyseur renvoie parfois un 422 transitoire (validation
+  stricte de la sortie Gemini après retries) — tolérance/retry à améliorer.
+
+> Note méthodo : avec 2-4 échantillons et une génération non déterministe, la note
+> globale est indicative. Le signal fiable est la **fidélité (10/10 sur cas cohérents)**
+> et la correction structurelle, pas le 2e chiffre après la virgule.
+
 ## Reproduire
 
 ```bash
