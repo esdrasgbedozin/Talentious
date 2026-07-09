@@ -126,6 +126,13 @@ services:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
+    environment:
+      # Dev mode with file-system polling: inotify events don't cross the macOS
+      # Docker bind mount, so without polling Next never hot-reloads host edits.
+      NODE_ENV: ${FRONTEND_NODE_ENV:-development}
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     depends_on:
       - backend
 

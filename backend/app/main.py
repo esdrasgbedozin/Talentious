@@ -36,6 +36,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def no_store_cache(request, call_next):
+    """API responses are dynamic — forbid browser/proxy caching.
+
+    Without this, browsers cache GET responses (e.g. the job-status polling
+    endpoint), so a client polling GET /cv/jobs/{id} keeps seeing the first
+    'running' response and never observes 'succeeded'.
+    """
+    response = await call_next(request)
+    response.headers.setdefault("Cache-Control", "no-store")
+    return response
+
+
 # Rate limiting (slowapi) — the limiter must be on app.state.
 app.state.limiter = limiter
 

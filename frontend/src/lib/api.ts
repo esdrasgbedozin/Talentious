@@ -88,6 +88,90 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+// ===== CV =====
+
+export interface CVBase {
+  id: string;
+  cv_name: string;
+  template_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GenerateCVRequest {
+  cv_name: string;
+  offer_text: string;
+}
+
+export interface GenerateCVResult {
+  cv_id: string;
+}
+
+export interface CVJobStatus {
+  job_id: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  progress_pct: number | null;
+  cv_id: string | null;
+  error_message: string | null;
+}
+
+/** Submit a generation job (returns immediately with the job id). */
+export const startGeneration = async (
+  data: GenerateCVRequest,
+): Promise<{ job_id: string; status: string }> => {
+  const { data: job } = await apiClient.post<{ job_id: string; status: string }>(
+    '/cv/generate',
+    data,
+  );
+  return job;
+};
+
+/** Fetch the current status of a generation job. */
+export const getJobStatus = async (jobId: string): Promise<CVJobStatus> => {
+  const { data } = await apiClient.get<CVJobStatus>(`/cv/jobs/${jobId}`);
+  return data;
+};
+
+/** List the current user's generated CVs. */
+export const getCVs = async (): Promise<CVBase[]> => {
+  const { data } = await apiClient.get<CVBase[]>('/cv');
+  return data;
+};
+
+/** Delete a CV by id. */
+export const deleteCV = async (cvId: string): Promise<void> => {
+  await apiClient.delete(`/cv/${cvId}`);
+};
+
+/**
+ * Generate a CV: submit the async job then poll until it succeeds or fails.
+ * Resolves with the created cv_id, or throws with a safe error message.
+ */
+export const generateCV = async (
+  data: GenerateCVRequest,
+): Promise<GenerateCVResult> => {
+  const { data: job } = await apiClient.post<{ job_id: string; status: string }>(
+    '/cv/generate',
+    data,
+  );
+  const jobId = job.job_id;
+
+  // Poll ~6 min max (120 × 3s). The backend runs the AI pipeline in the background.
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    const { data: status } = await apiClient.get<CVJobStatus>(
+      `/cv/jobs/${jobId}`,
+    );
+    if (status.status === 'succeeded' && status.cv_id) {
+      return { cv_id: status.cv_id };
+    }
+    if (status.status === 'failed') {
+      throw new Error(status.error_message || 'La génération a échoué.');
+    }
+  }
+  throw new Error('La génération a pris trop de temps. Réessayez.');
+};
+
 // ===== Billing (Stripe) =====
 
 export type PassType = 'PASS_30_DAYS' | 'PASS_90_DAYS';
