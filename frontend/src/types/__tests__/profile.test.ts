@@ -135,7 +135,7 @@ describe('Profile Type Helpers', () => {
 
       expect(certification).toHaveProperty('id');
       expect(certification).toHaveProperty('name');
-      expect(certification).toHaveProperty('issuing_organization');
+      expect(certification).toHaveProperty('issuer');
     });
 
     it('generates unique ID', () => {

@@ -53,8 +53,8 @@ export default function EducationForm({
         />
         <Input
           label="Domaine d'études"
-          value={education.field_of_study || ''}
-          onChange={(e) => onChange('field_of_study', e.target.value)}
+          value={education.field || ''}
+          onChange={(e) => onChange('field', e.target.value)}
           placeholder="Science des données"
         />
         <Input
@@ -67,7 +67,7 @@ export default function EducationForm({
           <Input
             label="Début *"
             type="month"
-            value={education.start_date}
+            value={education.start_date || ''}
             onChange={(e) => onChange('start_date', e.target.value)}
           />
           <Input

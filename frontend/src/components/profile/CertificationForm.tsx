@@ -22,7 +22,7 @@ export default function CertificationForm({ certification, onChange, onRemove }:
       </div>
       <div className="grid md:grid-cols-2 gap-4">
         <Input label="Nom de la certification *" value={certification.name} onChange={(e) => onChange('name', e.target.value)} placeholder="AWS Certified Solutions Architect" />
-        <Input label="Organisation émettrice *" value={certification.issuing_organization} onChange={(e) => onChange('issuing_organization', e.target.value)} placeholder="Amazon Web Services" />
+        <Input label="Organisation émettrice *" value={certification.issuer} onChange={(e) => onChange('issuer', e.target.value)} placeholder="Amazon Web Services" />
         <div className="grid grid-cols-2 gap-3">
           <Input label="Date d'obtention" type="month" value={certification.issue_date || ''} onChange={(e) => onChange('issue_date', e.target.value)} />
           <Input label="Date d'expiration" type="month" value={certification.expiration_date || ''} onChange={(e) => onChange('expiration_date', e.target.value)} />
