@@ -29,3 +29,6 @@ httpx==0.25.1
 google-cloud-storage==2.10.0
 cloud-sql-python-connector==1.11.0
 google-auth==2.36.0  # For IAM authentication with Cloud Run services
+
+# Required by SQLAlchemy async engine
+greenlet==3.5.3
