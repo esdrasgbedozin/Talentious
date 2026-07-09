@@ -141,9 +141,11 @@ Les dépendances inter-tickets sont notées dans la colonne **Dépend de**. Un t
 
 ---
 
-### M3 — Accès et paiement (objectif : un utilisateur non-admin peut acheter un CareerPass et générer un CV)
+### M3 — Accès et paiement (objectif : un utilisateur non-admin peut acheter un CareerPass et générer un CV) — 🟡 BACKEND FAIT (2026-07-09)
 
 **Critère de fin du jalon** : flux complet Stripe Checkout → webhook → CareerPass → `POST /cv/generate` fonctionnel en mode test Stripe local (Stripe CLI). [PAH-3]
+
+> **État** : cœur backend fait et testé (9 tests billing, Stripe mocké ; 45 tests backend verts). Endpoints `/billing/checkout-session`, `/billing/webhook` (signature HMAC vérifiée, idempotent), `/billing/status` ; service `services/billing.py` isolé ; config + docker-compose câblés. Smoke live OK (status/checkout/validation). **Reste** : (a) validation end-to-end en mode test réel — nécessite les clés Stripe test du fondateur + Stripe CLI (procédure dans ONBOARDING §6ter) [PAH-3] ; (b) frontend M3-T05/T06/T07 (page /billing, succès/annulation, intercepteur 402) ; (c) M3-T08 rate limiting login, M3-T09 CORS staging. Dette notée : monté sur `/billing` (pas `/v1`) — migration de versioning à faire globalement.
 
 | ID | Titre | Description courte | Fichiers / zone | Dépend de | Estim. | Critère de fin (test) |
 |---|---|---|---|---|---|---|

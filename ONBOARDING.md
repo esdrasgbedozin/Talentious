@@ -97,6 +97,31 @@ docker compose up backend analyseur-offre redacteur-cv
 #       field, expiration_date, credential_url, projects.role (champs jadis perdus).
 ```
 
+## 6ter. Tester le paiement Stripe en local (mode test — M3)
+
+Même code qu'en production ; seules les clés changent (test vs live).
+
+1. **Dashboard Stripe (mode test)** → récupérer `sk_test_...` et créer 2 Produits/Prix
+   (pass 30 j, pass 90 j) → noter les `price_...`.
+2. **Stripe CLI** (fournit le webhook secret local) :
+   ```bash
+   stripe login
+   stripe listen --forward-to localhost:8000/billing/webhook
+   # -> affiche whsec_... : c'est STRIPE_WEBHOOK_SECRET
+   ```
+3. Lancer le backend avec les clés de test :
+   ```bash
+   STRIPE_SECRET_KEY=sk_test_... STRIPE_WEBHOOK_SECRET=whsec_... \
+   STRIPE_PRICE_30_DAYS=price_... STRIPE_PRICE_90_DAYS=price_... \
+   docker compose up -d backend
+   ```
+4. Flux : `POST /billing/checkout-session {pass_type:"PASS_30_DAYS"}` → `checkout_url`
+   → payer avec la carte de test `4242 4242 4242 4242` → Stripe envoie
+   `checkout.session.completed` au webhook → un `CareerPass` est créé →
+   `GET /billing/status` renvoie `has_active_pass: true`.
+
+Aucune clé n'est nécessaire pour la suite de tests (`pytest`) : Stripe y est mocké.
+
 Sans credentials Vertex, la suite de tests (`pytest`) valide tout le pipeline avec agents mockés (33 tests verts).
 
 ## 7. Repères rapides
