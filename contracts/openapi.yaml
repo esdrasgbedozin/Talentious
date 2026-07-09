@@ -552,6 +552,44 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /billing/catalog:
+    get:
+      tags: [Billing]
+      operationId: getBillingCatalog
+      summary: Catalogue des Pass achetables
+      description: |
+        Liste les Pass proposés à l'achat avec leur prix. Le montant est lu en
+        direct depuis Stripe (source unique de vérité) : `amount_cents` et
+        `currency` peuvent être `null` si Stripe n'est pas configuré ou si la
+        récupération échoue — dans ce cas le prix est confirmé à l'étape Checkout.
+      responses:
+        '200':
+          description: Catalogue des Pass
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingCatalogResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /billing/status:
+    get:
+      tags: [Billing]
+      operationId: getBillingStatus
+      summary: Statut d'accès (Pass actif ?)
+      description: |
+        Indique si l'utilisateur détient un CareerPass actuellement valide et,
+        le cas échéant, jusqu'à quand.
+      responses:
+        '200':
+          description: Statut d'accès de l'utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   # ---------------------------------------------------------------------------
   # Account (RGPD Art. 17)
   # ---------------------------------------------------------------------------
@@ -1587,3 +1625,53 @@ components:
           type: string
           description: Identifiant de la session Stripe Checkout
           example: "cs_test_a1b2c3d4e5f6..."
+
+    CatalogEntry:
+      type: object
+      required:
+        - pass_type
+        - duration_days
+      properties:
+        pass_type:
+          $ref: '#/components/schemas/PassType'
+        duration_days:
+          type: integer
+          description: Durée de validité du Pass en jours
+          example: 30
+        amount_cents:
+          type: integer
+          nullable: true
+          description: |
+            Prix en plus petite unité monétaire (centimes), lu depuis Stripe.
+            `null` si Stripe n'est pas configuré ou si la récupération a échoué.
+          example: 1900
+        currency:
+          type: string
+          nullable: true
+          description: Code ISO 4217 en minuscules (ex. `eur`). `null` si inconnu.
+          example: "eur"
+
+    BillingCatalogResponse:
+      type: object
+      required:
+        - passes
+      properties:
+        passes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogEntry'
+
+    BillingStatusResponse:
+      type: object
+      required:
+        - has_active_pass
+      properties:
+        has_active_pass:
+          type: boolean
+          description: Vrai si l'utilisateur détient un CareerPass valide
+          example: true
+        valid_until:
+          type: string
+          format: date-time
+          nullable: true
+          description: Date d'expiration du Pass actif, ou `null` si aucun

@@ -9,6 +9,7 @@ mock in tests (no network in the test suite).
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -19,6 +20,8 @@ import stripe
 from app.config import settings
 from app.models import PassType
 
+logger = logging.getLogger(__name__)
+
 # Configure the SDK once from settings (None in tests → stripe calls are mocked).
 stripe.api_key = settings.stripe_secret_key
 
@@ -28,6 +31,16 @@ class PassSpec:
     price_id: Optional[str]
     duration_days: int
     model_pass_type: PassType
+
+
+@dataclass(frozen=True)
+class PassCatalogEntry:
+    """A purchasable pass with its live Stripe price (amount is None when unknown)."""
+
+    pass_type: str
+    duration_days: int
+    amount_cents: Optional[int]
+    currency: Optional[str]
 
 
 # Maps the API pass_type (contract enum, e.g. "PASS_30_DAYS") to its Stripe price,
@@ -49,6 +62,39 @@ def get_pass_spec(pass_type: str) -> PassSpec:
     if not spec.price_id:
         raise BillingConfigError(f"No Stripe price configured for {pass_type}")
     return spec
+
+
+def get_catalog() -> list[PassCatalogEntry]:
+    """
+    List the purchasable passes with their live Stripe price.
+
+    Stripe is the single source of truth for the amount: we read it from the
+    configured Price ID rather than duplicating it in our config. When Stripe is
+    not configured (local dev without keys) or a lookup fails, the amount stays
+    None and the client shows the price is confirmed at checkout — never a guess.
+    """
+    entries: list[PassCatalogEntry] = []
+    for pass_type, spec in PASS_SPECS.items():
+        amount_cents: Optional[int] = None
+        currency: Optional[str] = None
+        if spec.price_id and stripe.api_key:
+            try:
+                price = stripe.Price.retrieve(spec.price_id)
+                amount_cents = price.get("unit_amount")
+                currency = price.get("currency")
+            except stripe.StripeError as exc:
+                logger.warning(
+                    "Could not retrieve Stripe price %s: %s", spec.price_id, exc
+                )
+        entries.append(
+            PassCatalogEntry(
+                pass_type=pass_type,
+                duration_days=spec.duration_days,
+                amount_cents=amount_cents,
+                currency=currency,
+            )
+        )
+    return entries
 
 
 def create_checkout_session(

@@ -133,6 +133,62 @@ class TestWebhook:
 
 
 # ----------------------------------------------------------------------------
+# GET /billing/catalog
+# ----------------------------------------------------------------------------
+
+
+class TestCatalog:
+    async def test_lists_passes_without_price_when_unconfigured(
+        self, client, auth_headers
+    ):
+        """No Stripe key (default) → both passes listed, amount left null."""
+        r = await client.get("/billing/catalog", headers=auth_headers)
+        assert r.status_code == 200
+        passes = r.json()["passes"]
+        assert {p["pass_type"] for p in passes} == {"PASS_30_DAYS", "PASS_90_DAYS"}
+        p30 = next(p for p in passes if p["pass_type"] == "PASS_30_DAYS")
+        assert p30["duration_days"] == 30
+        assert p30["amount_cents"] is None
+        assert p30["currency"] is None
+
+    async def test_requires_auth(self, client):
+        r = await client.get("/billing/catalog")
+        assert r.status_code == 401
+
+    def test_get_catalog_reads_live_stripe_price(self, monkeypatch):
+        monkeypatch.setattr(billing.stripe, "api_key", "sk_test_x")
+        monkeypatch.setattr(
+            billing,
+            "PASS_SPECS",
+            {"PASS_30_DAYS": billing.PassSpec("price_30", 30, PassType.PASS_30_DAYS)},
+        )
+        monkeypatch.setattr(
+            billing.stripe.Price,
+            "retrieve",
+            lambda price_id: {"unit_amount": 1900, "currency": "eur"},
+        )
+        catalog = billing.get_catalog()
+        assert catalog[0].amount_cents == 1900
+        assert catalog[0].currency == "eur"
+
+    def test_get_catalog_survives_stripe_error(self, monkeypatch):
+        monkeypatch.setattr(billing.stripe, "api_key", "sk_test_x")
+        monkeypatch.setattr(
+            billing,
+            "PASS_SPECS",
+            {"PASS_30_DAYS": billing.PassSpec("price_30", 30, PassType.PASS_30_DAYS)},
+        )
+
+        def _boom(price_id):
+            raise stripe.StripeError("stripe down")
+
+        monkeypatch.setattr(billing.stripe.Price, "retrieve", _boom)
+        catalog = billing.get_catalog()
+        assert catalog[0].amount_cents is None
+        assert catalog[0].currency is None
+
+
+# ----------------------------------------------------------------------------
 # GET /billing/status
 # ----------------------------------------------------------------------------
 

@@ -50,6 +50,35 @@ class BillingStatusResponse(BaseModel):
     valid_until: Optional[datetime] = None
 
 
+class CatalogEntryResponse(BaseModel):
+    pass_type: str
+    duration_days: int
+    amount_cents: Optional[int] = None
+    currency: Optional[str] = None
+
+
+class BillingCatalogResponse(BaseModel):
+    passes: list[CatalogEntryResponse]
+
+
+@router.get("/catalog", response_model=BillingCatalogResponse)
+async def billing_catalog(
+    current_user: User = Depends(get_current_active_user),
+):
+    """List purchasable passes with their live Stripe price (amount may be null)."""
+    return BillingCatalogResponse(
+        passes=[
+            CatalogEntryResponse(
+                pass_type=entry.pass_type,
+                duration_days=entry.duration_days,
+                amount_cents=entry.amount_cents,
+                currency=entry.currency,
+            )
+            for entry in billing.get_catalog()
+        ]
+    )
+
+
 @router.post("/checkout-session", response_model=CheckoutSessionResponse)
 async def create_checkout_session(
     request: CheckoutSessionRequest,

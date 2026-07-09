@@ -40,10 +40,17 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error: AxiosError) => {
-    // If 401 error (Unauthorized), remove token and redirect to login
+    // If 401 error (Unauthorized), clear the session and redirect to login.
     if (error.response?.status === 401) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
+      // Also clear the middleware session cookie: otherwise the route guard still
+      // sees a "session", bounces /login → /onboarding → /profile, and the expired
+      // token re-triggers this 401 — an infinite redirect loop.
+      if (typeof document !== 'undefined') {
+        document.cookie =
+          'talentious_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      }
 
       // Redirect to login (except if already on /login or /register)
       if (typeof window !== 'undefined' &&
@@ -201,6 +208,37 @@ export const createCheckoutSession = async (
 export const getBillingStatus = async (): Promise<BillingStatus> => {
   const { data } = await apiClient.get<BillingStatus>('/billing/status');
   return data;
+};
+
+export interface CatalogEntry {
+  pass_type: PassType;
+  duration_days: number;
+  /** Price in the currency's minor unit (cents). Null when Stripe is unconfigured. */
+  amount_cents: number | null;
+  /** ISO 4217 lowercase code (e.g. "eur"). Null when unknown. */
+  currency: string | null;
+}
+
+export interface BillingCatalog {
+  passes: CatalogEntry[];
+}
+
+/** Purchasable passes with their live Stripe price (amount may be null). */
+export const getBillingCatalog = async (): Promise<BillingCatalog> => {
+  const { data } = await apiClient.get<BillingCatalog>('/billing/catalog');
+  return data;
+};
+
+/** Format a catalog price for display, or a fallback when the amount is unknown. */
+export const formatPrice = (
+  amountCents: number | null,
+  currency: string | null,
+): string | null => {
+  if (amountCents == null || currency == null) return null;
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+  }).format(amountCents / 100);
 };
 
 // Helper to extract error messages from API responses
