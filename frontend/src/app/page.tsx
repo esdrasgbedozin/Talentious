@@ -6,6 +6,9 @@ import {
   BarChart3,
   LayoutTemplate,
   RefreshCw,
+  MapPin,
+  ShieldCheck,
+  Lock,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Navbar from "@/components/Navbar";
@@ -341,7 +344,9 @@ export default function Home() {
 
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white p-6 rounded-2xl border border-border">
-              <div className="text-4xl mb-4">🇫🇷</div>
+              <div className="w-12 h-12 mx-auto bg-action/10 rounded-xl flex items-center justify-center mb-4">
+                <MapPin className="w-6 h-6 text-action" aria-hidden="true" />
+              </div>
               <h3 className="text-lg font-semibold text-primary mb-2">Hébergement français</h3>
               <p className="text-sm text-text-secondary">
                 Serveurs GCP en France (europe-west9). Vos données ne quittent jamais le territoire européen.
@@ -349,7 +354,9 @@ export default function Home() {
             </div>
 
             <div className="bg-white p-6 rounded-2xl border border-border">
-              <div className="text-4xl mb-4">🔒</div>
+              <div className="w-12 h-12 mx-auto bg-action/10 rounded-xl flex items-center justify-center mb-4">
+                <ShieldCheck className="w-6 h-6 text-action" aria-hidden="true" />
+              </div>
               <h3 className="text-lg font-semibold text-primary mb-2">Conformité RGPD</h3>
               <p className="text-sm text-text-secondary">
                 Respect total de vos droits : accès, modification, suppression de vos données à tout moment.
@@ -357,7 +364,9 @@ export default function Home() {
             </div>
 
             <div className="bg-white p-6 rounded-2xl border border-border">
-              <div className="text-4xl mb-4">🛡️</div>
+              <div className="w-12 h-12 mx-auto bg-action/10 rounded-xl flex items-center justify-center mb-4">
+                <Lock className="w-6 h-6 text-action" aria-hidden="true" />
+              </div>
               <h3 className="text-lg font-semibold text-primary mb-2">Chiffrement SSL</h3>
               <p className="text-sm text-text-secondary">
                 Toutes les communications sont cryptées. Vos informations personnelles sont protégées.

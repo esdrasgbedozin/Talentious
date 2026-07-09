@@ -31,7 +31,7 @@ export default function ProfileSection({
       {/* Header */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-6 py-5 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        className="w-full px-6 py-5 flex items-center justify-between hover:bg-background-light transition-colors"
       >
         <div className="flex items-center gap-4">
           {/* Icon */}
@@ -44,7 +44,7 @@ export default function ProfileSection({
           {/* Title and Description */}
           <div className="text-left">
             <div className="flex items-center gap-3">
-              <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+              <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
               {/* Completion indicator */}
               {isComplete && (
                 <div className="flex items-center gap-1.5 text-action text-sm font-medium">
@@ -60,7 +60,7 @@ export default function ProfileSection({
               )}
             </div>
             {description && (
-              <p className="text-sm text-gray-500 mt-1">{description}</p>
+              <p className="text-sm text-text-secondary mt-1">{description}</p>
             )}
           </div>
         </div>
@@ -85,7 +85,7 @@ export default function ProfileSection({
 
       {/* Content */}
       {isOpen && (
-        <div className="px-6 py-6 border-t border-gray-200 bg-gray-50/50">
+        <div className="px-6 py-6 border-t border-gray-200 bg-background-light/50">
           {children}
         </div>
       )}

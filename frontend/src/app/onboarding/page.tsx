@@ -98,10 +98,10 @@ export default function OnboardingPage() {
       <main className="max-w-5xl mx-auto px-6 py-12">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-text-primary mb-4">
             Bienvenue sur Talentious
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-text-secondary max-w-2xl mx-auto">
             Importons votre profil pour commencer. Choisissez la méthode qui vous convient le mieux.
           </p>
         </div>
@@ -130,10 +130,10 @@ export default function OnboardingPage() {
                 </svg>
               </div>
 
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
+              <h3 className="text-xl font-bold text-text-primary mb-2">
                 Importer un CV (PDF)
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-text-secondary">
                 La méthode la plus rapide pour pré-remplir votre profil
               </p>
             </div>
@@ -156,10 +156,10 @@ export default function OnboardingPage() {
                 </svg>
               </div>
 
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
+              <h3 className="text-xl font-bold text-text-primary mb-2">
                 Profil LinkedIn (PDF)
               </h3>
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-text-secondary mb-2">
                 Exportez votre profil LinkedIn en PDF
               </p>
               
@@ -192,15 +192,15 @@ export default function OnboardingPage() {
             <div className="flex flex-col items-center text-center">
               {/* Icon */}
               <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-gray-200 transition-colors">
-                <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-8 h-8 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </div>
 
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
+              <h3 className="text-xl font-bold text-text-primary mb-2">
                 Commencer manuellement
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-text-secondary">
                 Remplir votre profil à la main
               </p>
             </div>
@@ -210,7 +210,7 @@ export default function OnboardingPage() {
         {/* Upload Area - Only visible when CV or LinkedIn is selected */}
         {(selectedOption === 'cv' || selectedOption === 'linkedin') && (
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            <h2 className="text-2xl font-bold text-text-primary mb-6">
               {selectedOption === 'cv' ? 'Importez votre CV' : 'Importez votre profil LinkedIn'}
             </h2>
 
@@ -224,7 +224,7 @@ export default function OnboardingPage() {
                   ? 'border-action bg-green-50'
                   : uploadedFile
                   ? 'border-action bg-green-50/30'
-                  : 'border-gray-300 hover:border-action hover:bg-gray-50'
+                  : 'border-gray-300 hover:border-action hover:bg-background-light'
               }`}
             >
               <input
@@ -244,8 +244,8 @@ export default function OnboardingPage() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-lg font-semibold text-gray-900">{uploadedFile.name}</p>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-lg font-semibold text-text-primary">{uploadedFile.name}</p>
+                    <p className="text-sm text-text-secondary mt-1">
                       {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
@@ -265,17 +265,17 @@ export default function OnboardingPage() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-lg text-gray-700 mb-2">
+                    <p className="text-lg text-text-primary mb-2">
                       Glissez-déposez votre fichier PDF ici
                     </p>
-                    <p className="text-sm text-gray-500 mb-4">ou</p>
+                    <p className="text-sm text-text-secondary mb-4">ou</p>
                     <label htmlFor="file-upload">
                       <span className="inline-block bg-gradient-to-r from-action to-action-hover text-white px-6 py-3 rounded-lg font-medium cursor-pointer hover:shadow-lg transition-shadow">
                         Parcourir les fichiers
                       </span>
                     </label>
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-text-secondary">
                     Format PDF uniquement • Taille maximale : 10 MB
                   </p>
                 </div>
@@ -318,7 +318,7 @@ export default function OnboardingPage() {
 
         {/* Help text */}
         <div className="mt-8 text-center">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-text-secondary">
             Vos données sont sécurisées et ne seront jamais partagées sans votre consentement.
           </p>
         </div>

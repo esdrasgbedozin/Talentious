@@ -97,7 +97,7 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto px-6 py-12">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">Mes CVs</h1>
+          <h1 className="text-4xl font-bold text-text-primary">Mes CVs</h1>
           <Button
             variant="primary"
             size="lg"
@@ -113,7 +113,7 @@ export default function DashboardPage() {
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-16 h-16 border-4 border-action border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-gray-600 text-lg">Chargement de vos CVs...</p>
+            <p className="text-text-secondary text-lg">Chargement de vos CVs...</p>
           </div>
         )}
 
@@ -123,10 +123,10 @@ export default function DashboardPage() {
             <div className="text-red-600 mb-4">
               <FileText size={64} className="mx-auto opacity-50" />
             </div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-2xl font-semibold text-text-primary mb-2">
               Erreur de chargement
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-text-secondary mb-6">
               {error instanceof Error ? error.message : 'Une erreur est survenue'}
             </p>
             <Button
@@ -144,10 +144,10 @@ export default function DashboardPage() {
             <div className="mb-8">
               <FileText size={120} className="mx-auto text-gray-300" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl font-bold text-text-primary mb-4">
               Aucun CV pour le moment
             </h2>
-            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+            <p className="text-text-secondary mb-8 max-w-md mx-auto">
               Commencez par générer votre premier CV professionnel optimisé par notre IA.
             </p>
             <Button
@@ -210,10 +210,10 @@ function CVCard({ cv, onEdit, onDownload, onDelete, isDeleting }: CVCardProps) {
           <FileText size={24} className="text-action" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 text-lg truncate mb-1">
+          <h3 className="font-semibold text-text-primary text-lg truncate mb-1">
             {cv.cv_name}
           </h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-text-secondary">
             Modifié le {formatDate(cv.updated_at)}
           </p>
         </div>

@@ -225,7 +225,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-action mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement du profil...</p>
+          <p className="mt-4 text-text-secondary">Chargement du profil...</p>
         </div>
       </div>
     );
@@ -238,10 +238,10 @@ export default function ProfilePage() {
       <main className="max-w-5xl mx-auto px-6 py-12">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">
+          <h1 className="text-4xl font-bold text-text-primary mb-3">
             Mon Profil Maître
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-text-secondary">
             Votre source de vérité unique pour tous vos CVs. Remplissez votre profil une fois, 
             générez des CVs adaptés à l&apos;infini.
           </p>
@@ -353,7 +353,7 @@ export default function ProfilePage() {
                 rows={6}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-action focus:border-transparent resize-none"
               />
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-text-secondary">
                 {profile?.summary?.length || 0} caractères
                 {(profile?.summary?.length || 0) > 0 && (profile?.summary?.length || 0) < MIN_SUMMARY_LENGTH_RECOMMENDED && (
                   <span className="ml-2 text-orange-600">• Trop court (minimum recommandé: {MIN_SUMMARY_LENGTH_RECOMMENDED})</span>
@@ -384,12 +384,12 @@ export default function ProfilePage() {
               </div>
               
               {(profile?.experiences?.length || 0) === 0 ? (
-                <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <div className="text-center py-12 bg-background-light rounded-lg border-2 border-dashed border-gray-300">
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  <p className="mt-2 text-gray-600">Aucune expérience ajoutée</p>
-                  <p className="text-sm text-gray-500">Cliquez sur &ldquo;Ajouter une expérience&rdquo; pour commencer</p>
+                  <p className="mt-2 text-text-secondary">Aucune expérience ajoutée</p>
+                  <p className="text-sm text-text-secondary">Cliquez sur &ldquo;Ajouter une expérience&rdquo; pour commencer</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -430,12 +430,12 @@ export default function ProfilePage() {
               </div>
               
               {(profile?.educations?.length || 0) === 0 ? (
-                <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <div className="text-center py-12 bg-background-light rounded-lg border-2 border-dashed border-gray-300">
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
                   </svg>
-                  <p className="mt-2 text-gray-600">Aucune formation ajoutée</p>
-                  <p className="text-sm text-gray-500">Cliquez sur &ldquo;Ajouter une formation&rdquo; pour commencer</p>
+                  <p className="mt-2 text-text-secondary">Aucune formation ajoutée</p>
+                  <p className="text-sm text-text-secondary">Cliquez sur &ldquo;Ajouter une formation&rdquo; pour commencer</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -465,7 +465,7 @@ export default function ProfilePage() {
           >
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-text-primary mb-2">
                   Compétences techniques (Hard Skills)
                 </label>
                 <SkillsInput
@@ -473,13 +473,13 @@ export default function ProfilePage() {
                   onChange={(skills) => updateSkills('hard', skills)}
                   placeholder="Ex: React, Python, SQL... (Appuyez sur Entrée pour ajouter)"
                 />
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-text-secondary">
                   {profile?.skills?.hard?.length || 0}/20 compétences techniques
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-text-primary mb-2">
                   Compétences comportementales (Soft Skills)
                 </label>
                 <SkillsInput
@@ -487,7 +487,7 @@ export default function ProfilePage() {
                   onChange={(skills) => updateSkills('soft', skills)}
                   placeholder="Ex: Leadership, Communication, Travail d'équipe... (Appuyez sur Entrée pour ajouter)"
                 />
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-text-secondary">
                   {profile?.skills?.soft?.length || 0}/20 compétences comportementales
                 </p>
               </div>
@@ -516,12 +516,12 @@ export default function ProfilePage() {
               </div>
               
               {(profile?.projects?.length || 0) === 0 ? (
-                <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <div className="text-center py-12 bg-background-light rounded-lg border-2 border-dashed border-gray-300">
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                   </svg>
-                  <p className="mt-2 text-gray-600">Aucun projet ajouté</p>
-                  <p className="text-sm text-gray-500">Cliquez sur &ldquo;Ajouter un projet&rdquo; pour commencer</p>
+                  <p className="mt-2 text-text-secondary">Aucun projet ajouté</p>
+                  <p className="text-sm text-text-secondary">Cliquez sur &ldquo;Ajouter un projet&rdquo; pour commencer</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -560,12 +560,12 @@ export default function ProfilePage() {
               </div>
               
               {(profile?.certifications?.length || 0) === 0 ? (
-                <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <div className="text-center py-12 bg-background-light rounded-lg border-2 border-dashed border-gray-300">
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                   </svg>
-                  <p className="mt-2 text-gray-600">Aucune certification ajoutée</p>
-                  <p className="text-sm text-gray-500">Cliquez sur &ldquo;Ajouter une certification&rdquo; pour commencer</p>
+                  <p className="mt-2 text-text-secondary">Aucune certification ajoutée</p>
+                  <p className="text-sm text-text-secondary">Cliquez sur &ldquo;Ajouter une certification&rdquo; pour commencer</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -589,7 +589,7 @@ export default function ProfilePage() {
           <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
             <button
               onClick={() => router.push('/dashboard')}
-              className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
+              className="text-text-secondary hover:text-text-primary font-medium transition-colors"
             >
               ← Retour au tableau de bord
             </button>

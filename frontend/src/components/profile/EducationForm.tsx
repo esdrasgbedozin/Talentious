@@ -23,7 +23,7 @@ export default function EducationForm({
     <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
       {/* Header with Remove Button */}
       <div className="flex items-start justify-between gap-4">
-        <h4 className="text-lg font-semibold text-gray-900">
+        <h4 className="text-lg font-semibold text-text-primary">
           {education.degree || 'Nouvelle formation'}
         </h4>
         <button
@@ -87,7 +87,7 @@ export default function EducationForm({
 
       {/* Description */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-text-primary mb-2">
           Description (optionnel)
         </label>
         <textarea

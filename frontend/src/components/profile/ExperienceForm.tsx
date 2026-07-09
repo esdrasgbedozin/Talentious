@@ -23,7 +23,7 @@ export default function ExperienceForm({
     <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
       {/* Header with Remove Button */}
       <div className="flex items-start justify-between gap-4">
-        <h4 className="text-lg font-semibold text-gray-900">
+        <h4 className="text-lg font-semibold text-text-primary">
           {experience.title || 'Nouvelle expérience'}
         </h4>
         <button
@@ -87,12 +87,12 @@ export default function ExperienceForm({
           }}
           className="w-4 h-4 text-action border-gray-300 rounded focus:ring-action"
         />
-        <span className="text-sm text-gray-700">Poste actuel</span>
+        <span className="text-sm text-text-primary">Poste actuel</span>
       </label>
 
       {/* Description */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-text-primary mb-2">
           Description *
         </label>
         <textarea

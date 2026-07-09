@@ -237,7 +237,7 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                 height={96}
                 className="w-14 h-14 md:w-16 md:h-16 drop-shadow-md"
               />
-              <span className="text-xl font-bold text-gray-900">Talentious</span>
+              <span className="text-xl font-bold text-text-primary">Talentious</span>
             </Link>
 
             {/* Desktop Navigation */}
@@ -247,7 +247,7 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                 className={`text-sm font-medium transition-colors ${
                   pathname === '/profile' 
                     ? 'text-action' 
-                    : 'text-gray-600 hover:text-gray-900'
+                    : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
                 Mon Profil
@@ -257,7 +257,7 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                 className={`text-sm font-medium transition-colors ${
                   pathname === '/dashboard' 
                     ? 'text-action' 
-                    : 'text-gray-600 hover:text-gray-900'
+                    : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
                 Mes CV
@@ -268,7 +268,7 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
             <div className="relative user-menu-container">
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center gap-3 hover:bg-gray-50 rounded-lg px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-action"
+                className="flex items-center gap-3 hover:bg-background-light rounded-lg px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-action"
                 aria-haspopup="true"
                 aria-expanded={isUserMenuOpen}
                 aria-label="Menu utilisateur"
@@ -279,10 +279,10 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                 </div>
                 {/* User Info (Desktop only) */}
                 <div className="hidden md:block text-left">
-                  <div className="text-sm font-medium text-gray-900">
+                  <div className="text-sm font-medium text-text-primary">
                     {user?.email.split('@')[0] || 'Utilisateur'}
                   </div>
-                  <div className="text-xs text-gray-500">{user?.email}</div>
+                  <div className="text-xs text-text-secondary">{user?.email}</div>
                 </div>
                 {/* Dropdown Icon */}
                 <svg 
@@ -304,8 +304,8 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                 >
                   {/* Mobile: Show user info */}
                   <div className="md:hidden px-4 py-3 border-b border-gray-100">
-                    <div className="font-medium text-gray-900">{user?.email.split('@')[0] || 'Utilisateur'}</div>
-                    <div className="text-sm text-gray-500">{user?.email}</div>
+                    <div className="font-medium text-text-primary">{user?.email.split('@')[0] || 'Utilisateur'}</div>
+                    <div className="text-sm text-text-secondary">{user?.email}</div>
                   </div>
 
                   {/* Mobile: Navigation links */}
@@ -313,7 +313,7 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                     <Link 
                       href="/profile"
                       onClick={() => setIsUserMenuOpen(false)}
-                      className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="block px-4 py-3 text-sm text-text-primary hover:bg-background-light transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -325,7 +325,7 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                     <Link 
                       href="/dashboard"
                       onClick={() => setIsUserMenuOpen(false)}
-                      className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="block px-4 py-3 text-sm text-text-primary hover:bg-background-light transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

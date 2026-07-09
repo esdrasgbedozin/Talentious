@@ -243,7 +243,7 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
               <Sparkles className="w-20 h-20 text-action animate-pulse" />
             </div>
             
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">
+            <h3 className="text-2xl font-bold text-text-primary mb-6">
               Génération en cours...
             </h3>
 
@@ -262,14 +262,14 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
                   ) : (
                     <div className="w-6 h-6 border-4 border-gray-300 rounded-full flex-shrink-0" />
                   )}
-                  <p className={`text-lg ${index <= currentStep ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>
+                  <p className={`text-lg ${index <= currentStep ? 'text-text-primary font-medium' : 'text-gray-400'}`}>
                     {step.message}
                   </p>
                 </div>
               ))}
             </div>
 
-            <p className="mt-8 text-sm text-gray-500 text-center max-w-md">
+            <p className="mt-8 text-sm text-text-secondary text-center max-w-md">
               Cette opération peut prendre de 30 secondes à 3 minutes.
               <br />
               Notre IA analyse l&apos;offre et optimise votre profil.
@@ -287,17 +287,17 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
                   <FileText className="w-6 h-6 text-action" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
+                  <h2 className="text-2xl font-bold text-text-primary">
                     Générer un nouveau CV
                   </h2>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-text-secondary">
                     Optimisé par notre IA en quelques minutes
                   </p>
                 </div>
               </div>
               <button
                 onClick={handleClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-text-secondary transition-colors"
                 aria-label="Fermer"
               >
                 <X className="w-6 h-6" />
@@ -309,7 +309,7 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
               <div className="space-y-6">
                 {/* CV Name Input */}
                 <div>
-                  <label htmlFor="cv-name" className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label htmlFor="cv-name" className="block text-sm font-semibold text-text-primary mb-2">
                     Nom du CV <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -318,18 +318,18 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
                     value={cvName}
                     onChange={(e) => setCvName(e.target.value)}
                     placeholder="Ex: CV - Développeur React - Google"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-action focus:outline-none transition-colors text-gray-900"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-action focus:outline-none transition-colors text-text-primary"
                     maxLength={255}
                     required
                   />
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-text-secondary">
                     {cvName.length}/255 caractères
                   </p>
                 </div>
 
                 {/* Offer Text Textarea */}
                 <div>
-                  <label htmlFor="offer-text" className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label htmlFor="offer-text" className="block text-sm font-semibold text-text-primary mb-2">
                     Texte de l&apos;offre d&apos;emploi <span className="text-red-500">*</span>
                   </label>
                   <textarea
@@ -337,7 +337,7 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
                     value={offerText}
                     onChange={(e) => setOfferText(e.target.value)}
                     placeholder="Collez ici le texte complet de l'offre d'emploi (description du poste, compétences requises, responsabilités...)"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-action focus:outline-none transition-colors resize-none text-gray-900"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-action focus:outline-none transition-colors resize-none text-text-primary"
                     rows={10}
                     required
                   />
@@ -346,7 +346,7 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
                       offerText.trim().length > 0 &&
                       offerText.trim().length < MIN_OFFER_CHARS
                         ? 'text-error'
-                        : 'text-gray-500'
+                        : 'text-text-secondary'
                     }`}
                   >
                     Minimum {MIN_OFFER_CHARS} caractères · {offerText.length}{' '}
@@ -360,14 +360,14 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
                     <label className="block text-sm font-semibold text-gray-400">
                       Ou uploadez l&apos;offre en PDF
                     </label>
-                    <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">
+                    <span className="text-xs bg-gray-200 text-text-secondary px-2 py-1 rounded-full">
                       Bientôt disponible
                     </span>
                   </div>
                   <div className="relative opacity-50 cursor-not-allowed">
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center bg-gray-50">
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center bg-background-light">
                       <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-sm text-gray-500 mb-1">
+                      <p className="text-sm text-text-secondary mb-1">
                         Cliquez pour uploader ou glissez-déposez
                       </p>
                       <p className="text-xs text-gray-400">
@@ -398,7 +398,7 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
             </form>
 
             {/* Footer Actions */}
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-background-light">
               <Button
                 type="button"
                 variant="outline"
@@ -413,7 +413,7 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
                 className={`flex items-center gap-2 ${
                   isFormValid
                     ? 'bg-action hover:bg-action-hover text-white'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-300 text-text-secondary cursor-not-allowed'
                 }`}
               >
                 <Sparkles className="w-5 h-5" />
