@@ -70,9 +70,11 @@ Les dépendances inter-tickets sont notées dans la colonne **Dépend de**. Un t
 
 ---
 
-### M0 — Fondations (objectif : environnement local propre, types générés, modèles alignés)
+### M0 — Fondations (objectif : environnement local propre, types générés, modèles alignés) — ✅ TERMINÉ (2026-07-09)
 
 **Critère de fin du jalon** : `docker-compose up` démarre tous les services sans erreur ; les types Pydantic backend et TypeScript frontend sont générés depuis `contracts/openapi.yaml` et commités ; les tests existants (23 backend, 3 suites frontend) passent toujours.
+
+> **État** : ✅ atteint. 23 tests backend verts + 20 tests jest verts + `tsc --noEmit` propre. Types générés des deux côtés depuis les contrats, schémas backend et frontend alignés (renommages issuer/field, ajout languages, skills requis). Outillage retenu : `datamodel-code-generator` (backend) + `openapi-typescript` (frontend) au lieu d'openapi-generator (sans JVM) — **ADR outillage à formaliser**. Correctifs de fondation au passage : parsing CORS robuste + `extra=ignore` (config.py), dépendance `greenlet` ajoutée. Branche `restructuration/v1-foundations` (non poussée).
 
 | ID | Titre | Description courte | Fichiers / zone | Dépend de | Estim. | Critère de fin (test) |
 |---|---|---|---|---|---|---|
