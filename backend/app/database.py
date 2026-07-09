@@ -1,6 +1,7 @@
 """
 Database configuration and session management.
 """
+
 from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -40,7 +41,7 @@ else:
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency to inject a database session into FastAPI routes.
-    
+
     Usage:
         @app.get("/users")
         async def get_users(db: AsyncSession = Depends(get_db)):
@@ -48,7 +49,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     if AsyncSessionLocal is None:
         raise RuntimeError("Database engine not initialized for async operations")
-    
+
     # Yield the session to the caller and let the caller manage commits.
     # Automatically rolling back on exceptions so callers don't leave transactions open.
     async with AsyncSessionLocal() as session:
@@ -57,3 +58,13 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         except Exception:
             await session.rollback()
             raise
+
+
+def get_session_factory():
+    """Return the session factory for background workers (own session, not the request's).
+
+    Overridable in tests to bind the worker to the test database engine.
+    """
+    if AsyncSessionLocal is None:
+        raise RuntimeError("Database engine not initialized for async operations")
+    return AsyncSessionLocal

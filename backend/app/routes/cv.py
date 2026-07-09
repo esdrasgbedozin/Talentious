@@ -3,55 +3,73 @@ CV Generation Router
 Orchestrates the full AI pipeline: Analyzer → Writer
 """
 
+import asyncio
+import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Response,
+    status,
+)
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.database import get_db
-from app.models import User, UserProfile, CareerPass, GeneratedCV
+from app.database import get_db, get_session_factory
+from app.models import CareerPass, CVJob, GeneratedCV, JobStatus, User, UserProfile
 from app.routes.auth import get_current_active_user
-from app.services.analyzer_client import analyzer_client
-from app.services.writer_client import writer_client
+from app.services.cv_worker import run_cv_generation
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/cv", tags=["CV Generation"])
 
 
-# ==================== CONSTANTS ====================
-
-# Default skill levels for transformation from frontend structure to AI structure
-# Hard skills default to "advanced" as they are typically technical competencies
-# that users list only when they have strong proficiency
-DEFAULT_HARD_SKILL_LEVEL = "advanced"
-
-# Soft skills default to "intermediate" as they are more subjective and often
-# listed aspirationally or as areas of ongoing development
-DEFAULT_SOFT_SKILL_LEVEL = "intermediate"
-
 # ==================== REQUEST/RESPONSE MODELS ====================
+
 
 class GenerateCVRequest(BaseModel):
     """Request model for CV generation"""
-    cv_name: str = Field(..., min_length=1, max_length=255, description="Name for the generated CV")
-    offer_text: str = Field(..., min_length=50, description="Job offer text (minimum 50 characters)")
+
+    cv_name: str = Field(
+        ..., min_length=1, max_length=255, description="Name for the generated CV"
+    )
+    offer_text: str = Field(
+        ...,
+        min_length=50,
+        max_length=200000,
+        description="Job offer text (50 to 200,000 characters)",
+    )
 
 
-class GenerateCVResponse(BaseModel):
-    """Response model for CV generation"""
-    cv_id: UUID = Field(..., description="Unique identifier of the generated CV")
-    cv_data: dict = Field(..., description="Generated CV data (JSON structure)")
-    message: str = Field(default="CV generated successfully")
+class GenerateCVJobAccepted(BaseModel):
+    """202 response: the generation job was accepted and queued."""
+
+    job_id: UUID = Field(..., description="Identifier of the queued generation job")
+    status: JobStatus = Field(..., description="Current job status (queued)")
+
+
+class CVJobStatus(BaseModel):
+    """Status of an asynchronous CV generation job."""
+
+    job_id: UUID
+    status: JobStatus
+    progress_pct: Optional[int] = None
+    cv_id: Optional[UUID] = None
+    error_message: Optional[str] = None
 
 
 class CVListItem(BaseModel):
     """CV list item for GET /cv"""
+
     id: UUID
     cv_name: str
     template_id: str
@@ -61,6 +79,7 @@ class CVListItem(BaseModel):
 
 class CVDetailResponse(BaseModel):
     """Detailed CV response for GET /cv/{cv_id}"""
+
     id: UUID
     cv_name: str
     template_id: str
@@ -73,19 +92,18 @@ class CVDetailResponse(BaseModel):
 
 class UpdateCVRequest(BaseModel):
     """Request model for updating CV"""
+
     cv_name: Optional[str] = Field(None, min_length=1, max_length=255)
     cv_data_json: Optional[dict] = None
 
 
 # ==================== HELPER FUNCTIONS ====================
 
-async def check_career_pass_or_admin(
-    current_user: User,
-    db: AsyncSession
-) -> None:
+
+async def check_career_pass_or_admin(current_user: User, db: AsyncSession) -> None:
     """
     Verify user has an active CareerPass or is admin.
-    
+
     Raises:
         HTTPException(402): If user has no active pass and is not admin
     """
@@ -93,7 +111,7 @@ async def check_career_pass_or_admin(
     if current_user.role == "admin":
         logger.info(f"Admin user {current_user.email} bypassing CareerPass check")
         return
-    
+
     # Query for active CareerPass
     result = await db.execute(
         select(CareerPass)
@@ -102,14 +120,16 @@ async def check_career_pass_or_admin(
         .order_by(CareerPass.valid_until.desc())
     )
     active_pass = result.scalars().first()
-    
+
     if not active_pass:
-        logger.warning(f"User {current_user.email} attempted CV generation without active CareerPass")
+        logger.warning(
+            f"User {current_user.email} attempted CV generation without active CareerPass"
+        )
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail="Active CareerPass required. Please purchase a pass to generate CVs."
+            detail="Active CareerPass required. Please purchase a pass to generate CVs.",
         )
-    
+
     logger.info(
         f"User {current_user.email} has active {active_pass.pass_type} "
         f"(valid until {active_pass.valid_until})"
@@ -118,142 +138,160 @@ async def check_career_pass_or_admin(
 
 # ==================== ENDPOINTS ====================
 
-@router.post("/generate", response_model=GenerateCVResponse)
+
+@router.post(
+    "/generate",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=GenerateCVJobAccepted,
+)
 async def generate_cv(
     request: GenerateCVRequest,
+    response: Response,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    session_factory: async_sessionmaker = Depends(get_session_factory),
 ):
     """
-    🎯 **ORCHESTRATION ENDPOINT** - Generate optimized CV from job offer
-    
-    This is the main endpoint that orchestrates the full AI pipeline:
-    1. Verify user has active CareerPass (or is admin)
-    2. Fetch user profile from database
-    3. Call Analyseur-Offre to analyze job offer
-    4. Call Rédacteur-CV to generate optimized CV
-    5. Save generated CV to database
-    
-    **Pipeline:** `User Profile + Job Offer → Analyzer → Writer → Database`
-    
-    **Performance Note:** Generation takes 2-5 minutes due to:
-    - Gemini API latency (sequential calls to Analyzer + Writer)
-    - Retry logic for JSON validation (up to 3 attempts per agent)
-    - Large prompts and detailed responses (8192 max tokens)
-    
-    Returns:
-        GenerateCVResponse: Generated CV data with unique ID
-        
+    🎯 **ORCHESTRATION ENDPOINT** — accepte une génération de CV (asynchrone).
+
+    Vérifie l'accès (CareerPass ou admin) et l'existence du profil, garantit qu'une
+    seule génération est active par utilisateur (idempotence), crée un `CVJob` en
+    statut `queued` puis lance le pipeline IA en tâche de fond. Retourne `202` avec
+    le `job_id` ; le client suit l'avancement via `GET /cv/jobs/{job_id}`.
+
     Raises:
-        HTTPException(402): No active CareerPass
-        HTTPException(404): User profile not found
-        HTTPException(502/503/504): AI service errors
+        HTTPException(402): pas de CareerPass actif (non-admin)
+        HTTPException(404): profil utilisateur absent
+        HTTPException(409): une génération est déjà en cours pour cet utilisateur
     """
-    try:
-        # 1. Check permissions (CareerPass or Admin)
-        await check_career_pass_or_admin(current_user, db)
-        
-        # 2. Fetch user profile
-        logger.info(f"Fetching profile for user {current_user.email}...")
-        result = await db.execute(
-            select(UserProfile).where(UserProfile.user_id == current_user.id)
-        )
-        user_profile = result.scalars().first()
-        
-        if not user_profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User profile not found. Please create your profile first."
-            )
-        
-        # 3. Transform skills structure (Frontend {hard:[], soft:[]} → AI [{name, level, category}])
-        profile_data = dict(user_profile.profile_data)
-        
-        # Check if skills uses old frontend structure {hard: [], soft: []}
-        if isinstance(profile_data.get('skills'), dict) and 'hard' in profile_data.get('skills', {}):
-            logger.info("🔄 Transforming skills from frontend structure to AI structure...")
-            skills_dict = profile_data['skills']
-            transformed_skills = []
-            
-            # Transform hard skills
-            for skill_name in skills_dict.get('hard', []):
-                transformed_skills.append({
-                    "name": skill_name,
-                    "level": DEFAULT_HARD_SKILL_LEVEL,
-                    "category": "hard_skill"
-                })
-            
-            # Transform soft skills
-            for skill_name in skills_dict.get('soft', []):
-                transformed_skills.append({
-                    "name": skill_name,
-                    "level": DEFAULT_SOFT_SKILL_LEVEL,
-                    "category": "soft_skill"
-                })
-            
-            profile_data['skills'] = transformed_skills
-            logger.info(f"✅ Transformed {len(transformed_skills)} skills to AI format")
-        
-        # 4. Analyze job offer with Analyseur-Offre
-        logger.info("📊 Step 1/3: Analyzing job offer...")
-        analysis_result = await analyzer_client.analyze_text(request.offer_text)
-        logger.info(
-            f"✅ Offer analyzed: {len(analysis_result.hard_skills)} hard skills, "
-            f"{len(analysis_result.soft_skills)} soft skills"
-        )
-        
-        # 5. Generate CV with Rédacteur-CV
-        logger.info("✍️  Step 2/3: Generating optimized CV...")
-        generated_response = await writer_client.generate_cv(
-            user_profile=profile_data,  # Use transformed profile
-            offer_analysis=analysis_result.to_dict()
-        )
-        
-        # Extract cv_data from response (writer returns {"cv_data": {...}, "message": "..."})
-        cv_data = generated_response.get("cv_data", generated_response)
-        
-        logger.info("✅ CV generated successfully by AI pipeline")
-        
-        # 6. Save to database
-        new_cv = GeneratedCV(
-            user_id=current_user.id,
-            cv_name=request.cv_name,
-            template_id="modern_v1",  # Default template for now
-            job_offer_context=request.offer_text,
-            cv_data_json=cv_data
-        )
-        
-        db.add(new_cv)
-        await db.commit()
-        await db.refresh(new_cv)
-        
-        logger.info(f"💾 CV saved to database with ID: {new_cv.id}")
-        
-        return GenerateCVResponse(
-            cv_id=new_cv.id,
-            cv_data=cv_data,
-            message="CV generated successfully"
-        )
-        
-    except HTTPException:
-        # Re-raise HTTPExceptions as-is (from permissions, clients, etc.)
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error during CV generation: {str(e)}", exc_info=True)
+    # 1. Access control (CareerPass or admin) — raises 402 if not allowed.
+    await check_career_pass_or_admin(current_user, db)
+
+    # 2. The user must have a profile to generate from.
+    result = await db.execute(
+        select(UserProfile).where(UserProfile.user_id == current_user.id)
+    )
+    if result.scalars().first() is None:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"CV generation failed: {str(e)}"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User profile not found. Please create your profile first.",
         )
+
+    # 3. Idempotency: at most one active (queued/running) job per user.
+    active = await db.execute(
+        select(CVJob)
+        .where(CVJob.user_id == current_user.id)
+        .where(CVJob.status.in_([JobStatus.QUEUED, JobStatus.RUNNING]))
+    )
+    if active.scalars().first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A CV generation is already in progress. Please wait for it to finish.",
+        )
+
+    # 4. Create the job and schedule the background pipeline.
+    job = CVJob(
+        user_id=current_user.id,
+        cv_name=request.cv_name,
+        status=JobStatus.QUEUED,
+        progress_pct=0,
+    )
+    db.add(job)
+    await db.commit()
+    await db.refresh(job)
+
+    background_tasks.add_task(
+        run_cv_generation,
+        session_factory,
+        job.id,
+        current_user.id,
+        request.cv_name,
+        request.offer_text,
+    )
+
+    response.headers["Location"] = f"/cv/jobs/{job.id}"
+    return GenerateCVJobAccepted(job_id=job.id, status=job.status)
+
+
+async def _get_owned_job(
+    cv_job_id: UUID, current_user: User, db: AsyncSession
+) -> CVJob:
+    """Fetch a job, enforcing ownership (or admin)."""
+    result = await db.execute(select(CVJob).where(CVJob.id == cv_job_id))
+    job = result.scalars().first()
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job {cv_job_id} not found",
+        )
+    if job.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to access this job",
+        )
+    return job
+
+
+@router.get("/jobs/{cv_job_id}", response_model=CVJobStatus)
+async def get_cv_job(
+    cv_job_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Poll the status of an asynchronous CV generation job."""
+    job = await _get_owned_job(cv_job_id, current_user, db)
+    return CVJobStatus(
+        job_id=job.id,
+        status=job.status,
+        progress_pct=job.progress_pct,
+        cv_id=job.cv_id,
+        error_message=job.error_message,
+    )
+
+
+@router.get("/jobs/{cv_job_id}/events")
+async def stream_cv_job(
+    cv_job_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+    session_factory: async_sessionmaker = Depends(get_session_factory),
+):
+    """Server-Sent Events stream of a job's progress until it reaches a terminal state."""
+    # Ownership check up-front (raises 403/404) before opening the stream.
+    await _get_owned_job(cv_job_id, current_user, db)
+
+    async def event_generator():
+        terminal = {JobStatus.SUCCEEDED, JobStatus.FAILED}
+        for _ in range(600):  # safety bound (~10 min at 1s cadence)
+            async with session_factory() as stream_db:
+                job = await stream_db.get(CVJob, cv_job_id)
+            if job is None:
+                break
+            payload = {
+                "job_id": str(job.id),
+                "status": job.status.value,
+                "progress_pct": job.progress_pct,
+                "cv_id": str(job.cv_id) if job.cv_id else None,
+            }
+            if job.status in terminal:
+                payload["error_message"] = job.error_message
+                yield f"event: done\ndata: {json.dumps(payload)}\n\n"
+                break
+            yield f"event: progress\ndata: {json.dumps(payload)}\n\n"
+            await asyncio.sleep(1)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @router.get("", response_model=list[CVListItem])
 async def list_cvs(
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     List all CVs generated by the current user
-    
+
     Returns:
         List of CV summaries (without full cv_data to reduce payload size)
     """
@@ -263,14 +301,14 @@ async def list_cvs(
         .order_by(GeneratedCV.created_at.desc())
     )
     cvs = result.scalars().all()
-    
+
     return [
         CVListItem(
             id=cv.id,
             cv_name=cv.cv_name,
             template_id=cv.template_id,
             created_at=cv.created_at,
-            updated_at=cv.updated_at
+            updated_at=cv.updated_at,
         )
         for cv in cvs
     ]
@@ -280,36 +318,34 @@ async def list_cvs(
 async def get_cv(
     cv_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get full details of a specific CV
-    
+
     Returns:
         Complete CV data including cv_data_json
-        
+
     Raises:
         HTTPException(404): CV not found
         HTTPException(403): CV belongs to another user
     """
-    result = await db.execute(
-        select(GeneratedCV).where(GeneratedCV.id == cv_id)
-    )
+    result = await db.execute(select(GeneratedCV).where(GeneratedCV.id == cv_id))
     cv = result.scalars().first()
-    
+
     if not cv:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"CV with ID {cv_id} not found"
+            detail=f"CV with ID {cv_id} not found",
         )
-    
+
     # Authorization check
     if cv.user_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to access this CV"
+            detail="You don't have permission to access this CV",
         )
-    
+
     return CVDetailResponse(
         id=cv.id,
         cv_name=cv.cv_name,
@@ -318,7 +354,7 @@ async def get_cv(
         cv_data_json=cv.cv_data_json,
         gcs_pdf_url=cv.gcs_pdf_url,
         created_at=cv.created_at,
-        updated_at=cv.updated_at
+        updated_at=cv.updated_at,
     )
 
 
@@ -327,44 +363,42 @@ async def update_cv(
     cv_id: UUID,
     request: UpdateCVRequest,
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Update CV name or cv_data
-    
+
     Raises:
         HTTPException(404): CV not found
         HTTPException(403): CV belongs to another user
     """
-    result = await db.execute(
-        select(GeneratedCV).where(GeneratedCV.id == cv_id)
-    )
+    result = await db.execute(select(GeneratedCV).where(GeneratedCV.id == cv_id))
     cv = result.scalars().first()
-    
+
     if not cv:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"CV with ID {cv_id} not found"
+            detail=f"CV with ID {cv_id} not found",
         )
-    
+
     # Authorization check
     if cv.user_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to update this CV"
+            detail="You don't have permission to update this CV",
         )
-    
+
     # Update fields
     if request.cv_name is not None:
         cv.cv_name = request.cv_name
     if request.cv_data_json is not None:
         cv.cv_data_json = request.cv_data_json
-    
-    cv.updated_at = datetime.utcnow()
-    
+
+    cv.updated_at = datetime.now(timezone.utc)
+
     await db.commit()
     await db.refresh(cv)
-    
+
     return CVDetailResponse(
         id=cv.id,
         cv_name=cv.cv_name,
@@ -373,7 +407,7 @@ async def update_cv(
         cv_data_json=cv.cv_data_json,
         gcs_pdf_url=cv.gcs_pdf_url,
         created_at=cv.created_at,
-        updated_at=cv.updated_at
+        updated_at=cv.updated_at,
     )
 
 
@@ -381,34 +415,32 @@ async def update_cv(
 async def delete_cv(
     cv_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Delete a CV
-    
+
     Raises:
         HTTPException(404): CV not found
         HTTPException(403): CV belongs to another user
     """
-    result = await db.execute(
-        select(GeneratedCV).where(GeneratedCV.id == cv_id)
-    )
+    result = await db.execute(select(GeneratedCV).where(GeneratedCV.id == cv_id))
     cv = result.scalars().first()
-    
+
     if not cv:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"CV with ID {cv_id} not found"
+            detail=f"CV with ID {cv_id} not found",
         )
-    
+
     # Authorization check
     if cv.user_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to delete this CV"
+            detail="You don't have permission to delete this CV",
         )
-    
+
     await db.delete(cv)
     await db.commit()
-    
+
     logger.info(f"CV {cv_id} deleted by user {current_user.email}")

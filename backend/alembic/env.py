@@ -13,7 +13,13 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 # Import the base and the models
 from app.database import Base
-from app.models import user, user_profile, career_pass, generated_cv  # Import to register the models
+from app.models import (  # Import to register the models
+    user,
+    user_profile,
+    career_pass,
+    generated_cv,
+    cv_job,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -30,7 +36,9 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # Retrieve the database URL from environment variables
-database_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://talentious:talentious@db:5432/talentious")
+database_url = os.getenv(
+    "DATABASE_URL", "postgresql+asyncpg://talentious:talentious@db:5432/talentious"
+)
 # For Alembic, use psycopg2 instead of asyncpg
 database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
 config.set_main_option("sqlalchemy.url", database_url)
@@ -79,9 +87,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
