@@ -122,6 +122,12 @@ Les dépendances inter-tickets sont notées dans la colonne **Dépend de**. Un t
 > **État** : ADR-MODEL tranché ([PAH-2] : géographie UE → `gemini-2.5-pro` en europe-west9 ; cible `gemini-3.5-flash` différée car migration SDK `google-genai` requise, cf. ci-dessous). Modèle basculé et validé. Juge LLM construit (`score_evals.py`). **Mesure : 7.0 → 7.7 (+10 %)**, gain décisif sur la fidélité du CV junior (1→9 : le flash hallucinait). Le +15 % visé nécessite encore **M2-T06 (ingénierie des prompts)** et de meilleures fixtures. **M2-T07 (anti-injection)** partiellement fait (optimization_notes retiré du contrat) ; délimiteurs de prompt restants. Détails : `backend/evals/results/SCORES.md`.
 >
 > **Nouveau chantier acté** : migration `vertexai → google-genai` + `gemini-3.5-flash` (endpoint EU) — bloquée aujourd'hui par un conflit de namespace `google.*` dans les images agents ; **imposée avant oct. 2026** (fin de vie famille 2.5). À créer : ADR-GENAI-SDK.
+>
+> **M2-T06/T07 FAITS (2026-07-09)** : prompts améliorés (schéma réaligné end_date/field, anti-injection `<offre>` + bloc sécurité, fidélité renforcée) ; `.format`→`.replace` dans l'analyseur (robustesse accolades). **Injection testée et bloquée** (l'agent traite l'offre comme donnée). Mesure honnête sur paires **cohérentes** : junior 7.6 / senior 9.6, **fidélité 10/10** (moyenne 8.6 vs flash 7.0). L'hallucination ne subsiste que sur un mauvais-fit artificiel (junior×tech-lead). **Follow-ups** : (a) garde-fou « profil hors-cible » (refuser/signaler un fit trop faible) ; (b) robustesse analyseur (422 transitoire sur variance de sortie Gemini → retry/tolérance) ; (c) élargir le jeu d'evals.
+
+### [PAH-1] — Run end-to-end réel : ✅ VALIDÉ (2026-07-09)
+
+`POST /cv/generate` via l'API backend (base `talentious_app` migrée + seed admin, agents `gemini-2.5-pro`) → job async `queued→running→succeeded` (~60s) → `GET /cv/{id}` : CV ciblé et riche (résumé « Tech Lead Full-Stack » sur-mesure, 3 expériences reformulées avec verbes d'action, 23 compétences, formations avec dates/domaines préservés). **L'application génère correctement les CV.** Bug corrigé au passage : enum stocké en valeurs (`values_callable`) — l'inscription/seed cassait sur base migrée.
 
 | ID | Titre | Description courte | Fichiers / zone | Dépend de | Estim. | Critère de fin (test) |
 |---|---|---|---|---|---|---|
