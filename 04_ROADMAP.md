@@ -115,9 +115,13 @@ Les dépendances inter-tickets sont notées dans la colonne **Dépend de**. Un t
 
 ---
 
-### M2 — Qualité IA (objectif : CV nettement mieux générés, modèle Pro-tier validé par les evals)
+### M2 — Qualité IA (objectif : CV nettement mieux générés, modèle Pro-tier validé par les evals) — 🟢 LARGEMENT ATTEINT (2026-07-09)
 
 **Critère de fin du jalon** : ADR-MODEL tranché [PAH-2] ; score moyen du harnais d'evals augmenté d'au moins 15 % vs la baseline `gemini-2.5-flash` sur les 2 résultats commités ; le modèle choisi est déployé localement et les evals repassent.
+
+> **État** : ADR-MODEL tranché ([PAH-2] : géographie UE → `gemini-2.5-pro` en europe-west9 ; cible `gemini-3.5-flash` différée car migration SDK `google-genai` requise, cf. ci-dessous). Modèle basculé et validé. Juge LLM construit (`score_evals.py`). **Mesure : 7.0 → 7.7 (+10 %)**, gain décisif sur la fidélité du CV junior (1→9 : le flash hallucinait). Le +15 % visé nécessite encore **M2-T06 (ingénierie des prompts)** et de meilleures fixtures. **M2-T07 (anti-injection)** partiellement fait (optimization_notes retiré du contrat) ; délimiteurs de prompt restants. Détails : `backend/evals/results/SCORES.md`.
+>
+> **Nouveau chantier acté** : migration `vertexai → google-genai` + `gemini-3.5-flash` (endpoint EU) — bloquée aujourd'hui par un conflit de namespace `google.*` dans les images agents ; **imposée avant oct. 2026** (fin de vie famille 2.5). À créer : ADR-GENAI-SDK.
 
 | ID | Titre | Description courte | Fichiers / zone | Dépend de | Estim. | Critère de fin (test) |
 |---|---|---|---|---|---|---|
