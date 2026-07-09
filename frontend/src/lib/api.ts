@@ -44,15 +44,24 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
-      
+
       // Redirect to login (except if already on /login or /register)
-      if (typeof window !== 'undefined' && 
-          !window.location.pathname.includes('/login') && 
+      if (typeof window !== 'undefined' &&
+          !window.location.pathname.includes('/login') &&
           !window.location.pathname.includes('/register')) {
         window.location.href = '/login';
       }
     }
-    
+
+    // If 402 (Payment Required), the user needs an active CareerPass → billing.
+    if (
+      error.response?.status === 402 &&
+      typeof window !== 'undefined' &&
+      !window.location.pathname.includes('/billing')
+    ) {
+      window.location.href = '/billing';
+    }
+
     return Promise.reject(error);
   }
 );
@@ -78,6 +87,37 @@ export interface ApiResponse<T> {
   data: T;
   message?: string;
 }
+
+// ===== Billing (Stripe) =====
+
+export type PassType = 'PASS_30_DAYS' | 'PASS_90_DAYS';
+
+export interface CheckoutSessionResponse {
+  checkout_url: string;
+  session_id: string;
+}
+
+export interface BillingStatus {
+  has_active_pass: boolean;
+  valid_until: string | null;
+}
+
+/** Start a Stripe Checkout for the given pass and return the redirect URL. */
+export const createCheckoutSession = async (
+  passType: PassType,
+): Promise<CheckoutSessionResponse> => {
+  const { data } = await apiClient.post<CheckoutSessionResponse>(
+    '/billing/checkout-session',
+    { pass_type: passType },
+  );
+  return data;
+};
+
+/** Whether the current user holds an active CareerPass. */
+export const getBillingStatus = async (): Promise<BillingStatus> => {
+  const { data } = await apiClient.get<BillingStatus>('/billing/status');
+  return data;
+};
 
 // Helper to extract error messages from API responses
 export const getErrorMessage = (error: unknown): string => {
