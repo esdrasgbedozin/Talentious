@@ -1,238 +1,236 @@
 """
-Pydantic models for CV Generator API request/response validation
+Pydantic models for CV Generator API request/response validation.
+
+INPUT models mirror the canonical ProfileData contract
+(contracts/openapi.yaml) so the backend can forward the stored profile as-is,
+with NO runtime transformation. In particular:
+- skills is the canonical `{hard: string[], soft: string[]}` object (not a list),
+- certifications use issuer / issue_date / expiration_date / credential_url,
+- languages are `{name, level}`,
+- experiences carry achievements / is_current, projects carry role.
+
+OUTPUT date fields are optional to avoid 422s when the model omits a date.
 """
 
 from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 
 # ==================== INPUT MODELS ====================
 
+
 class SkillItem(BaseModel):
     """Individual skill item from offer analysis"""
+
     name: str = Field(..., description="Skill name")
-    level: Optional[str] = Field(None, description="Required level (e.g., 'Expert', 'Intermediate')")
-    importance: Optional[str] = Field(None, description="Importance level (Critical, Important, Nice to have)")
+    level: Optional[str] = Field(None, description="Required level (e.g., 'Expert')")
+    importance: Optional[str] = Field(
+        None, description="Importance (Critical, Important, Nice to have)"
+    )
 
 
 class OfferAnalysis(BaseModel):
-    """
-    Job offer analysis result from Analyseur-Offre agent (v0.2.0)
-    """
+    """Job offer analysis result from Analyseur-Offre agent"""
+
     hard_skills: List[SkillItem] = Field(..., description="Technical skills required")
-    soft_skills: List[SkillItem] = Field(..., description="Soft/interpersonal skills required")
-    seniority_level: str = Field(..., description="Required seniority level (Junior, Mid-level, Senior, Expert)")
-    key_responsibilities: List[str] = Field(..., description="Main responsibilities of the position")
-    tone: str = Field(..., description="Tone of the job offer (professional, casual, innovative)")
+    soft_skills: List[SkillItem] = Field(..., description="Soft skills required")
+    seniority_level: str = Field(..., description="Required seniority level")
+    key_responsibilities: List[str] = Field(..., description="Main responsibilities")
+    tone: str = Field(..., description="Tone of the job offer")
 
 
 class PersonalInfo(BaseModel):
-    """Personal information from user profile"""
+    """Personal information from user profile (canonical ProfileData.personal_info)"""
+
     first_name: str
     last_name: str
-    phone: Optional[str] = None
     email: str
+    phone: Optional[str] = None
     linkedin: Optional[str] = None
     address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    country: Optional[str] = None
 
 
 class Experience(BaseModel):
     """Work experience entry"""
+
     id: str
     title: str
     company: str
-    start_date: str  # YYYY-MM format
-    end_date: Optional[str] = None  # YYYY-MM format or null for current
+    start_date: str  # YYYY-MM
+    end_date: Optional[str] = None  # YYYY-MM or null for current
+    is_current: bool = False
     description: str
     location: Optional[str] = None
+    achievements: Optional[List[str]] = None
 
 
 class Education(BaseModel):
     """Education entry"""
+
     id: str
     degree: str
     field: Optional[str] = None  # Field of study
     institution: str
-    start_date: Optional[str] = None  # YYYY-MM format
-    end_date: Optional[str] = None  # YYYY-MM format (graduation date)
+    start_date: Optional[str] = None  # YYYY-MM
+    end_date: Optional[str] = None  # YYYY-MM (graduation date)
     location: Optional[str] = None
     description: Optional[str] = None
+    grade: Optional[str] = None
 
 
-class Skill(BaseModel):
-    """User skill from profile"""
-    id: Optional[str] = None  # Optional ID field
-    name: str
-    category: Optional[str] = None  # "hard_skill" or "soft_skill"
-    level: Optional[str] = None
+class Skills(BaseModel):
+    """Canonical skills structure `{hard: [...], soft: [...]}` (no transformation)."""
+
+    hard: List[str] = Field(default_factory=list)
+    soft: List[str] = Field(default_factory=list)
 
 
 class Language(BaseModel):
-    """Language proficiency from profile"""
-    id: str
+    """Language proficiency from profile (canonical `{name, level}`)."""
+
     name: str
-    level: str  # e.g., "Native", "Fluent", "Intermediate", "Basic"
+    level: str  # e.g., "Native", "Fluent", "Intermediate"
 
 
 class Project(BaseModel):
     """Project entry"""
+
     id: str
     name: str
     description: str
-    technologies: Optional[List[str]] = None  # List of technologies used
-    start_date: Optional[str] = None  # YYYY-MM format
-    end_date: Optional[str] = None  # YYYY-MM format
+    role: Optional[str] = None
+    technologies: Optional[List[str]] = None
+    start_date: Optional[str] = None  # YYYY-MM
+    end_date: Optional[str] = None  # YYYY-MM
     url: Optional[str] = None
 
 
 class Certification(BaseModel):
-    """Certification entry"""
+    """Certification entry (canonical field names)."""
+
     id: str
     name: str
     issuer: str
-    date: Optional[str] = None  # YYYY-MM format (issue date)
-    credential_id: Optional[str] = None  # Certification credential ID
-    url: Optional[str] = None
+    issue_date: Optional[str] = None  # YYYY-MM
+    expiration_date: Optional[str] = None  # YYYY-MM
+    credential_id: Optional[str] = None
+    credential_url: Optional[str] = None
 
 
 class UserProfileData(BaseModel):
-    """
-    Complete user profile data from backend
-    """
+    """Complete user profile data from backend (canonical ProfileData)."""
+
     personal_info: PersonalInfo
     summary: Optional[str] = None
-    experiences: List[Experience] = []
-    educations: List[Education] = []
-    skills: List[Skill] = []
-    languages: List[Language] = []  # Language proficiencies
-    projects: List[Project] = []
-    certifications: List[Certification] = []
+    experiences: List[Experience] = Field(default_factory=list)
+    educations: List[Education] = Field(default_factory=list)
+    skills: Skills = Field(default_factory=Skills)
+    languages: List[Language] = Field(default_factory=list)
+    projects: List[Project] = Field(default_factory=list)
+    certifications: List[Certification] = Field(default_factory=list)
 
 
 class GenerateRequest(BaseModel):
-    """
-    Request model for CV generation
-    Combines offer analysis with user profile data
-    """
-    offer_analysis: OfferAnalysis = Field(..., description="Job offer analysis from Analyseur-Offre agent")
-    user_profile: UserProfileData = Field(..., description="User's complete profile data")
+    """Request model for CV generation (offer analysis + user profile)."""
+
+    offer_analysis: OfferAnalysis = Field(..., description="Job offer analysis")
+    user_profile: UserProfileData = Field(..., description="User's complete profile")
 
 
 # ==================== OUTPUT MODELS ====================
 
+
 class SelectedExperience(BaseModel):
-    """
-    Optimized work experience for the target job offer
-    """
+    """Optimized work experience for the target job offer"""
+
     id: str = Field(..., description="Original experience ID")
-    title: str = Field(..., description="Job title")
-    company: str = Field(..., description="Company name")
-    start_date: str = Field(..., description="Start date (YYYY-MM)")
-    end_date: Optional[str] = Field(None, description="End date (YYYY-MM) or null for current")
-    location: Optional[str] = Field(None, description="Location")
+    title: str
+    company: str
+    start_date: str
+    end_date: Optional[str] = None
+    location: Optional[str] = None
     description: str = Field(
-        ..., 
-        description="Rewritten description optimized for the target job offer with action verbs, metrics, and keywords"
+        ...,
+        description="Rewritten description optimized for the target job offer",
     )
     highlighted_skills: List[str] = Field(
-        ..., 
-        description="Skills demonstrated in this experience that match the job offer"
+        ..., description="Skills demonstrated in this experience matching the offer"
     )
 
 
 class HighlightedSkill(BaseModel):
-    """
-    Skill prioritized for the target job offer
-    """
-    name: str = Field(..., description="Skill name")
-    level: Optional[str] = Field(None, description="Proficiency level")
-    category: str = Field(..., description="Skill category (hard_skill or soft_skill)")
-    importance: str = Field(..., description="Importance for target job (Critical, Important, Nice to have)")
+    """Skill prioritized for the target job offer"""
+
+    name: str
+    level: Optional[str] = None
+    category: str = Field(..., description="hard_skill or soft_skill")
+    importance: str = Field(..., description="Critical, Important, Nice to have")
 
 
 class SelectedEducation(BaseModel):
-    """
-    Education entry relevant for the target job
-    """
+    """Education entry relevant for the target job"""
+
     id: str
     degree: str
     institution: str
-    graduation_date: str
+    end_date: Optional[str] = None  # graduation date, optional (was required -> 422)
+    field: Optional[str] = None
     description: Optional[str] = None
 
 
 class SelectedProject(BaseModel):
-    """
-    Project relevant for the target job
-    """
+    """Project relevant for the target job"""
+
     id: str
     name: str
     description: str
     url: Optional[str] = None
     completion_date: Optional[str] = None
     relevant_skills: List[str] = Field(
-        ..., 
-        description="Skills demonstrated that match the job offer"
+        default_factory=list, description="Skills demonstrated that match the offer"
     )
 
 
 class SelectedCertification(BaseModel):
-    """
-    Certification relevant for the target job
-    """
+    """Certification relevant for the target job"""
+
     id: str
     name: str
     issuer: str
-    issue_date: str
-    url: Optional[str] = None
+    issue_date: Optional[str] = None  # optional (was required -> 422)
+    credential_url: Optional[str] = None
 
 
 class GeneratedCVData(BaseModel):
-    """
-    Complete optimized CV structure ready for frontend rendering
-    This is the final output of the Rédacteur-CV agent
-    """
-    personal_info: PersonalInfo = Field(..., description="Personal information (unchanged from profile)")
-    
+    """Complete optimized CV structure — final output of the Rédacteur-CV agent."""
+
+    personal_info: PersonalInfo = Field(..., description="Personal information")
     summary: str = Field(
-        ..., 
-        description="Rewritten professional summary targeting the specific job offer (2-4 sentences, 50-120 words)"
+        ..., description="Rewritten professional summary targeting the job offer"
     )
-    
     selected_experiences: List[SelectedExperience] = Field(
-        ..., 
-        description="Work experiences selected and optimized for the target job (3-5 most relevant)"
+        ..., description="Experiences selected and optimized (3-5 most relevant)"
     )
-    
     highlighted_skills: List[HighlightedSkill] = Field(
-        ..., 
-        description="Skills prioritized and categorized for the target job (8-15 skills)"
+        ..., description="Skills prioritized and categorized (8-15)"
     )
-    
     selected_educations: List[SelectedEducation] = Field(
-        ..., 
-        description="Education entries relevant for the target job"
+        default_factory=list, description="Education entries relevant for the job"
     )
-    
     selected_projects: List[SelectedProject] = Field(
-        default_factory=list,
-        description="Projects relevant for the target job (optional, 0-3 projects)"
+        default_factory=list, description="Projects relevant for the job (0-3)"
     )
-    
     selected_certifications: List[SelectedCertification] = Field(
-        default_factory=list,
-        description="Certifications relevant for the target job (optional, 0-5 certifications)"
-    )
-    
-    optimization_notes: Optional[str] = Field(
-        None,
-        description="Internal notes about optimization strategy (for debugging, optional)"
+        default_factory=list, description="Certifications relevant for the job (0-5)"
     )
 
 
 class GenerateResponse(BaseModel):
-    """
-    Response model for CV generation endpoint
-    """
+    """Response model for CV generation endpoint"""
+
     cv_data: GeneratedCVData = Field(..., description="Generated and optimized CV data")
-    message: str = Field(default="CV generated successfully", description="Status message")
+    message: str = Field(default="CV generated successfully")
