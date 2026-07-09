@@ -2,69 +2,69 @@
   "metadata": {
     "profile_file": "02_senior_fullstack.json",
     "offer_file": "01_tech_lead.txt",
-    "generated_at": "2026-07-09T11:38:50.084443Z",
+    "generated_at": "2026-07-09T11:30:06.922209Z",
     "pipeline_version": "1.0.0"
   },
   "offer_analysis": {
     "hard_skills": [
       {
         "name": "JavaScript",
-        "level": "Expert",
+        "level": null,
         "importance": "Critical"
       },
       {
         "name": "TypeScript",
-        "level": "Expert",
+        "level": null,
         "importance": "Critical"
       },
       {
         "name": "React",
-        "level": "Expert",
+        "level": null,
         "importance": "Critical"
       },
       {
         "name": "Node.js",
-        "level": "Expert",
+        "level": null,
         "importance": "Critical"
       },
       {
         "name": "Express",
-        "level": "Expert",
-        "importance": "Important"
+        "level": null,
+        "importance": "Critical"
       },
       {
         "name": "NestJS",
-        "level": "Expert",
+        "level": null,
         "importance": "Critical"
       },
       {
         "name": "PostgreSQL",
-        "level": "Expert",
+        "level": null,
         "importance": "Critical"
       },
       {
         "name": "MongoDB",
-        "level": "Expert",
+        "level": null,
         "importance": "Critical"
       },
       {
         "name": "Redis",
-        "level": "Expert",
+        "level": null,
         "importance": "Critical"
       },
       {
         "name": "Docker",
-        "level": "Intermediate",
+        "level": null,
         "importance": "Critical"
       },
       {
         "name": "Kubernetes",
-        "level": "Intermediate",
+        "level": null,
         "importance": "Critical"
       },
       {
         "name": "CI/CD",
-        "level": "Intermediate",
+        "level": null,
         "importance": "Critical"
       },
       {
@@ -78,23 +78,18 @@
         "importance": "Important"
       },
       {
-        "name": "Cloud Architecture",
-        "level": "Intermediate",
-        "importance": "Important"
-      },
-      {
         "name": "AWS",
-        "level": "Intermediate",
+        "level": null,
         "importance": "Important"
       },
       {
         "name": "GCP",
-        "level": "Intermediate",
+        "level": null,
         "importance": "Important"
       },
       {
         "name": "Microservices",
-        "level": "Intermediate",
+        "level": null,
         "importance": "Important"
       },
       {
@@ -111,6 +106,11 @@
         "name": "Kotlin",
         "level": null,
         "importance": "Nice to have"
+      },
+      {
+        "name": "React 18",
+        "level": null,
+        "importance": "Important"
       },
       {
         "name": "Next.js",
@@ -143,6 +143,26 @@
         "importance": "Important"
       },
       {
+        "name": "ECS",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "RDS",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "S3",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "CloudFront",
+        "level": null,
+        "importance": "Important"
+      },
+      {
         "name": "Terraform",
         "level": null,
         "importance": "Important"
@@ -170,24 +190,19 @@
         "importance": "Critical"
       },
       {
+        "name": "Prise de décision architecturale",
+        "level": null,
+        "importance": "Critical"
+      },
+      {
         "name": "Collaboration",
-        "level": "Expert",
-        "importance": "Critical"
-      },
-      {
-        "name": "Communication",
         "level": null,
         "importance": "Critical"
       },
       {
-        "name": "Prise de décision stratégique",
+        "name": "Communication claire",
         "level": null,
         "importance": "Critical"
-      },
-      {
-        "name": "Mentoring",
-        "level": null,
-        "importance": "Important"
       },
       {
         "name": "Empathie",
@@ -210,7 +225,12 @@
         "importance": "Important"
       },
       {
-        "name": "Promotion de l'excellence technique",
+        "name": "Mentorat",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Garantie de qualité",
         "level": null,
         "importance": "Important"
       }
@@ -225,7 +245,7 @@
       "Participer aux décisions d'architecture et à la modernisation de notre stack technique",
       "Assurer la performance, la sécurité et la maintenabilité de nos applications en production"
     ],
-    "tone": "startup-like"
+    "tone": "startup-like, innovative, demanding, corporate"
   },
   "generated_cv": {
     "cv_data": {
@@ -240,7 +260,7 @@
         "postal_code": null,
         "country": null
       },
-      "summary": "Tech Lead Full-Stack avec plus de 8 ans d'expérience, spécialisé dans l'architecture de solutions scalables et la direction d'équipes techniques performantes. Expert de l'écosystème JavaScript (React, Node.js, NestJS, TypeScript) et des environnements cloud (AWS, Docker, Kubernetes), j'ai un bilan éprouvé dans la mise en place de pipelines CI/CD et la migration vers des architectures microservices. Passionné par le mentoring et la promotion de l'excellence technique, je suis prêt à appliquer mes compétences en leadership et en prise de décision stratégique pour garantir la qualité et la performance de vos applications.",
+      "summary": "Tech Lead Full-Stack expérimenté avec près de 10 ans d'expérience dans le développement de solutions logicielles innovantes. Expert en architecture microservices, développement Full-Stack avec React, Node.js et NestJS, et mise en place de pipelines CI/CD robustes. Démontre un leadership technique avéré, une capacité à prendre des décisions architecturales stratégiques et à mentorer des équipes pour livrer des produits de haute qualité. Passionné par la construction de systèmes scalables et performants dans des environnements exigeants.",
       "selected_experiences": [
         {
           "id": "exp_001",
@@ -249,17 +269,17 @@
           "start_date": "2021-03",
           "end_date": null,
           "location": "Paris, France",
-          "description": "Direction technique d'une équipe de 5 développeurs dans la refonte d'une plateforme de trading, en architecturant une solution microservices performante avec NestJS, React et TypeScript. Implémentation d'un pipeline CI/CD complet avec GitHub Actions pour des déploiements automatisés sur AWS, réduisant le time-to-market de 40%. Promotion de l'excellence technique via le mentoring, les code reviews et la prise de décision stratégique sur l'architecture. Collaboration étroite avec les équipes produit pour aligner la roadmap technique.",
+          "description": "Dirigé techniquement une équipe de 5 développeurs (seniors et mid-level) pour la refonte d'une plateforme de trading, en architecturant des solutions microservices robustes avec Node.js, NestJS et React. Implémenté des pipelines CI/CD via GitHub Actions et orchestré le déploiement sur AWS (ECS, RDS), réduisant le time-to-market de 40%. Assuré la qualité du code par des code reviews et le mentorat technique, favorisant l'excellence et la collaboration.",
           "highlighted_skills": [
             "Leadership technique",
+            "Node.js",
             "NestJS",
             "React",
-            "TypeScript",
+            "Microservices",
             "CI/CD",
             "GitHub Actions",
             "AWS",
-            "Mentoring",
-            "Prise de décision stratégique",
+            "Mentorat",
             "Collaboration"
           ]
         },
@@ -270,7 +290,7 @@
           "start_date": "2018-06",
           "end_date": "2021-02",
           "location": "Lyon, France",
-          "description": "Développement et maintenance d'une plateforme de paiement à haute disponibilité (99.9% SLA) gérant plus de 50 000 transactions/jour avec React, Node.js, PostgreSQL et Redis. Conduite de la migration d'un monolithe vers une architecture microservices conteneurisée avec Docker et orchestrée par Kubernetes. Optimisation des REST APIs backend, résultant en une réduction de 60% du temps de réponse. Participation active à la définition de la roadmap en collaboration avec les Product Managers.",
+          "description": "Développé et maintenu une plateforme de paiement en ligne gérant 50K+ transactions/jour avec React, Node.js, PostgreSQL et Redis, garantissant une haute disponibilité (99.9% SLA). Piloté la migration vers une architecture microservices avec Docker et Kubernetes, optimisant les performances backend de 60%. Collaboré étroitement avec les Product Managers pour définir la roadmap produit et assurer l'alignement technique.",
           "highlighted_skills": [
             "React",
             "Node.js",
@@ -290,24 +310,20 @@
           "start_date": "2016-09",
           "end_date": "2018-05",
           "location": "Paris, France",
-          "description": "Conception et développement d'applications SaaS B2B en utilisant React, Node.js et MongoDB. Contribution significative aux décisions d'architecture et à l'amélioration de la qualité du code par l'implémentation de stratégies de tests automatisés avec Jest et Cypress. Travail en environnement Agile, assurant la livraison continue de fonctionnalités et la maintenabilité des applications.",
+          "description": "Conçu et développé des applications web SaaS B2B en utilisant React, Node.js et MongoDB. Contribué activement aux décisions d'architecture pour des solutions scalables. Mis en œuvre des stratégies de tests automatisés avec Jest et Cypress, et promu les bonnes pratiques CI/CD et DevOps. Géré des projets en mode Agile/Scrum, assurant la livraison de fonctionnalités de qualité.",
           "highlighted_skills": [
             "React",
             "Node.js",
             "MongoDB",
+            "Prise de décision architecturale",
             "Jest",
             "Cypress",
+            "CI/CD",
             "Agilité"
           ]
         }
       ],
       "highlighted_skills": [
-        {
-          "name": "Leadership technique",
-          "level": null,
-          "category": "soft_skill",
-          "importance": "Critical"
-        },
         {
           "name": "JavaScript",
           "level": null,
@@ -351,6 +367,12 @@
           "importance": "Critical"
         },
         {
+          "name": "Redis",
+          "level": null,
+          "category": "hard_skill",
+          "importance": "Critical"
+        },
+        {
           "name": "Docker",
           "level": null,
           "category": "hard_skill",
@@ -369,46 +391,34 @@
           "importance": "Critical"
         },
         {
+          "name": "Leadership technique",
+          "level": null,
+          "category": "soft_skill",
+          "importance": "Critical"
+        },
+        {
+          "name": "Prise de décision architecturale",
+          "level": null,
+          "category": "soft_skill",
+          "importance": "Critical"
+        },
+        {
           "name": "Collaboration",
           "level": null,
           "category": "soft_skill",
           "importance": "Critical"
         },
         {
-          "name": "Communication",
+          "name": "Communication claire",
           "level": null,
           "category": "soft_skill",
           "importance": "Critical"
-        },
-        {
-          "name": "Prise de décision stratégique",
-          "level": null,
-          "category": "soft_skill",
-          "importance": "Critical"
-        },
-        {
-          "name": "AWS",
-          "level": null,
-          "category": "hard_skill",
-          "importance": "Important"
-        },
-        {
-          "name": "Microservices",
-          "level": null,
-          "category": "hard_skill",
-          "importance": "Important"
-        },
-        {
-          "name": "Mentoring",
-          "level": null,
-          "category": "soft_skill",
-          "importance": "Important"
         }
       ],
       "selected_educations": [
         {
           "id": "edu_001",
-          "degree": "Master en Informatique et Systèmes d'Information",
+          "degree": "Master",
           "institution": "École Centrale de Lyon",
           "end_date": null,
           "field": null,
@@ -416,7 +426,7 @@
         },
         {
           "id": "edu_002",
-          "degree": "Licence en Informatique",
+          "degree": "Licence",
           "institution": "Université Claude Bernard Lyon 1",
           "end_date": null,
           "field": null,
@@ -424,6 +434,19 @@
         }
       ],
       "selected_projects": [
+        {
+          "id": "proj_001",
+          "name": "Migration Cloud AWS",
+          "description": "Leadership de la migration complète de l'infrastructure on-premise vers AWS (ECS, RDS, S3, CloudFront). Infrastructure as Code avec Terraform. Réduction des coûts d'infrastructure de 35%.",
+          "url": null,
+          "completion_date": "2022-08",
+          "relevant_skills": [
+            "AWS",
+            "Terraform",
+            "Docker",
+            "Kubernetes"
+          ]
+        },
         {
           "id": "proj_002",
           "name": "Refonte Architecture Microservices",
@@ -434,22 +457,9 @@
             "Node.js",
             "NestJS",
             "PostgreSQL",
+            "Microservices",
             "Docker",
             "Kubernetes"
-          ]
-        },
-        {
-          "id": "proj_001",
-          "name": "Migration Cloud AWS",
-          "description": "Leadership de la migration complète de l'infrastructure on-premise vers AWS (ECS, RDS, S3). Infrastructure as Code avec Terraform. Réduction des coûts d'infrastructure de 35%.",
-          "url": null,
-          "completion_date": "2022-08",
-          "relevant_skills": [
-            "AWS",
-            "Terraform",
-            "Docker",
-            "Kubernetes",
-            "Cloud Architecture"
           ]
         }
       ],
@@ -466,13 +476,6 @@
           "name": "Certified Kubernetes Application Developer (CKAD)",
           "issuer": "Cloud Native Computing Foundation",
           "issue_date": "2021-11",
-          "credential_url": null
-        },
-        {
-          "id": "cert_003",
-          "name": "Professional Scrum Master I (PSM I)",
-          "issuer": "Scrum.org",
-          "issue_date": "2019-03",
           "credential_url": null
         }
       ]
