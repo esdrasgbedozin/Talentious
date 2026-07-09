@@ -122,7 +122,7 @@ function LoginForm() {
         <div className="w-full max-w-md relative z-10">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-action bg-clip-text text-transparent mb-3">
+            <h1 className="text-4xl font-bold text-primary mb-3">
               Bon retour !
             </h1>
             <p className="text-text-secondary text-lg">Connectez-vous pour continuer</p>

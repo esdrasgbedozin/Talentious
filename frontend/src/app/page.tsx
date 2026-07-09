@@ -1,4 +1,12 @@
 import Link from "next/link";
+import {
+  FileUp,
+  Wand2,
+  Target,
+  BarChart3,
+  LayoutTemplate,
+  RefreshCw,
+} from "lucide-react";
 import Button from "@/components/ui/Button";
 import Navbar from "@/components/Navbar";
 
@@ -10,10 +18,6 @@ export default function Home() {
 
       {/* HERO SECTION */}
       <section className="relative overflow-hidden bg-gradient-to-br from-background-light via-white to-green-50 pt-32 pb-32 px-4">
-        {/* Decorative gradient orbs */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-action/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
-        
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center space-y-8">
             {/* Trust badge */}
@@ -27,7 +31,7 @@ export default function Home() {
               <h1 className="text-6xl md:text-7xl font-bold text-primary leading-tight">
                 Talentious
               </h1>
-              <p className="text-3xl md:text-4xl font-semibold bg-gradient-to-r from-action to-green-600 bg-clip-text text-transparent">
+              <p className="text-3xl md:text-4xl font-semibold text-action">
                 Révélez votre véritable potentiel
               </p>
             </div>
@@ -92,7 +96,7 @@ export default function Home() {
 
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center space-y-4 group">
-              <div className="w-16 h-16 mx-auto bg-gradient-to-br from-action to-green-600 rounded-2xl flex items-center justify-center transform group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 mx-auto bg-gradient-to-br from-action to-green-600 rounded-2xl flex items-center justify-center">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
@@ -105,7 +109,7 @@ export default function Home() {
             </div>
 
             <div className="text-center space-y-4 group">
-              <div className="w-16 h-16 mx-auto bg-gradient-to-br from-primary to-gray-700 rounded-2xl flex items-center justify-center transform group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 mx-auto bg-gradient-to-br from-primary to-gray-700 rounded-2xl flex items-center justify-center">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -118,7 +122,7 @@ export default function Home() {
             </div>
 
             <div className="text-center space-y-4 group">
-              <div className="w-16 h-16 mx-auto bg-gradient-to-br from-green-500 to-action rounded-2xl flex items-center justify-center transform group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 mx-auto bg-gradient-to-br from-green-500 to-action rounded-2xl flex items-center justify-center">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                 </svg>
@@ -150,7 +154,7 @@ export default function Home() {
             <div className="bg-white p-8 rounded-2xl border border-border shadow-sm hover:shadow-lg transition-all group">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-action/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-action/20 transition-colors">
-                  <span className="text-2xl">📄</span>
+                  <FileUp className="w-6 h-6 text-action" aria-hidden="true" />
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-xl font-semibold text-primary">Import automatique</h3>
@@ -166,7 +170,7 @@ export default function Home() {
             <div className="bg-white p-8 rounded-2xl border border-border shadow-sm hover:shadow-lg transition-all group">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-action/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-action/20 transition-colors">
-                  <span className="text-2xl">🤖</span>
+                  <Wand2 className="w-6 h-6 text-action" aria-hidden="true" />
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-xl font-semibold text-primary">Enrichissement IA</h3>
@@ -182,7 +186,7 @@ export default function Home() {
             <div className="bg-white p-8 rounded-2xl border border-border shadow-sm hover:shadow-lg transition-all group">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-action/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-action/20 transition-colors">
-                  <span className="text-2xl">🎯</span>
+                  <Target className="w-6 h-6 text-action" aria-hidden="true" />
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-xl font-semibold text-primary">Optimisation ciblée</h3>
@@ -198,7 +202,7 @@ export default function Home() {
             <div className="bg-white p-8 rounded-2xl border border-border shadow-sm hover:shadow-lg transition-all group">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-action/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-action/20 transition-colors">
-                  <span className="text-2xl">📊</span>
+                  <BarChart3 className="w-6 h-6 text-action" aria-hidden="true" />
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-xl font-semibold text-primary">Analyse de compatibilité</h3>
@@ -214,7 +218,7 @@ export default function Home() {
             <div className="bg-white p-8 rounded-2xl border border-border shadow-sm hover:shadow-lg transition-all group">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-action/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-action/20 transition-colors">
-                  <span className="text-2xl">✨</span>
+                  <LayoutTemplate className="w-6 h-6 text-action" aria-hidden="true" />
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-xl font-semibold text-primary">Templates professionnels</h3>
@@ -230,7 +234,7 @@ export default function Home() {
             <div className="bg-white p-8 rounded-2xl border border-border shadow-sm hover:shadow-lg transition-all group">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-action/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-action/20 transition-colors">
-                  <span className="text-2xl">🔄</span>
+                  <RefreshCw className="w-6 h-6 text-action" aria-hidden="true" />
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-xl font-semibold text-primary">Versions illimitées</h3>
@@ -452,13 +456,7 @@ export default function Home() {
       </section>
 
       {/* FINAL CTA */}
-      <section className="py-24 px-4 bg-gradient-to-br from-primary via-gray-800 to-primary relative overflow-hidden">
-        {/* Decorative elements */}
-        <div className="absolute top-0 left-0 w-full h-full opacity-10">
-          <div className="absolute top-10 left-10 w-64 h-64 bg-action rounded-full blur-3xl"></div>
-          <div className="absolute bottom-10 right-10 w-96 h-96 bg-green-400 rounded-full blur-3xl"></div>
-        </div>
-
+      <section className="py-24 px-4 bg-primary relative overflow-hidden">
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
             Prêt à révéler votre véritable potentiel ?
@@ -499,19 +497,18 @@ export default function Home() {
               <ul className="space-y-2 text-sm text-gray-300">
                 <li><Link href="/register" className="hover:text-action transition-colors">Créer un compte</Link></li>
                 <li><Link href="/login" className="hover:text-action transition-colors">Se connecter</Link></li>
-                <li><span className="opacity-50">Tarifs (à venir)</span></li>
               </ul>
             </div>
-            
+
             <div>
-              <h4 className="font-semibold mb-4">Entreprise</h4>
+              <h4 className="font-semibold mb-4">Navigation</h4>
               <ul className="space-y-2 text-sm text-gray-300">
-                <li><span className="opacity-50">À propos (à venir)</span></li>
-                <li><span className="opacity-50">Blog (à venir)</span></li>
-                <li><span className="opacity-50">Carrières (à venir)</span></li>
+                <li><a href="#features" className="hover:text-action transition-colors">Fonctionnalités</a></li>
+                <li><a href="#how-it-works" className="hover:text-action transition-colors">Comment ça marche</a></li>
+                <li><a href="#security" className="hover:text-action transition-colors">Sécurité</a></li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-4">Légal</h4>
               <ul className="space-y-2 text-sm text-gray-300">
@@ -523,7 +520,7 @@ export default function Home() {
           </div>
 
           <div className="border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
-            <p>© 2025 Talentious. Tous droits réservés.</p>
+            <p>© 2026 Talentious. Tous droits réservés.</p>
             <p className="mt-2 flex items-center justify-center gap-2">
               <span className="text-lg">🇫🇷</span>
               Fièrement hébergé en France • Conforme RGPD
