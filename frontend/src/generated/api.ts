@@ -628,7 +628,7 @@ export interface components {
             experiences: components["schemas"]["Experience"][];
             /** @default [] */
             educations: components["schemas"]["Education"][];
-            skills?: components["schemas"]["Skills"];
+            skills: components["schemas"]["Skills"];
             /**
              * @description Langues parlées. Était présent dans l'agent rédacteur mais jamais
              *     transmis depuis le backend. Désormais inclus dans le profil canonique.

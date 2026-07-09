@@ -959,6 +959,9 @@ components:
         Les niveaux apparaissent uniquement dans la sortie (`HighlightedSkill`).
 
         Limite : 20 compétences par catégorie (enforced par validation backend).
+      required:
+        - hard
+        - soft
       properties:
         hard:
           type: array
@@ -1120,6 +1123,7 @@ components:
       required:
         - personal_info
         - summary
+        - skills
       properties:
         personal_info:
           $ref: '#/components/schemas/PersonalInfo'
