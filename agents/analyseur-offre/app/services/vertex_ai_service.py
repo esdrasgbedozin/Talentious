@@ -7,6 +7,7 @@ import asyncio
 import os
 import json
 import logging
+import re
 from typing import Dict, Any, Optional
 
 from vertexai.generative_models import GenerativeModel, GenerationConfig
@@ -87,9 +88,14 @@ class VertexAIService:
         if not self.model:
             raise ValueError("Vertex AI model not initialized")
 
-        # Inject the offer text via replace (NOT str.format): the offer may contain
-        # literal braces { } (code, JSON), which would break str.format().
-        prompt = prompt_template.replace("{job_offer_text}", job_offer_text)
+        # Neutralize any attempt to escape the <offre> data fence from within the
+        # user-controlled offer text (prompt-injection defense).
+        safe_offer_text = re.sub(
+            r"</?\s*offre\s*>", "", job_offer_text, flags=re.IGNORECASE
+        )
+        # Inject via replace (NOT str.format): the offer may contain literal
+        # braces { } (code, JSON), which would break str.format().
+        prompt = prompt_template.replace("{job_offer_text}", safe_offer_text)
 
         logger.info(
             f"Analyzing job offer with Vertex AI "
