@@ -1,0 +1,76 @@
+name: Contracts & Generated Types
+
+# Garde-fou contract-first : le contrat OpenAPI est la source de vérité.
+# Ce workflow lint le contrat et vérifie que les types générés (Pydantic backend
+# + TypeScript frontend) sont à jour vis-à-vis de contracts/openapi.yaml.
+# Il échoue si quelqu'un modifie le contrat sans régénérer, ou édite à la main
+# les fichiers */generated/.
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'contracts/**'
+      - 'backend/app/generated/**'
+      - 'frontend/src/generated/**'
+      - '.github/workflows/contracts-types.yml'
+  pull_request:
+    paths:
+      - 'contracts/**'
+      - 'backend/app/generated/**'
+      - 'frontend/src/generated/**'
+      - '.github/workflows/contracts-types.yml'
+
+jobs:
+  lint-and-verify:
+    name: Lint contract & verify generated types
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Lint OpenAPI contract
+        run: npx --yes @redocly/cli@latest lint contracts/openapi.yaml contracts/agents/*.yaml
+
+      - name: Install type generators
+        run: |
+          pip install "datamodel-code-generator[http]==0.68.1" black isort
+
+      - name: Regenerate backend Pydantic models
+        run: |
+          datamodel-codegen \
+            --input contracts/openapi.yaml \
+            --input-file-type openapi \
+            --output backend/app/generated/models.py \
+            --output-model-type pydantic_v2.BaseModel \
+            --use-standard-collections \
+            --use-union-operator \
+            --use-schema-description \
+            --field-constraints \
+            --collapse-root-models \
+            --formatters black isort \
+            --target-python-version 3.11
+
+      - name: Regenerate frontend TypeScript types
+        run: |
+          cd frontend
+          npx --yes openapi-typescript ../contracts/openapi.yaml -o src/generated/api.ts
+
+      - name: Fail if generated types are out of date
+        run: |
+          if ! git diff --exit-code backend/app/generated frontend/src/generated; then
+            echo "::error::Les types générés ne sont pas à jour. Lance 'make generate-types' et committe le résultat."
+            exit 1
+          fi
