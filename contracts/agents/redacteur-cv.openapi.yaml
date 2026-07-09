@@ -1,0 +1,693 @@
+openapi: 3.0.3
+info:
+  title: Agent Rédacteur-CV
+  version: "1.0.0"
+  description: |
+    Microservice privé de génération de CV optimisé. Encapsule un appel Vertex AI
+    (Gemini 2.5 Flash, région europe-west9) pour produire un CV structuré adapté
+    à une offre d'emploi, à partir du profil canonique de l'utilisateur.
+
+    ## Accès
+    Ce service est privé (Cloud Run --no-allow-unauthenticated). Seul le compte
+    de service du backend Talentious (backend-sa@<project>.iam.gserviceaccount.com)
+    est autorisé à l'appeler (rôle IAM roles/run.invoker).
+
+    ## Entrée — ProfileData canonique
+    Ce service reçoit directement le ProfileData canonique défini dans
+    contracts/openapi.yaml#/components/schemas/ProfileData. Il n'y a aucune
+    transformation runtime entre le backend et cet agent. Le backend transmet
+    le profil tel quel, tel que stocké en JSONB.
+
+    Structure skills reçue : {hard: string[], soft: string[]} — aucune conversion
+    vers [{name, level, category}] n'est opérée. L'agent infère les niveaux à partir
+    du contexte global du profil et de l'offre.
+
+    ## Erreurs
+    Toutes les erreurs suivent le standard RFC 7807 (application/problem+json).
+  license:
+    name: Proprietary
+    url: https://talentious.fr/legal/terms
+
+servers:
+  - url: http://localhost:8003
+    description: Développement local
+  - url: https://redacteur-cv-placeholder-ew.a.run.app
+    description: Cloud Run (URL interne au réseau privé GCP — remplacer par l'URL réelle)
+
+security:
+  - iamAuth: []
+
+tags:
+  - name: Generation
+    description: Génération de CV optimisé
+  - name: Health
+    description: Vérification de santé du service
+
+paths:
+
+  /generate:
+    post:
+      tags: [Generation]
+      operationId: generateCV
+      summary: Générer un CV optimisé pour une offre d'emploi
+      description: |
+        Reçoit le profil canonique de l'utilisateur et l'analyse de l'offre d'emploi,
+        et produit un CV structuré (GeneratedCVData) optimisé pour cette offre :
+        - Résumé professionnel réécrit
+        - Expériences sélectionnées et reformulées avec verbes d'action et métriques
+        - Compétences priorisées et catégorisées
+        - Formations et certifications pertinentes sélectionnées
+
+        L'appel Vertex AI inclut une logique de retry (3 tentatives max).
+        La sortie est validée contre le schéma GeneratedCVData.
+
+        Sécurité : le champ optimization_notes de la sortie NE DOIT PAS être
+        affiché à l'utilisateur ni loggé (risque d'exfiltration BLK-5).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateRequest'
+      responses:
+        '200':
+          description: CV généré avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateResponse'
+        '400':
+          description: Données d'entrée invalides
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Token IAM absent ou invalide
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Erreur de validation du corps
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: Erreur Vertex AI (toutes les tentatives épuisées)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "https://talentious.fr/errors/ai-service-error"
+                title: "AI Service Error"
+                status: 502
+                detail: "The AI generation service is temporarily unavailable. Please retry."
+                instance: "/generate"
+
+  /health:
+    get:
+      tags: [Health]
+      operationId: healthCheck
+      summary: Vérification de santé du service
+      security: []
+      responses:
+        '200':
+          description: Service opérationnel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service dégradé ou indisponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+
+  securitySchemes:
+    iamAuth:
+      type: http
+      scheme: bearer
+      description: Token IAM Google. Seul le compte de service backend est autorisé (roles/run.invoker).
+
+  schemas:
+
+    Problem:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          description: URI identifiant le type d'erreur
+        title:
+          type: string
+          description: Titre court lisible par un humain
+        status:
+          type: integer
+          description: Code HTTP
+        detail:
+          type: string
+          description: Explication détaillée sans internals
+        instance:
+          type: string
+          description: URI de la ressource concernée
+
+    # =========================================================================
+    # Entrée : ProfileData canonique
+    # =========================================================================
+
+    PersonalInfo:
+      type: object
+      description: Informations personnelles. Identique à openapi.yaml#/components/schemas/PersonalInfo.
+      required:
+        - first_name
+        - last_name
+        - email
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        linkedin:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        postal_code:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+
+    Experience:
+      type: object
+      description: |
+        Expérience professionnelle canonique. Inclut achievements et is_current,
+        qui étaient absents dans l'ancienne version de l'agent (champs perdus).
+      required:
+        - id
+        - title
+        - company
+        - start_date
+        - description
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        company:
+          type: string
+        location:
+          type: string
+          nullable: true
+        start_date:
+          type: string
+          pattern: '^\d{4}-\d{2}$'
+        end_date:
+          type: string
+          nullable: true
+          pattern: '^\d{4}-\d{2}$'
+        is_current:
+          type: boolean
+          default: false
+        description:
+          type: string
+        achievements:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: Réalisations concrètes — désormais transmises à l'agent (étaient perdues)
+
+    Education:
+      type: object
+      description: |
+        Formation académique canonique. Utilise field (et non field_of_study
+        ni graduation_date). Toutes les dates sont optionnelles.
+      required:
+        - id
+        - degree
+        - institution
+      properties:
+        id:
+          type: string
+        degree:
+          type: string
+        institution:
+          type: string
+        location:
+          type: string
+          nullable: true
+        field:
+          type: string
+          nullable: true
+          description: Domaine d'étude (remplace field_of_study — désormais transmis à l'agent)
+        start_date:
+          type: string
+          nullable: true
+          pattern: '^\d{4}-\d{2}$'
+        end_date:
+          type: string
+          nullable: true
+          pattern: '^\d{4}-\d{2}$'
+        description:
+          type: string
+          nullable: true
+        grade:
+          type: string
+          nullable: true
+
+    Skills:
+      type: object
+      description: |
+        Structure de compétences canonique. L'agent reçoit {hard, soft} directement
+        sans transformation. Il n'y a plus de conversion vers [{name, level, category}]
+        dans cv.py. L'agent infère les niveaux du contexte global.
+      properties:
+        hard:
+          type: array
+          items:
+            type: string
+          default: []
+        soft:
+          type: array
+          items:
+            type: string
+          default: []
+
+    Language:
+      type: object
+      description: Maîtrise linguistique. Désormais transmis à l'agent (était absent du profil backend).
+      required:
+        - name
+        - level
+      properties:
+        name:
+          type: string
+          example: "Anglais"
+        level:
+          type: string
+          example: "Courant"
+
+    Project:
+      type: object
+      description: Projet canonique. Inclut role (était absent de l'agent — champ perdu).
+      required:
+        - id
+        - name
+        - description
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        role:
+          type: string
+          nullable: true
+          description: Rôle tenu dans le projet — désormais transmis à l'agent
+        url:
+          type: string
+          nullable: true
+        start_date:
+          type: string
+          nullable: true
+          pattern: '^\d{4}-\d{2}$'
+        end_date:
+          type: string
+          nullable: true
+          pattern: '^\d{4}-\d{2}$'
+        technologies:
+          type: array
+          nullable: true
+          items:
+            type: string
+
+    Certification:
+      type: object
+      description: |
+        Certification canonique. Utilise issuer (et non issuing_organization).
+        Inclut expiration_date et credential_url (étaient perdus côté agent).
+        issue_date est optionnel en entrée.
+      required:
+        - id
+        - name
+        - issuer
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        issuer:
+          type: string
+          description: Organisation émettrice (remplace issuing_organization)
+        issue_date:
+          type: string
+          nullable: true
+          pattern: '^\d{4}-\d{2}$'
+        expiration_date:
+          type: string
+          nullable: true
+          pattern: '^\d{4}-\d{2}$'
+          description: Date d'expiration — désormais transmise à l'agent
+        credential_id:
+          type: string
+          nullable: true
+        credential_url:
+          type: string
+          nullable: true
+          description: URL de vérification — désormais transmise à l'agent
+
+    ProfileData:
+      type: object
+      description: |
+        Profil canonique complet tel que reçu du backend, sans transformation.
+        Identique à contracts/openapi.yaml#/components/schemas/ProfileData.
+      required:
+        - personal_info
+        - summary
+      properties:
+        personal_info:
+          $ref: '#/components/schemas/PersonalInfo'
+        summary:
+          type: string
+          nullable: true
+        experiences:
+          type: array
+          items:
+            $ref: '#/components/schemas/Experience'
+          default: []
+        educations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Education'
+          default: []
+        skills:
+          $ref: '#/components/schemas/Skills'
+        languages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Language'
+          default: []
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+          default: []
+        certifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Certification'
+          default: []
+
+    # =========================================================================
+    # Entrée : Analyse d'offre (miroir de AnalysisResult analyseur-offre)
+    # =========================================================================
+
+    SkillItem:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        level:
+          type: string
+          nullable: true
+        importance:
+          type: string
+          nullable: true
+          enum: [Critical, Important, "Nice to have"]
+
+    OfferAnalysis:
+      type: object
+      description: |
+        Résultat de l'agent analyseur-offre. Identique à
+        agents/analyseur-offre.openapi.yaml#/components/schemas/AnalysisResult.
+      required:
+        - hard_skills
+        - soft_skills
+        - seniority_level
+        - key_responsibilities
+        - tone
+      properties:
+        hard_skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillItem'
+        soft_skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillItem'
+        seniority_level:
+          type: string
+          enum: [Junior, "Mid-level", Senior, Lead, Expert]
+        key_responsibilities:
+          type: array
+          items:
+            type: string
+        tone:
+          type: string
+
+    GenerateRequest:
+      type: object
+      description: |
+        Requête de génération de CV. Combine le profil canonique de l'utilisateur
+        et l'analyse de l'offre d'emploi.
+      required:
+        - user_profile
+        - offer_analysis
+      properties:
+        user_profile:
+          $ref: '#/components/schemas/ProfileData'
+        offer_analysis:
+          $ref: '#/components/schemas/OfferAnalysis'
+
+    # =========================================================================
+    # Sortie : GeneratedCVData
+    # =========================================================================
+
+    SelectedExperience:
+      type: object
+      required:
+        - id
+        - title
+        - company
+        - start_date
+        - description
+        - highlighted_skills
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        company:
+          type: string
+        start_date:
+          type: string
+          pattern: '^\d{4}-\d{2}$'
+        end_date:
+          type: string
+          nullable: true
+          pattern: '^\d{4}-\d{2}$'
+        location:
+          type: string
+          nullable: true
+        description:
+          type: string
+          description: Description réécrite avec verbes d'action et mots-clés de l'offre
+        highlighted_skills:
+          type: array
+          items:
+            type: string
+
+    HighlightedSkill:
+      type: object
+      required:
+        - name
+        - category
+        - importance
+      properties:
+        name:
+          type: string
+        level:
+          type: string
+          nullable: true
+        category:
+          type: string
+          enum: [hard_skill, soft_skill]
+        importance:
+          type: string
+          enum: [Critical, Important, "Nice to have"]
+
+    SelectedEducation:
+      type: object
+      description: |
+        Formation sélectionnée. end_date est optionnel — remplace l'ancien
+        graduation_date: str requis qui causait des 422 aléatoires.
+      required:
+        - id
+        - degree
+        - institution
+      properties:
+        id:
+          type: string
+        degree:
+          type: string
+        institution:
+          type: string
+        end_date:
+          type: string
+          nullable: true
+          pattern: '^\d{4}-\d{2}$'
+          description: Date d'obtention optionnelle (remplace graduation_date requis)
+        description:
+          type: string
+          nullable: true
+
+    SelectedProject:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - relevant_skills
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        url:
+          type: string
+          nullable: true
+        completion_date:
+          type: string
+          nullable: true
+          pattern: '^\d{4}-\d{2}$'
+        relevant_skills:
+          type: array
+          items:
+            type: string
+
+    SelectedCertification:
+      type: object
+      description: |
+        Certification sélectionnée. issue_date est optionnel — remplace l'ancien
+        issue_date: str requis qui causait des 422 aléatoires.
+      required:
+        - id
+        - name
+        - issuer
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        issuer:
+          type: string
+        issue_date:
+          type: string
+          nullable: true
+          pattern: '^\d{4}-\d{2}$'
+          description: Date d'obtention optionnelle (remplace issue_date requis)
+        url:
+          type: string
+          nullable: true
+
+    GeneratedCVData:
+      type: object
+      description: |
+        CV optimisé pour l'offre cible. Stocké en JSONB dans generated_cvs.cv_data_json.
+
+        Contrainte de sécurité : optimization_notes NE DOIT PAS être affiché à
+        l'utilisateur ni loggé en production (risque d'exfiltration BLK-5).
+      required:
+        - personal_info
+        - summary
+        - selected_experiences
+        - highlighted_skills
+        - selected_educations
+      properties:
+        personal_info:
+          $ref: '#/components/schemas/PersonalInfo'
+        summary:
+          type: string
+          description: Résumé professionnel réécrit (50-120 mots, adapté à l'offre)
+        selected_experiences:
+          type: array
+          items:
+            $ref: '#/components/schemas/SelectedExperience'
+        highlighted_skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/HighlightedSkill'
+        selected_educations:
+          type: array
+          items:
+            $ref: '#/components/schemas/SelectedEducation'
+        selected_projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/SelectedProject'
+          default: []
+        selected_certifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/SelectedCertification'
+          default: []
+        optimization_notes:
+          type: string
+          nullable: true
+          description: Notes internes de stratégie d'optimisation (usage debug uniquement). Ne pas exposer.
+
+    GenerateResponse:
+      type: object
+      required:
+        - cv_data
+        - message
+      properties:
+        cv_data:
+          $ref: '#/components/schemas/GeneratedCVData'
+        message:
+          type: string
+          default: "CV generated successfully"
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - service
+        - version
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          example: "healthy"
+        service:
+          type: string
+          example: "redacteur-cv"
+        version:
+          type: string
+          example: "1.0.0"

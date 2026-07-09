@@ -1,0 +1,273 @@
+openapi: 3.0.3
+info:
+  title: Agent Analyseur-Offre
+  version: "1.0.0"
+  description: |
+    Microservice privé d'analyse d'offres d'emploi. Encapsule un appel Vertex AI
+    (Gemini 2.5 Flash, région europe-west9) pour extraire les compétences, le niveau
+    de séniorité, les responsabilités clés et le ton d'une offre d'emploi.
+
+    ## Accès
+    Ce service est privé (Cloud Run --no-allow-unauthenticated). Seul le compte
+    de service du backend Talentious (backend-sa@<project>.iam.gserviceaccount.com)
+    est autorisé à l'appeler (rôle IAM roles/run.invoker).
+    Le backend transmet un token IAM via l'en-tête `Authorization: Bearer <iam_token>`.
+    Aucun JWT utilisateur ne doit être accepté par ce service.
+
+    ## Erreurs
+    Toutes les erreurs suivent le standard RFC 7807 (application/problem+json).
+  license:
+    name: Proprietary
+    url: https://talentious.fr/legal/terms
+
+servers:
+  - url: http://localhost:8002
+    description: Développement local
+  - url: https://analyseur-offre-placeholder-ew.a.run.app
+    description: Cloud Run (URL interne au réseau privé GCP — remplacer par l'URL réelle)
+
+security:
+  - iamAuth: []
+
+tags:
+  - name: Analysis
+    description: Analyse d'offres d'emploi
+  - name: Health
+    description: Vérification de santé du service
+
+paths:
+
+  /analyze:
+    post:
+      tags: [Analysis]
+      operationId: analyzeOffer
+      summary: Analyser une offre d'emploi
+      description: |
+        Reçoit le texte brut d'une offre d'emploi et retourne une analyse structurée :
+        compétences techniques (hard_skills), compétences comportementales (soft_skills),
+        niveau de séniorité, responsabilités principales et ton de l'offre.
+
+        L'appel Vertex AI inclut une logique de retry (3 tentatives max) avec validation
+        de la sortie JSON contre ce schéma.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyzeRequest'
+      responses:
+        '200':
+          description: Analyse structurée de l'offre
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResult'
+        '400':
+          description: Texte trop court ou invalide
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "https://talentious.fr/errors/invalid-offer-text"
+                title: "Invalid Offer Text"
+                status: 400
+                detail: "Offer text must be between 50 and 200,000 characters."
+                instance: "/analyze"
+        '401':
+          description: Token IAM absent ou invalide
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Erreur de validation du corps
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: Erreur Vertex AI (toutes les tentatives épuisées)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "https://talentious.fr/errors/ai-service-error"
+                title: "AI Service Error"
+                status: 502
+                detail: "The AI analysis service is temporarily unavailable. Please retry."
+                instance: "/analyze"
+
+  /health:
+    get:
+      tags: [Health]
+      operationId: healthCheck
+      summary: Vérification de santé du service
+      description: Endpoint utilisé par Cloud Run et le backend avant de déclencher le pipeline.
+      security: []
+      responses:
+        '200':
+          description: Service opérationnel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service dégradé ou indisponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+
+  securitySchemes:
+    iamAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Token IAM Google (obtenu via google.auth.transport.requests).
+        Seul le compte de service backend est autorisé (roles/run.invoker).
+
+  schemas:
+
+    Problem:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          description: URI identifiant le type d'erreur
+          example: "https://talentious.fr/errors/invalid-offer-text"
+        title:
+          type: string
+          description: Titre court lisible par un humain
+          example: "Invalid Offer Text"
+        status:
+          type: integer
+          description: Code HTTP
+          example: 400
+        detail:
+          type: string
+          description: Explication détaillée sans internals
+          example: "Offer text must be between 50 and 200,000 characters."
+        instance:
+          type: string
+          description: URI de la ressource concernée
+          example: "/analyze"
+
+    AnalyzeRequest:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          minLength: 50
+          maxLength: 200000
+          description: |
+            Texte brut de l'offre d'emploi.
+
+            Sécurité : ce texte est injecté dans le prompt Gemini.
+            Le backend doit s'assurer qu'il est délimité (balises offer...offer)
+            avant transmission pour atténuer le risque d'injection de prompt (BLK-5).
+          example: "Nous recherchons un ingénieur backend senior maîtrisant Python et FastAPI..."
+
+    SkillItem:
+      type: object
+      description: Compétence extraite de l'offre d'emploi
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          example: "Python"
+        level:
+          type: string
+          nullable: true
+          description: Niveau requis par l'offre (ex. Expert, Intermédiaire). Optionnel pour les soft skills.
+          example: "Expert"
+        importance:
+          type: string
+          nullable: true
+          enum: [Critical, Important, "Nice to have"]
+          description: Importance de la compétence pour le poste
+          example: "Critical"
+
+    AnalysisResult:
+      type: object
+      description: |
+        Résultat structuré de l'analyse d'une offre d'emploi.
+        Ce schéma est réutilisé en entrée de l'agent rédacteur-cv
+        (agents/redacteur-cv.openapi.yaml#/components/schemas/OfferAnalysis).
+      required:
+        - hard_skills
+        - soft_skills
+        - seniority_level
+        - key_responsibilities
+        - tone
+      properties:
+        hard_skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillItem'
+          description: Compétences techniques requises (langages, frameworks, outils)
+          example:
+            - name: "Python"
+              level: "Expert"
+              importance: "Critical"
+            - name: "FastAPI"
+              level: "Intermediate"
+              importance: "Important"
+        soft_skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillItem'
+          description: Compétences comportementales requises
+          example:
+            - name: "Collaboration"
+              importance: "Critical"
+            - name: "Communication"
+              importance: "Important"
+        seniority_level:
+          type: string
+          description: Niveau de séniorité requis par le poste
+          enum: [Junior, "Mid-level", Senior, Lead, Expert]
+          example: "Senior"
+        key_responsibilities:
+          type: array
+          items:
+            type: string
+            maxLength: 500
+          description: Principales responsabilités et missions du poste
+          example:
+            - "Concevoir et implémenter des microservices"
+            - "Mentorer les développeurs juniors"
+            - "Participer aux décisions d'architecture"
+        tone:
+          type: string
+          description: Ton général de l'offre d'emploi
+          example: "innovant"
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - service
+        - version
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          example: "healthy"
+        service:
+          type: string
+          example: "analyseur-offre"
+        version:
+          type: string
+          example: "1.0.0"
