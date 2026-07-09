@@ -375,15 +375,12 @@ export default function ProfilePage() {
           >
             <div className="space-y-4">
               <div className="flex justify-end">
-                <button
-                  onClick={addExperience}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white rounded-lg hover:bg-action-hover transition-colors"
-                >
+                <Button variant="primary" size="sm" onClick={addExperience}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                   Ajouter une expérience
-                </button>
+                </Button>
               </div>
               
               {(profile?.experiences?.length || 0) === 0 ? (
@@ -424,15 +421,12 @@ export default function ProfilePage() {
           >
             <div className="space-y-4">
               <div className="flex justify-end">
-                <button
-                  onClick={addEducation}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white rounded-lg hover:bg-action-hover transition-colors"
-                >
+                <Button variant="primary" size="sm" onClick={addEducation}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                   Ajouter une formation
-                </button>
+                </Button>
               </div>
               
               {(profile?.educations?.length || 0) === 0 ? (
@@ -513,15 +507,12 @@ export default function ProfilePage() {
           >
             <div className="space-y-4">
               <div className="flex justify-end">
-                <button
-                  onClick={addProject}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white rounded-lg hover:bg-action-hover transition-colors"
-                >
+                <Button variant="primary" size="sm" onClick={addProject}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                   Ajouter un projet
-                </button>
+                </Button>
               </div>
               
               {(profile?.projects?.length || 0) === 0 ? (
@@ -560,15 +551,12 @@ export default function ProfilePage() {
           >
             <div className="space-y-4">
               <div className="flex justify-end">
-                <button
-                  onClick={addCertification}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white rounded-lg hover:bg-action-hover transition-colors"
-                >
+                <Button variant="primary" size="sm" onClick={addCertification}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                   Ajouter une certification
-                </button>
+                </Button>
               </div>
               
               {(profile?.certifications?.length || 0) === 0 ? (
