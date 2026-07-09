@@ -21,10 +21,19 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.database import get_db, get_session_factory
-from app.models import CareerPass, CVJob, GeneratedCV, JobStatus, User, UserProfile
+from app.models import (
+    CareerPass,
+    CVJob,
+    GeneratedCV,
+    JobStatus,
+    User,
+    UserProfile,
+    UserRole,
+)
 from app.routes.auth import get_current_active_user
 from app.services.cv_worker import run_cv_generation
 
@@ -108,7 +117,7 @@ async def check_career_pass_or_admin(current_user: User, db: AsyncSession) -> No
         HTTPException(402): If user has no active pass and is not admin
     """
     # Admins bypass CareerPass check
-    if current_user.role == "admin":
+    if current_user.role == UserRole.ADMIN:
         logger.info(f"Admin user {current_user.email} bypassing CareerPass check")
         return
 
@@ -179,6 +188,7 @@ async def generate_cv(
         )
 
     # 3. Idempotency: at most one active (queued/running) job per user.
+    # Fast-path pre-check for a friendly 409...
     active = await db.execute(
         select(CVJob)
         .where(CVJob.user_id == current_user.id)
@@ -190,7 +200,9 @@ async def generate_cv(
             detail="A CV generation is already in progress. Please wait for it to finish.",
         )
 
-    # 4. Create the job and schedule the background pipeline.
+    # 4. Create the job and schedule the background pipeline. The partial unique
+    # index (uq_cv_jobs_one_active_per_user) is the real guard against a race
+    # between two concurrent requests — catch its violation and return 409.
     job = CVJob(
         user_id=current_user.id,
         cv_name=request.cv_name,
@@ -198,7 +210,14 @@ async def generate_cv(
         progress_pct=0,
     )
     db.add(job)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A CV generation is already in progress. Please wait for it to finish.",
+        )
     await db.refresh(job)
 
     background_tasks.add_task(
@@ -225,7 +244,7 @@ async def _get_owned_job(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job {cv_job_id} not found",
         )
-    if job.user_id != current_user.id and current_user.role != "admin":
+    if job.user_id != current_user.id and current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to access this job",
@@ -263,23 +282,31 @@ async def stream_cv_job(
 
     async def event_generator():
         terminal = {JobStatus.SUCCEEDED, JobStatus.FAILED}
-        for _ in range(600):  # safety bound (~10 min at 1s cadence)
-            async with session_factory() as stream_db:
-                job = await stream_db.get(CVJob, cv_job_id)
-            if job is None:
-                break
-            payload = {
-                "job_id": str(job.id),
-                "status": job.status.value,
-                "progress_pct": job.progress_pct,
-                "cv_id": str(job.cv_id) if job.cv_id else None,
-            }
-            if job.status in terminal:
-                payload["error_message"] = job.error_message
-                yield f"event: done\ndata: {json.dumps(payload)}\n\n"
-                break
-            yield f"event: progress\ndata: {json.dumps(payload)}\n\n"
-            await asyncio.sleep(1)
+        try:
+            for _ in range(600):  # safety bound (~10 min at 1s cadence)
+                async with session_factory() as stream_db:
+                    job = await stream_db.get(CVJob, cv_job_id)
+                if job is None:
+                    break
+                payload = {
+                    "job_id": str(job.id),
+                    "status": job.status.value,
+                    "progress_pct": job.progress_pct,
+                    "cv_id": str(job.cv_id) if job.cv_id else None,
+                }
+                if job.status in terminal:
+                    payload["error_message"] = job.error_message
+                    yield f"event: done\ndata: {json.dumps(payload)}\n\n"
+                    return
+                yield f"event: progress\ndata: {json.dumps(payload)}\n\n"
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            # Client disconnected — stop quietly.
+            raise
+        except Exception:
+            logger.error("SSE stream failed for job %s", cv_job_id, exc_info=True)
+            # Tell the client the stream ended abnormally, without leaking details.
+            yield 'event: error\ndata: {"status": "error"}\n\n'
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
@@ -340,7 +367,7 @@ async def get_cv(
         )
 
     # Authorization check
-    if cv.user_id != current_user.id and current_user.role != "admin":
+    if cv.user_id != current_user.id and current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to access this CV",
@@ -382,7 +409,7 @@ async def update_cv(
         )
 
     # Authorization check
-    if cv.user_id != current_user.id and current_user.role != "admin":
+    if cv.user_id != current_user.id and current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to update this CV",
@@ -434,7 +461,7 @@ async def delete_cv(
         )
 
     # Authorization check
-    if cv.user_id != current_user.id and current_user.role != "admin":
+    if cv.user_id != current_user.id and current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to delete this CV",

@@ -11,7 +11,17 @@ import enum
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -36,6 +46,18 @@ class CVJob(Base):
     """A single asynchronous CV generation job for a user."""
 
     __tablename__ = "cv_jobs"
+
+    # At most one active (queued/running) job per user — the real guard against a
+    # race between two concurrent POST /cv/generate (the route pre-check is only a
+    # fast path). Postgres partial unique index.
+    __table_args__ = (
+        Index(
+            "uq_cv_jobs_one_active_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("status IN ('queued', 'running')"),
+        ),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(

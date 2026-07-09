@@ -3,10 +3,13 @@ Configuration module for the Talentious application.
 """
 
 import os
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from functools import lru_cache
 from typing import Annotated, Optional
+
+# Known-insecure default; forbidden outside local development.
+DEFAULT_SECRET_KEY = "your-secret-key-change-in-production"
 
 
 class Settings(BaseSettings):
@@ -24,7 +27,7 @@ class Settings(BaseSettings):
     sql_echo: bool = False
 
     # Security
-    secret_key: str = "your-secret-key-change-in-production"
+    secret_key: str = DEFAULT_SECRET_KEY
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
@@ -55,6 +58,18 @@ class Settings(BaseSettings):
     # Stripe (for future payment integration)
     stripe_secret_key: Optional[str] = None
     stripe_webhook_secret: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _enforce_production_safety(self):
+        """Refuse insecure defaults outside local development, and never run debug in prod."""
+        if self.environment.lower() != "development":
+            if self.secret_key == DEFAULT_SECRET_KEY:
+                raise ValueError(
+                    "SECRET_KEY must be set to a strong secret when ENVIRONMENT is not 'development'."
+                )
+            # Force debug off outside dev so 500s never render stack traces.
+            self.debug = False
+        return self
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -26,7 +26,25 @@ from app.services.writer_client import writer_client
 logger = logging.getLogger(__name__)
 
 DEFAULT_TEMPLATE_ID = "modern_v1"
-MAX_ERROR_MESSAGE_LEN = 1000
+
+# Safe, client-facing failure messages. The raw exception is logged server-side
+# (exc_info=True) but NEVER stored in job.error_message, which is returned to the
+# client via GET /cv/jobs/{id} — storing str(exc) would leak internals/PII.
+_SAFE_PROFILE_MISSING = (
+    "Profil utilisateur introuvable. Complétez votre profil avant de générer un CV."
+)
+_SAFE_GENERIC = "La génération a échoué (service IA momentanément indisponible). Merci de réessayer."
+
+
+class ProfileNotFoundError(Exception):
+    """Raised when the user's profile is missing at generation time."""
+
+
+def _safe_error_message(exc: Exception) -> str:
+    """Map an exception to a safe, non-leaking client-facing message."""
+    if isinstance(exc, ProfileNotFoundError):
+        return _SAFE_PROFILE_MISSING
+    return _SAFE_GENERIC
 
 
 async def run_cv_generation(
@@ -57,7 +75,7 @@ async def run_cv_generation(
             )
             profile = result.scalars().first()
             if profile is None:
-                raise ValueError("User profile not found")
+                raise ProfileNotFoundError()
 
             # Canonical profile passed through untouched — no runtime skills transform.
             profile_data = dict(profile.profile_data)
@@ -96,5 +114,6 @@ async def run_cv_generation(
             job = await db.get(CVJob, job_id)
             if job is not None:
                 job.status = JobStatus.FAILED
-                job.error_message = str(exc)[:MAX_ERROR_MESSAGE_LEN]
+                # Safe message only — the real exception was logged above.
+                job.error_message = _safe_error_message(exc)
                 await db.commit()

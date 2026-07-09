@@ -12,10 +12,9 @@ Do NOT hand-edit the profile field definitions here. Change
 `make generate-types`.
 """
 
-from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AwareDatetime, BaseModel, ConfigDict
 
 from app.generated.models import (
     Certification,
@@ -46,11 +45,9 @@ class ProfileResponse(BaseModel):
     """API envelope returning a user's profile with metadata."""
 
     user_id: UUID
+    # Timezone-aware: DB columns are TIMESTAMP WITH TIME ZONE since migration b1f2c3d4e5f6.
     profile_data: ProfileData
-    # NOTE: kept naive-tolerant on purpose. The DB still stores naive datetimes
-    # (datetime.utcnow()). M1-T06 migrates the whole codebase to timezone-aware
-    # datetimes; the contract's AwareDatetime will apply once that lands.
-    updated_at: datetime
+    updated_at: AwareDatetime
 
     model_config = ConfigDict(from_attributes=True)
 

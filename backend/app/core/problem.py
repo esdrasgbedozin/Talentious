@@ -9,11 +9,15 @@ exception strings or stack traces to clients.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Optional
 
 from fastapi import Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+logger = logging.getLogger(__name__)
 
 PROBLEM_MEDIA_TYPE = "application/problem+json"
 
@@ -74,4 +78,37 @@ async def http_exception_handler(
         detail=detail,
         instance=str(request.url.path),
         headers=getattr(exc, "headers", None),
+    )
+
+
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Render request-validation errors (422) as problem+json (RFC 7807 §3.1 extension).
+
+    Only loc + msg + type are exposed — never the submitted input values, which
+    could contain PII.
+    """
+    invalid_params = [
+        {"loc": list(e.get("loc", [])), "msg": e.get("msg"), "type": e.get("type")}
+        for e in exc.errors()
+    ]
+    return problem_response(
+        422,
+        detail="Request validation failed",
+        instance=str(request.url.path),
+        extra={"invalid_params": invalid_params},
+    )
+
+
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Last-resort handler: never leak internals/stack traces to the client.
+
+    The full exception is logged server-side; the client gets a generic 500.
+    """
+    logger.error("Unhandled exception on %s: %s", request.url.path, exc, exc_info=True)
+    return problem_response(
+        500,
+        detail="An unexpected error occurred. Please try again later.",
+        instance=str(request.url.path),
     )

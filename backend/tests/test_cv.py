@@ -144,6 +144,56 @@ class TestJobStatus:
             "/cv/jobs/00000000-0000-0000-0000-000000000000", headers=admin_headers
         )
         assert response.status_code == 404
+        # RFC 7807 shape
+        assert response.headers["content-type"].startswith("application/problem+json")
+        body = response.json()
+        assert body["status"] == 404
+        assert "detail" in body
+
+    async def test_cannot_read_another_users_job(
+        self, client, auth_headers, admin_user, test_db
+    ):
+        """A non-owner, non-admin user gets 403 on someone else's job (IDOR guard)."""
+        job = CVJob(user_id=admin_user.id, cv_name="admin job", status=JobStatus.QUEUED)
+        test_db.add(job)
+        await test_db.commit()
+        await test_db.refresh(job)
+
+        # auth_headers is the standard (non-admin) test_user, not the owner.
+        response = await client.get(f"/cv/jobs/{job.id}", headers=auth_headers)
+        assert response.status_code == 403
+
+
+class TestCVOwnership:
+    async def _make_cv(self, test_db, owner_id):
+        cv = GeneratedCV(
+            user_id=owner_id,
+            cv_name="owned",
+            template_id="modern_v1",
+            job_offer_context="ctx",
+            cv_data_json={"summary": "x"},
+        )
+        test_db.add(cv)
+        await test_db.commit()
+        await test_db.refresh(cv)
+        return cv
+
+    async def test_cannot_get_update_delete_another_users_cv(
+        self, client, auth_headers, admin_user, test_db
+    ):
+        cv = await self._make_cv(test_db, admin_user.id)
+        # auth_headers = non-admin test_user (not the owner)
+        assert (
+            await client.get(f"/cv/{cv.id}", headers=auth_headers)
+        ).status_code == 403
+        assert (
+            await client.put(
+                f"/cv/{cv.id}", headers=auth_headers, json={"cv_name": "hacked"}
+            )
+        ).status_code == 403
+        assert (
+            await client.delete(f"/cv/{cv.id}", headers=auth_headers)
+        ).status_code == 403
 
 
 # ----------------------------------------------------------------------------
@@ -241,3 +291,36 @@ class TestWorker:
             refreshed = await check.get(CVJob, job.id)
             assert refreshed.status == JobStatus.FAILED
             assert refreshed.error_message is not None
+            # The raw exception text must NOT leak into the client-facing message.
+            assert "analyzer down" not in refreshed.error_message
+
+    async def test_worker_missing_profile_marks_job_failed_safely(
+        self, session_factory, test_db, monkeypatch
+    ):
+        """A user without a profile: job fails with a safe, non-leaking message."""
+        from app.models.user import User, UserRole
+        from app.services import cv_worker
+        from app.services.auth import hash_password
+
+        # A bare user with NO profile.
+        user = User(
+            email="noprofile@example.com",
+            hashed_password=hash_password("Pw123456!"),
+            role=UserRole.USER,
+        )
+        test_db.add(user)
+        await test_db.flush()
+        job = CVJob(user_id=user.id, cv_name="CV", status=JobStatus.QUEUED)
+        test_db.add(job)
+        await test_db.commit()
+        await test_db.refresh(job)
+        uid = user.id
+
+        await cv_worker.run_cv_generation(
+            session_factory, job.id, uid, "CV", VALID_OFFER
+        )
+
+        async with session_factory() as check:
+            refreshed = await check.get(CVJob, job.id)
+            assert refreshed.status == JobStatus.FAILED
+            assert "Profil utilisateur introuvable" in refreshed.error_message

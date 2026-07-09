@@ -3,11 +3,16 @@ Talentious API - Main application entry point.
 """
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
-from app.core.problem import http_exception_handler
+from app.core.problem import (
+    http_exception_handler,
+    unhandled_exception_handler,
+    validation_exception_handler,
+)
 from app.routes import auth, profile, cv
 
 # Create FastAPI application
@@ -28,8 +33,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# RFC 7807 error responses for all HTTPExceptions
+# RFC 7807 error responses (problem+json) for every error path.
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 # Include routers
 app.include_router(auth.router)

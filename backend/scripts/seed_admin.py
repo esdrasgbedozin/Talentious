@@ -28,13 +28,24 @@ from app.schemas.profile import PersonalInfo, ProfileData, Skills
 from app.models.user_profile import UserProfile
 from app.services.auth import hash_password
 
+DEFAULT_ADMIN_PASSWORD = "adminpassword"
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@talentious.fr")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "adminpassword")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", DEFAULT_ADMIN_PASSWORD)
 
 
 async def seed_admin() -> None:
     if AsyncSessionLocal is None:
         raise RuntimeError("Database engine not initialized (async URL required).")
+
+    # Never create an admin with the well-known default password outside local dev.
+    if (
+        os.getenv("ENVIRONMENT", "development").lower() != "development"
+        and ADMIN_PASSWORD == DEFAULT_ADMIN_PASSWORD
+    ):
+        raise SystemExit(
+            "[seed_admin] Refusing to seed admin with the default password outside "
+            "development. Set ADMIN_PASSWORD to a strong secret."
+        )
 
     async with AsyncSessionLocal() as db:
         existing = await db.execute(select(User).where(User.email == ADMIN_EMAIL))
