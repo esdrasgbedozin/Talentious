@@ -277,6 +277,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/billing/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Catalogue des Pass achetables
+         * @description Liste les Pass proposés à l'achat avec leur prix. Le montant est lu en
+         *     direct depuis Stripe (source unique de vérité) : `amount_cents` et
+         *     `currency` peuvent être `null` si Stripe n'est pas configuré ou si la
+         *     récupération échoue — dans ce cas le prix est confirmé à l'étape Checkout.
+         */
+        get: operations["getBillingCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Statut d'accès (Pass actif ?)
+         * @description Indique si l'utilisateur détient un CareerPass actuellement valide et,
+         *     le cas échéant, jusqu'à quand.
+         */
+        get: operations["getBillingStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/me": {
         parameters: {
             query?: never;
@@ -866,6 +910,40 @@ export interface components {
              */
             session_id: string;
         };
+        CatalogEntry: {
+            pass_type: components["schemas"]["PassType"];
+            /**
+             * @description Durée de validité du Pass en jours
+             * @example 30
+             */
+            duration_days: number;
+            /**
+             * @description Prix en plus petite unité monétaire (centimes), lu depuis Stripe.
+             *     `null` si Stripe n'est pas configuré ou si la récupération a échoué.
+             * @example 1900
+             */
+            amount_cents?: number | null;
+            /**
+             * @description Code ISO 4217 en minuscules (ex. `eur`). `null` si inconnu.
+             * @example eur
+             */
+            currency?: string | null;
+        };
+        BillingCatalogResponse: {
+            passes: components["schemas"]["CatalogEntry"][];
+        };
+        BillingStatusResponse: {
+            /**
+             * @description Vrai si l'utilisateur détient un CareerPass valide
+             * @example true
+             */
+            has_active_pass: boolean;
+            /**
+             * Format: date-time
+             * @description Date d'expiration du Pass actif, ou `null` si aucun
+             */
+            valid_until?: string | null;
+        };
     };
     responses: {
         /** @description JWT absent ou invalide */
@@ -1414,6 +1492,48 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    getBillingCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catalogue des Pass */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingCatalogResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    getBillingStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Statut d'accès de l'utilisateur */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingStatusResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
         };
     };
     deleteAccount: {

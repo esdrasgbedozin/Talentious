@@ -566,6 +566,38 @@ class CheckoutSessionResponse(BaseModel):
     )
 
 
+class CatalogEntry(BaseModel):
+    pass_type: PassType
+    duration_days: int = Field(
+        ..., description='Durée de validité du Pass en jours', examples=[30]
+    )
+    amount_cents: int | None = Field(
+        None,
+        description="Prix en plus petite unité monétaire (centimes), lu depuis Stripe.\n`null` si Stripe n'est pas configuré ou si la récupération a échoué.\n",
+        examples=[1900],
+    )
+    currency: str | None = Field(
+        None,
+        description='Code ISO 4217 en minuscules (ex. `eur`). `null` si inconnu.',
+        examples=['eur'],
+    )
+
+
+class BillingCatalogResponse(BaseModel):
+    passes: list[CatalogEntry]
+
+
+class BillingStatusResponse(BaseModel):
+    has_active_pass: bool = Field(
+        ...,
+        description="Vrai si l'utilisateur détient un CareerPass valide",
+        examples=[True],
+    )
+    valid_until: AwareDatetime | None = Field(
+        None, description="Date d'expiration du Pass actif, ou `null` si aucun"
+    )
+
+
 class UserResponse(BaseModel):
     id: UUID
     email: EmailStr
