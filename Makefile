@@ -20,6 +20,7 @@ generate-types-backend:
 		--field-constraints \
 		--collapse-root-models \
 		--formatters black isort \
+		--disable-timestamp \
 		--target-python-version 3.11
 	@touch backend/app/generated/__init__.py
 

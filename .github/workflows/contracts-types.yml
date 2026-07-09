@@ -61,6 +61,7 @@ jobs:
             --field-constraints \
             --collapse-root-models \
             --formatters black isort \
+            --disable-timestamp \
             --target-python-version 3.11
 
       - name: Regenerate frontend TypeScript types
