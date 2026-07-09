@@ -32,3 +32,6 @@ google-auth==2.36.0  # For IAM authentication with Cloud Run services
 
 # Required by SQLAlchemy async engine
 greenlet==3.5.3
+
+# Payments
+stripe==15.3.0

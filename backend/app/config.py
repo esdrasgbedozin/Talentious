@@ -55,9 +55,14 @@ class Settings(BaseSettings):
     gcp_sql_connection_name: str = "talentious-project:europe-west9:talentious-db-prod"
     gcp_bucket_name: str = "talentious-project-cvs"
 
-    # Stripe (for future payment integration)
+    # Stripe (test-mode keys locally; live keys in prod — same code, see ADR-MODEL)
     stripe_secret_key: Optional[str] = None
     stripe_webhook_secret: Optional[str] = None
+    stripe_price_30_days: Optional[str] = None  # Stripe Price ID for the 30-day pass
+    stripe_price_90_days: Optional[str] = None  # Stripe Price ID for the 90-day pass
+
+    # Public base URL of the frontend (for Checkout success/cancel redirects)
+    app_base_url: str = "http://localhost:3000"
 
     @model_validator(mode="after")
     def _enforce_production_safety(self):

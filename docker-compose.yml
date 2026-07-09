@@ -35,6 +35,12 @@ services:
       ANALYZER_SERVICE_URL: ${ANALYZER_SERVICE_URL:-http://analyseur-offre:8002}
       # Rédacteur-CV Agent URL (local development)
       WRITER_SERVICE_URL: ${WRITER_SERVICE_URL:-http://redacteur-cv:8003}
+      # Stripe (test-mode keys locally; Stripe CLI provides the webhook secret)
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_30_DAYS: ${STRIPE_PRICE_30_DAYS:-}
+      STRIPE_PRICE_90_DAYS: ${STRIPE_PRICE_90_DAYS:-}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
 
   parser-pdf:
     build: ./agents/parser-pdf
