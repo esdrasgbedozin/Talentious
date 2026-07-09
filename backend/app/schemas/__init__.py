@@ -1,6 +1,7 @@
 """
 Schemas package - Pydantic models for request/response validation.
 """
+
 from app.schemas.user import (
     UserCreate,
     UserLogin,
@@ -15,6 +16,7 @@ from app.schemas.profile import (
     Skills,
     Project,
     Certification,
+    Language,
     ProfileData,
     ProfileResponse,
     ProfileUpdate,
@@ -34,6 +36,7 @@ __all__ = [
     "Skills",
     "Project",
     "Certification",
+    "Language",
     "ProfileData",
     "ProfileResponse",
     "ProfileUpdate",
