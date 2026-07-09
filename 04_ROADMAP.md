@@ -88,9 +88,11 @@ Les dépendances inter-tickets sont notées dans la colonne **Dépend de**. Un t
 
 ---
 
-### M1 — Pipeline vert local (objectif : générer un CV de bout en bout sans erreur depuis `curl` local)
+### M1 — Pipeline vert local (objectif : générer un CV de bout en bout sans erreur depuis `curl` local) — 🟢 QUASI TERMINÉ (2026-07-09)
 
 **Critère de fin du jalon** : `POST /cv/generate` avec un profil admin complet retourne `202`, le job passe à `succeeded`, `GET /cv/{cv_id}` retourne un CV structuré valide. Tests TDD verts sur tout le pipeline. [PAH-1]
+
+> **État** : cœur backend fait et testé (33 tests verts, 10 nouveaux sur le pipeline). Faits : T01-T14 (async job 202 + polling/SSE, worker BackgroundTask, fix NameError timezone, suppression transformation skills, RFC 7807, idempotence 409, tz-aware timestamptz + migration Alembic réversible, seed admin, borne offer_text), T04/T05 (agents réalignés sur le contrat, fix event-loop). **Reste avant [PAH-1]** : run end-to-end réel avec les agents Vertex (nécessite credentials GCP) — jusqu'ici les agents sont mockés dans les tests. Dette mineure : T16 (jsonb_agg→null) laissée car dans une migration déjà appliquée.
 
 | ID | Titre | Description courte | Fichiers / zone | Dépend de | Estim. | Critère de fin (test) |
 |---|---|---|---|---|---|---|

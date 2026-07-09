@@ -75,12 +75,36 @@ pipeline n'est déclenchable que via curl/Swagger.
 - Confirmez-vous la cible : V1 = génération + éditeur simple + export PDF + Pass Stripe, en production GCP ?
 - Génération 2-5 min : accepte-t-on une file asynchrone (polling/SSE) en V1 ? (fortement recommandé)
 
+## 6bis. Lancer le pipeline en local (smoke test — M1)
+
+Prérequis : Postgres up (`docker compose up -d db`), venv backend (`backend/.venv-py312`).
+
+```bash
+# 1. Base de test / dev + migrations
+docker exec talentious_db psql -U talentious -d talentious -c "CREATE DATABASE talentious" 2>/dev/null || true
+cd backend && cp -n .env.example .env
+DATABASE_URL=postgresql+asyncpg://talentious:talentious@localhost:5432/talentious .venv-py312/bin/python -m alembic upgrade head
+
+# 2. Compte admin (débloque la génération sans Stripe)
+ADMIN_EMAIL=admin@talentious.local ADMIN_PASSWORD=adminpassword .venv-py312/bin/python -m scripts.seed_admin
+
+# 3. Lancer le backend + les 3 agents (Vertex AI nécessite des credentials GCP)
+docker compose up backend analyseur-offre redacteur-cv
+
+# 4. Flux : login admin -> POST /cv/generate {cv_name, offer_text}
+#    -> 202 {job_id} -> polling GET /cv/jobs/{job_id} jusqu'à "succeeded"
+#    -> GET /cv/{cv_id} : le CV contient languages, achievements, is_current,
+#       field, expiration_date, credential_url, projects.role (champs jadis perdus).
+```
+
+Sans credentials Vertex, la suite de tests (`pytest`) valide tout le pipeline avec agents mockés (33 tests verts).
+
 ## 7. Repères rapides
 
 | Sujet | Où regarder |
 |---|---|
-| Orchestration génération (bogué) | `backend/app/routes/cv.py` |
-| Contrats agents (divergents) | `backend/app/schemas/profile.py` vs `agents/redacteur-cv/app/models.py` |
+| Orchestration génération (async, M1) | `backend/app/routes/cv.py` + `backend/app/services/cv_worker.py` |
+| Contrat canonique (source de vérité) | `contracts/openapi.yaml` → types générés `backend/app/generated/`, `frontend/src/generated/` |
 | Historique du bug skills | `.github/BUG_SKILLS_STRUCTURE_CONFLICT.md` |
 | Prompts IA | `agents/*/prompts/*.txt` (+ Secret Manager prévu) |
 | Evals qualité prompts | `backend/evals/run_evals.py` |
