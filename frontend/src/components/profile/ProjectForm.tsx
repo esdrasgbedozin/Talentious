@@ -31,7 +31,7 @@ export default function ProjectForm({ project, onChange, onRemove }: ProjectForm
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
-        <textarea value={project.description} onChange={(e) => onChange('description', e.target.value)} placeholder="Décrivez le projet..." rows={3} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#38A169] focus:border-transparent resize-none" />
+        <textarea value={project.description} onChange={(e) => onChange('description', e.target.value)} placeholder="Décrivez le projet..." rows={3} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-action focus:border-transparent resize-none" />
       </div>
     </div>
   );

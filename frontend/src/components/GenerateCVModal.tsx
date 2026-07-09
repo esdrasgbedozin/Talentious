@@ -230,7 +230,7 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
         {isGenerating && (
           <div className="absolute inset-0 bg-white z-10 flex flex-col items-center justify-center p-8">
             <div className="mb-8">
-              <Sparkles className="w-20 h-20 text-[#38A169] animate-pulse" />
+              <Sparkles className="w-20 h-20 text-action animate-pulse" />
             </div>
             
             <h3 className="text-2xl font-bold text-gray-900 mb-6">
@@ -246,9 +246,9 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
                   }`}
                 >
                   {index < currentStep ? (
-                    <CheckCircle2 className="w-6 h-6 text-[#38A169] flex-shrink-0" />
+                    <CheckCircle2 className="w-6 h-6 text-action flex-shrink-0" />
                   ) : index === currentStep ? (
-                    <div className="w-6 h-6 border-4 border-[#38A169] border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                    <div className="w-6 h-6 border-4 border-action border-t-transparent rounded-full animate-spin flex-shrink-0" />
                   ) : (
                     <div className="w-6 h-6 border-4 border-gray-300 rounded-full flex-shrink-0" />
                   )}
@@ -273,8 +273,8 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-[#38A169] bg-opacity-10 rounded-lg flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-[#38A169]" />
+                <div className="w-12 h-12 bg-action bg-opacity-10 rounded-lg flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-action" />
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">
@@ -308,7 +308,7 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
                     value={cvName}
                     onChange={(e) => setCvName(e.target.value)}
                     placeholder="Ex: CV - Développeur React - Google"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#38A169] focus:outline-none transition-colors text-gray-900"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-action focus:outline-none transition-colors text-gray-900"
                     maxLength={255}
                     required
                   />
@@ -327,7 +327,7 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
                     value={offerText}
                     onChange={(e) => setOfferText(e.target.value)}
                     placeholder="Collez ici le texte complet de l'offre d'emploi (description du poste, compétences requises, responsabilités...)"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#38A169] focus:outline-none transition-colors resize-none text-gray-900"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-action focus:outline-none transition-colors resize-none text-gray-900"
                     rows={10}
                     required
                   />
@@ -394,7 +394,7 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
                 disabled={!isFormValid}
                 className={`flex items-center gap-2 ${
                   isFormValid
-                    ? 'bg-[#38A169] hover:bg-[#2F855A] text-white'
+                    ? 'bg-action hover:bg-action-hover text-white'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >

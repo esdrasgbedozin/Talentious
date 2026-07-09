@@ -13,9 +13,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg';
     
     const variants = {
-      primary: 'bg-action text-white hover:bg-[#2f8a5a] focus:ring-action shadow-sm',
-      secondary: 'bg-primary text-white hover:bg-[#1a202c] focus:ring-primary shadow-sm',
-      danger: 'bg-error text-white hover:bg-[#c53030] focus:ring-error shadow-sm',
+      primary: 'bg-action text-white hover:bg-action-hover focus:ring-action shadow-sm',
+      secondary: 'bg-primary text-white hover:bg-primary-hover focus:ring-primary shadow-sm',
+      danger: 'bg-error text-white hover:bg-error-hover focus:ring-error shadow-sm',
       outline: 'border-2 border-primary text-primary hover:bg-primary hover:text-white focus:ring-primary',
       ghost: 'text-primary hover:bg-background-light focus:ring-primary',
     };

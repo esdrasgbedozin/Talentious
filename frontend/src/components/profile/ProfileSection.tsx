@@ -36,7 +36,7 @@ export default function ProfileSection({
         <div className="flex items-center gap-4">
           {/* Icon */}
           {icon && (
-            <div className="w-10 h-10 bg-gradient-to-br from-[#38A169] to-[#2F855A] rounded-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-gradient-to-br from-action to-action-hover rounded-lg flex items-center justify-center flex-shrink-0">
               {icon}
             </div>
           )}
@@ -47,7 +47,7 @@ export default function ProfileSection({
               <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
               {/* Completion indicator */}
               {isComplete && (
-                <div className="flex items-center gap-1.5 text-[#38A169] text-sm font-medium">
+                <div className="flex items-center gap-1.5 text-action text-sm font-medium">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path
                       fillRule="evenodd"

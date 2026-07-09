@@ -112,7 +112,7 @@ export default function DashboardPage() {
         {/* Loading State */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-16 h-16 border-4 border-[#38A169] border-t-transparent rounded-full animate-spin mb-4" />
+            <div className="w-16 h-16 border-4 border-action border-t-transparent rounded-full animate-spin mb-4" />
             <p className="text-gray-600 text-lg">Chargement de vos CVs...</p>
           </div>
         )}
@@ -203,11 +203,11 @@ function CVCard({ cv, onEdit, onDownload, onDelete, isDeleting }: CVCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl border-2 border-gray-200 p-6 hover:shadow-xl transition-all duration-300 hover:border-[#38A169] group">
+    <div className="bg-white rounded-xl border-2 border-gray-200 p-6 hover:shadow-xl transition-all duration-300 hover:border-action group">
       {/* Header */}
       <div className="flex items-start gap-3 mb-4">
-        <div className="flex-shrink-0 w-12 h-12 bg-[#38A169] bg-opacity-10 rounded-lg flex items-center justify-center group-hover:bg-opacity-20 transition-colors">
-          <FileText size={24} className="text-[#38A169]" />
+        <div className="flex-shrink-0 w-12 h-12 bg-action bg-opacity-10 rounded-lg flex items-center justify-center group-hover:bg-opacity-20 transition-colors">
+          <FileText size={24} className="text-action" />
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-gray-900 text-lg truncate mb-1">

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui';
 export default function BillingCancelledPage() {
   return (
     <main className="mx-auto max-w-xl px-4 py-16 text-center">
-      <h1 className="mb-2 text-2xl font-bold text-[#2D3748]">Paiement annulé</h1>
+      <h1 className="mb-2 text-2xl font-bold text-primary">Paiement annulé</h1>
       <p className="mb-8 text-gray-600">
         Aucun montant n&apos;a été prélevé. Vous pouvez réessayer quand vous le souhaitez.
       </p>

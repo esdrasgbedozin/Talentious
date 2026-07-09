@@ -85,7 +85,7 @@ export default function ExperienceForm({
               onChange('end_date', '');
             }
           }}
-          className="w-4 h-4 text-[#38A169] border-gray-300 rounded focus:ring-[#38A169]"
+          className="w-4 h-4 text-action border-gray-300 rounded focus:ring-action"
         />
         <span className="text-sm text-gray-700">Poste actuel</span>
       </label>
@@ -100,7 +100,7 @@ export default function ExperienceForm({
           onChange={(e) => onChange('description', e.target.value)}
           placeholder="Décrivez vos responsabilités et réalisations..."
           rows={4}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#38A169] focus:border-transparent resize-none"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-action focus:border-transparent resize-none"
         />
       </div>
     </div>

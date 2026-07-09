@@ -60,7 +60,7 @@ export default function BillingPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
-      <h1 className="mb-2 text-2xl font-bold text-[#2D3748]">
+      <h1 className="mb-2 text-2xl font-bold text-primary">
         Débloquez la génération de CV
       </h1>
       <p className="mb-8 text-gray-600">

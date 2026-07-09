@@ -246,7 +246,7 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                 href="/profile"
                 className={`text-sm font-medium transition-colors ${
                   pathname === '/profile' 
-                    ? 'text-[#38A169]' 
+                    ? 'text-action' 
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
@@ -256,7 +256,7 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                 href="/dashboard"
                 className={`text-sm font-medium transition-colors ${
                   pathname === '/dashboard' 
-                    ? 'text-[#38A169]' 
+                    ? 'text-action' 
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
@@ -274,7 +274,7 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                 aria-label="Menu utilisateur"
               >
                 {/* Avatar */}
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#38A169] to-[#2F855A] flex items-center justify-center text-white font-semibold text-sm shadow-md">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-action to-action-hover flex items-center justify-center text-white font-semibold text-sm shadow-md">
                   {initials}
                 </div>
                 {/* User Info (Desktop only) */}

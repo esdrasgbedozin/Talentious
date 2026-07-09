@@ -113,18 +113,18 @@ export default function OnboardingPage() {
             onClick={() => setSelectedOption('cv')}
             className={`relative group bg-white rounded-2xl p-8 border-2 transition-all duration-300 hover:shadow-xl ${
               selectedOption === 'cv'
-                ? 'border-[#38A169] shadow-lg scale-105'
-                : 'border-gray-200 hover:border-[#38A169]'
+                ? 'border-action shadow-lg scale-105'
+                : 'border-gray-200 hover:border-action'
             }`}
           >
             {/* Badge "Recommandé" */}
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#38A169] to-[#2F855A] text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-action to-action-hover text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
               Recommandé
             </div>
 
             <div className="flex flex-col items-center text-center">
               {/* Icon */}
-              <div className="w-16 h-16 bg-gradient-to-br from-[#38A169] to-[#2F855A] rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 bg-gradient-to-br from-action to-action-hover rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
@@ -144,8 +144,8 @@ export default function OnboardingPage() {
             onClick={() => setSelectedOption('linkedin')}
             className={`relative group bg-white rounded-2xl p-8 border-2 transition-all duration-300 hover:shadow-xl ${
               selectedOption === 'linkedin'
-                ? 'border-[#38A169] shadow-lg scale-105'
-                : 'border-gray-200 hover:border-[#38A169]'
+                ? 'border-action shadow-lg scale-105'
+                : 'border-gray-200 hover:border-action'
             }`}
           >
             <div className="flex flex-col items-center text-center">
@@ -165,7 +165,7 @@ export default function OnboardingPage() {
               
               {/* Info tooltip */}
               <div className="group/tooltip relative inline-block">
-                <span className="text-xs text-[#38A169] hover:text-[#2F855A] font-medium flex items-center gap-1 cursor-help">
+                <span className="text-xs text-action hover:text-action-hover font-medium flex items-center gap-1 cursor-help">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -221,10 +221,10 @@ export default function OnboardingPage() {
               onDrop={handleDrop}
               className={`relative border-2 border-dashed rounded-xl p-12 text-center transition-all duration-300 ${
                 isDragging
-                  ? 'border-[#38A169] bg-green-50'
+                  ? 'border-action bg-green-50'
                   : uploadedFile
-                  ? 'border-[#38A169] bg-green-50/30'
-                  : 'border-gray-300 hover:border-[#38A169] hover:bg-gray-50'
+                  ? 'border-action bg-green-50/30'
+                  : 'border-gray-300 hover:border-action hover:bg-gray-50'
               }`}
             >
               <input
@@ -238,7 +238,7 @@ export default function OnboardingPage() {
               {uploadedFile ? (
                 // File preview
                 <div className="space-y-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-[#38A169] to-[#2F855A] rounded-2xl flex items-center justify-center mx-auto">
+                  <div className="w-16 h-16 bg-gradient-to-br from-action to-action-hover rounded-2xl flex items-center justify-center mx-auto">
                     <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
@@ -270,7 +270,7 @@ export default function OnboardingPage() {
                     </p>
                     <p className="text-sm text-gray-500 mb-4">ou</p>
                     <label htmlFor="file-upload">
-                      <span className="inline-block bg-gradient-to-r from-[#38A169] to-[#2F855A] text-white px-6 py-3 rounded-lg font-medium cursor-pointer hover:shadow-lg transition-shadow">
+                      <span className="inline-block bg-gradient-to-r from-action to-action-hover text-white px-6 py-3 rounded-lg font-medium cursor-pointer hover:shadow-lg transition-shadow">
                         Parcourir les fichiers
                       </span>
                     </label>

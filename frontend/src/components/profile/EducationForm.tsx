@@ -95,7 +95,7 @@ export default function EducationForm({
           onChange={(e) => onChange('description', e.target.value)}
           placeholder="Cours principaux, projets, distinctions..."
           rows={3}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#38A169] focus:border-transparent resize-none"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-action focus:border-transparent resize-none"
         />
       </div>
     </div>

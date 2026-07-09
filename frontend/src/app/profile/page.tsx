@@ -224,7 +224,7 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#38A169] mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-action mx-auto"></div>
           <p className="mt-4 text-gray-600">Chargement du profil...</p>
         </div>
       </div>
@@ -351,7 +351,7 @@ export default function ProfilePage() {
                 onChange={(e) => updateSummary(e.target.value)}
                 placeholder="Décrivez votre parcours, vos compétences clés et ce que vous recherchez..."
                 rows={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#38A169] focus:border-transparent resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-action focus:border-transparent resize-none"
               />
               <p className="mt-2 text-sm text-gray-500">
                 {profile?.summary?.length || 0} caractères
@@ -377,7 +377,7 @@ export default function ProfilePage() {
               <div className="flex justify-end">
                 <button
                   onClick={addExperience}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#38A169] text-white rounded-lg hover:bg-[#2F8A5B] transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white rounded-lg hover:bg-action-hover transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -426,7 +426,7 @@ export default function ProfilePage() {
               <div className="flex justify-end">
                 <button
                   onClick={addEducation}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#38A169] text-white rounded-lg hover:bg-[#2F8A5B] transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white rounded-lg hover:bg-action-hover transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -515,7 +515,7 @@ export default function ProfilePage() {
               <div className="flex justify-end">
                 <button
                   onClick={addProject}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#38A169] text-white rounded-lg hover:bg-[#2F8A5B] transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white rounded-lg hover:bg-action-hover transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -562,7 +562,7 @@ export default function ProfilePage() {
               <div className="flex justify-end">
                 <button
                   onClick={addCertification}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#38A169] text-white rounded-lg hover:bg-[#2F8A5B] transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white rounded-lg hover:bg-action-hover transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
