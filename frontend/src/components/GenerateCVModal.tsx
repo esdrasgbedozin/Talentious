@@ -10,7 +10,7 @@
  * 3. Redirect vers éditeur ou gestion erreur 402
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { X, FileText, Sparkles, CheckCircle2, Upload } from 'lucide-react';
 import Button from './ui/Button';
@@ -155,6 +155,40 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isOpen, isGenerating, handleClose]);
 
+  // Focus management: move focus into the dialog on open, trap Tab, restore on close.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!isOpen) return;
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    const focusable = () =>
+      Array.from(
+        panelRef.current?.querySelectorAll<HTMLElement>(
+          'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+    (focusable()[0] ?? panelRef.current)?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const items = focusable();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      previouslyFocused.current?.focus?.();
+    };
+  }, [isOpen]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -184,7 +218,14 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
       />
 
       {/* Modal Content */}
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Générer un nouveau CV"
+        className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200 focus:outline-none"
+      >
         {/* Loading Screen */}
         {isGenerating && (
           <div className="absolute inset-0 bg-white z-10 flex flex-col items-center justify-center p-8">

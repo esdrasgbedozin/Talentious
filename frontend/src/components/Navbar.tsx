@@ -42,9 +42,16 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
         setIsUserMenuOpen(false);
       }
     };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isUserMenuOpen) setIsUserMenuOpen(false);
+    };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, [isUserMenuOpen]);
 
   // Smooth scroll to section
@@ -261,7 +268,10 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
             <div className="relative user-menu-container">
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center gap-3 hover:bg-gray-50 rounded-lg px-3 py-2 transition-colors"
+                className="flex items-center gap-3 hover:bg-gray-50 rounded-lg px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-action"
+                aria-haspopup="true"
+                aria-expanded={isUserMenuOpen}
+                aria-label="Menu utilisateur"
               >
                 {/* Avatar */}
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#38A169] to-[#2F855A] flex items-center justify-center text-white font-semibold text-sm shadow-md">
@@ -287,7 +297,11 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
 
               {/* Dropdown Menu */}
               {isUserMenuOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                <div
+                  role="menu"
+                  aria-label="Menu utilisateur"
+                  className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50"
+                >
                   {/* Mobile: Show user info */}
                   <div className="md:hidden px-4 py-3 border-b border-gray-100">
                     <div className="font-medium text-gray-900">{user?.email.split('@')[0] || 'Utilisateur'}</div>

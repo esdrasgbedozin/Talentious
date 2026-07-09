@@ -93,7 +93,11 @@ function ToastContainer({
   onRemove: (id: string) => void;
 }) {
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md">
+    <div
+      className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md"
+      role="region"
+      aria-label="Notifications"
+    >
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />
       ))}
@@ -124,8 +128,13 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
     info: 'text-blue-900',
   };
 
+  // Errors/warnings interrupt (assertive); success/info are polite.
+  const isUrgent = toast.type === 'error' || toast.type === 'warning';
+
   return (
     <div
+      role={isUrgent ? 'alert' : 'status'}
+      aria-live={isUrgent ? 'assertive' : 'polite'}
       className={`
         ${bgColors[toast.type]} ${textColors[toast.type]}
         flex items-start gap-3 p-4 rounded-lg border-2 shadow-lg
