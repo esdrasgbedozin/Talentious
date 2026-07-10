@@ -223,7 +223,7 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Overlay */}
       <div
-        className="absolute inset-0 bg-black bg-opacity-60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={isGenerating ? undefined : handleClose}
       />
 
@@ -236,43 +236,67 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
         aria-label="Générer un nouveau CV"
         className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200 focus:outline-none"
       >
-        {/* Loading Screen */}
+        {/* Loading Screen — in-flow (gives the panel height) + on-brand waiting lobby */}
         {isGenerating && (
-          <div className="absolute inset-0 bg-white z-10 flex flex-col items-center justify-center p-8">
-            <div className="mb-8">
-              <Sparkles className="w-20 h-20 text-action animate-pulse" />
+          <div className="flex flex-col items-center justify-center px-8 py-12 min-h-[520px] text-center">
+            {/* Animated brand orb */}
+            <div className="relative mb-8">
+              <span className="absolute inset-0 rounded-full bg-action/20 animate-ping motion-reduce:hidden" />
+              <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-action/10">
+                <Sparkles className="h-11 w-11 text-action animate-pulse motion-reduce:animate-none" />
+              </div>
             </div>
-            
-            <h3 className="text-2xl font-bold text-text-primary mb-6">
-              Génération en cours...
-            </h3>
 
-            <div className="w-full max-w-md space-y-4">
+            <h3 className="mb-2 text-2xl font-bold text-text-primary">
+              Génération en cours…
+            </h3>
+            <p className="mb-8 max-w-sm text-text-secondary">
+              Notre IA analyse l&apos;offre et rédige un CV taillé pour cette
+              opportunité.
+            </p>
+
+            {/* Progress bar — advances with the current step */}
+            <div className="mb-8 h-2 w-full max-w-md overflow-hidden rounded-full bg-background-light">
+              <div
+                className="h-full rounded-full bg-action transition-all duration-700 ease-out"
+                style={{
+                  width: `${((currentStep + 1) / GENERATION_STEPS.length) * 100}%`,
+                }}
+              />
+            </div>
+
+            {/* Step checklist */}
+            <div className="w-full max-w-md space-y-3 text-left">
               {GENERATION_STEPS.map((step, index) => (
                 <div
                   key={index}
-                  className={`flex items-center gap-3 transition-all duration-500 ${
-                    index <= currentStep ? 'opacity-100' : 'opacity-30'
+                  className={`flex items-center gap-3 transition-opacity duration-500 ${
+                    index <= currentStep ? 'opacity-100' : 'opacity-40'
                   }`}
                 >
                   {index < currentStep ? (
-                    <CheckCircle2 className="w-6 h-6 text-action flex-shrink-0" />
+                    <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-action" />
                   ) : index === currentStep ? (
-                    <div className="w-6 h-6 border-4 border-action border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                    <div className="h-5 w-5 flex-shrink-0 animate-spin rounded-full border-2 border-action border-t-transparent" />
                   ) : (
-                    <div className="w-6 h-6 border-4 border-gray-300 rounded-full flex-shrink-0" />
+                    <div className="h-5 w-5 flex-shrink-0 rounded-full border-2 border-border" />
                   )}
-                  <p className={`text-lg ${index <= currentStep ? 'text-text-primary font-medium' : 'text-gray-400'}`}>
+                  <p
+                    className={`text-sm ${
+                      index <= currentStep
+                        ? 'font-medium text-text-primary'
+                        : 'text-text-secondary'
+                    }`}
+                  >
                     {step.message}
                   </p>
                 </div>
               ))}
             </div>
 
-            <p className="mt-8 text-sm text-text-secondary text-center max-w-md">
-              Cette opération peut prendre de 30 secondes à 3 minutes.
-              <br />
-              Notre IA analyse l&apos;offre et optimise votre profil.
+            <p className="mt-8 text-xs text-text-secondary">
+              Cette opération prend généralement 30 secondes à 3 minutes — vous
+              pouvez patienter ici en toute tranquillité.
             </p>
           </div>
         )}
@@ -283,7 +307,7 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-action bg-opacity-10 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-action/10 rounded-lg flex items-center justify-center">
                   <FileText className="w-6 h-6 text-action" />
                 </div>
                 <div>

@@ -206,7 +206,7 @@ function CVCard({ cv, onEdit, onDownload, onDelete, isDeleting }: CVCardProps) {
     <div className="bg-white rounded-xl border-2 border-gray-200 p-6 hover:shadow-xl transition-all duration-300 hover:border-action group">
       {/* Header */}
       <div className="flex items-start gap-3 mb-4">
-        <div className="flex-shrink-0 w-12 h-12 bg-action bg-opacity-10 rounded-lg flex items-center justify-center group-hover:bg-opacity-20 transition-colors">
+        <div className="flex-shrink-0 w-12 h-12 bg-action/10 rounded-lg flex items-center justify-center group-hover:bg-action/20 transition-colors">
           <FileText size={24} className="text-action" />
         </div>
         <div className="flex-1 min-w-0">
@@ -221,10 +221,15 @@ function CVCard({ cv, onEdit, onDownload, onDelete, isDeleting }: CVCardProps) {
 
       {/* Action Buttons */}
       <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
+        {/* Édition et export PDF : fonctionnalités en cours de construction (M3/M4).
+            Désactivées pour ne pas exposer d'affordance cassée (route éditeur 404,
+            export non implémenté). */}
         <Button
           variant="outline"
           size="sm"
           onClick={() => onEdit(cv.id)}
+          disabled
+          title="Édition — bientôt disponible"
           className="flex-1 flex items-center justify-center gap-2"
         >
           <Edit size={16} />
@@ -234,8 +239,9 @@ function CVCard({ cv, onEdit, onDownload, onDelete, isDeleting }: CVCardProps) {
           variant="ghost"
           size="sm"
           onClick={() => onDownload(cv.id)}
+          disabled
           className="flex items-center justify-center p-2"
-          title="Télécharger PDF"
+          title="Export PDF — bientôt disponible"
         >
           <Download size={18} />
         </Button>
