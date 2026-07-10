@@ -63,9 +63,10 @@ export default function DashboardPage() {
     router.push(`/cv/${cvId}/edit`);
   };
 
-  const handleDownload = (_cvId: string) => {
-    // TODO Phase 4.5: Implement PDF download
-    toast.info('Téléchargement PDF - Fonctionnalité en cours de développement');
+  const handleDownload = (cvId: string) => {
+    // Opens the print route, which renders the CV full-size and triggers the
+    // browser's print dialog (Save as PDF).
+    router.push(`/cv/${cvId}/print`);
   };
 
   const handleGenerateNew = () => {
@@ -221,15 +222,10 @@ function CVCard({ cv, onEdit, onDownload, onDelete, isDeleting }: CVCardProps) {
 
       {/* Action Buttons */}
       <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
-        {/* Édition et export PDF : fonctionnalités en cours de construction (M3/M4).
-            Désactivées pour ne pas exposer d'affordance cassée (route éditeur 404,
-            export non implémenté). */}
         <Button
           variant="outline"
           size="sm"
           onClick={() => onEdit(cv.id)}
-          disabled
-          title="Édition — bientôt disponible"
           className="flex-1 flex items-center justify-center gap-2"
         >
           <Edit size={16} />
@@ -239,9 +235,8 @@ function CVCard({ cv, onEdit, onDownload, onDelete, isDeleting }: CVCardProps) {
           variant="ghost"
           size="sm"
           onClick={() => onDownload(cv.id)}
-          disabled
           className="flex items-center justify-center p-2"
-          title="Export PDF — bientôt disponible"
+          title="Télécharger en PDF"
         >
           <Download size={18} />
         </Button>

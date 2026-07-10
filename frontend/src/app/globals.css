@@ -39,3 +39,30 @@ body {
   color: var(--text-primary);
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
+
+/* --- CV print / PDF export -------------------------------------------------
+   The .cv-sheet renders at A4 width on screen; when printing we drop the page
+   margins (the sheet has its own) and force background colors so the brand
+   accents (skill chips, rules) survive the browser's "Save as PDF". */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  html,
+  body {
+    background: #ffffff;
+  }
+  /* Hide anything explicitly marked non-printable (toolbars, buttons). */
+  .print-hide {
+    display: none !important;
+  }
+  .cv-sheet {
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

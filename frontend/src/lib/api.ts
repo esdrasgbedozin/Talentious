@@ -4,6 +4,8 @@
  */
 
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import type { UserProfile } from '@/types/profile';
+import { normalizeCVData } from '@/lib/cv';
 
 // Base URL of the FastAPI backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -148,6 +150,27 @@ export const getCVs = async (): Promise<CVBase[]> => {
 /** Delete a CV by id. */
 export const deleteCV = async (cvId: string): Promise<void> => {
   await apiClient.delete(`/cv/${cvId}`);
+};
+
+export interface CVDetail extends CVBase {
+  job_offer_context: string | null;
+  cv_data_json: UserProfile;
+  gcs_pdf_url: string | null;
+}
+
+/** Fetch a single CV, normalizing its content to canonical ProfileData. */
+export const getCV = async (cvId: string): Promise<CVDetail> => {
+  const { data } = await apiClient.get<CVDetail>(`/cv/${cvId}`);
+  return { ...data, cv_data_json: normalizeCVData(data.cv_data_json) };
+};
+
+/** Update a CV's name and/or content (PUT /cv/{id}). */
+export const updateCV = async (
+  cvId: string,
+  payload: { cv_name?: string; cv_data_json?: UserProfile },
+): Promise<CVDetail> => {
+  const { data } = await apiClient.put<CVDetail>(`/cv/${cvId}`, payload);
+  return data;
 };
 
 /**
