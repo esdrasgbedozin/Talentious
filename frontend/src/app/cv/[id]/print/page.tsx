@@ -31,14 +31,18 @@ export default function CVPrintPage() {
       .then((data) => {
         if (cancelled) return;
         setCv(data);
+        // The browser uses document.title as the default "Save as PDF" filename.
+        document.title = data.cv_name || 'CV';
         if (!previewOnly) {
           // Let the layout settle, then open the print dialog.
           setTimeout(() => window.print(), 400);
         }
       })
       .catch((err) => !cancelled && setError(getErrorMessage(err)));
+    const originalTitle = document.title;
     return () => {
       cancelled = true;
+      document.title = originalTitle;
     };
   }, [cvId]);
 
