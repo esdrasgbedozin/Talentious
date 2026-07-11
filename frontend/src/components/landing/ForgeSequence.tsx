@@ -126,7 +126,13 @@ function GlassCube() {
   return (
     <div
       className="forge-spin-box relative h-[156px] w-[156px]"
-      style={{ transformStyle: 'preserve-3d', animation: 'forge-spin-box 11s linear infinite' }}
+      style={{
+        transformStyle: 'preserve-3d',
+        animation: 'forge-spin-box 11s linear infinite',
+        // subtle chromatic aberration on the bright glass edges ("real lens")
+        filter:
+          'drop-shadow(1.5px 0 0 rgba(255,40,90,0.16)) drop-shadow(-1.5px 0 0 rgba(0,210,255,0.16))',
+      }}
     >
       {/* outer glass shell */}
       {CUBE_FACES.map((f, i) => (
@@ -174,6 +180,43 @@ function GlassCube() {
   );
 }
 
+/* -------------------- The cube shattering into shards ---------------------- */
+const SHARD_DIRS = Array.from({ length: 14 }, (_, i) => {
+  const a = i * 2.3999632;
+  const phi = Math.acos(2 * ((i + 0.5) / 14) - 1);
+  return {
+    x: Math.sin(phi) * Math.cos(a),
+    y: Math.sin(phi) * Math.sin(a),
+    z: Math.cos(phi),
+    rot: (i * 61) % 360,
+  };
+});
+
+function ShardBurst({ burst }: { burst: number }) {
+  const op = Math.sin(burst * Math.PI); // appears then fades as shards fly out
+  if (op < 0.02) return null;
+  const R = 180 * burst;
+  return (
+    <div className="absolute left-1/2 top-1/2" style={{ transformStyle: 'preserve-3d' }}>
+      {SHARD_DIRS.map((d, i) => (
+        <div
+          key={i}
+          className="absolute -left-1.5 -top-2"
+          style={{
+            width: 12,
+            height: 16,
+            transform: `translate3d(${(d.x * R).toFixed(1)}px, ${(d.y * R).toFixed(1)}px, ${(d.z * R).toFixed(1)}px) rotateX(${d.rot + burst * 420}deg) rotateY(${d.rot}deg)`,
+            background: 'linear-gradient(150deg, rgba(200,255,220,0.95), rgba(56,161,105,0.45))',
+            boxShadow: '0 0 8px rgba(104,211,145,0.85)',
+            clipPath: 'polygon(50% 0%, 100% 68%, 22% 100%)',
+            opacity: op,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 /* ------------------------------- The paper CV ------------------------------ */
 const PAPER_W = 208;
 const PAPER_H = 292;
@@ -189,9 +232,9 @@ function CVPaper({ rotateY }: { rotateY: number }) {
         transformStyle: 'preserve-3d',
         // Scroll-driven: spins as it emerges, then settles facing the viewer.
         transform: `rotateY(${rotateY}deg)`,
-        // layered: sharp contact + soft cast + brand glow
+        // layered: sharp contact + soft cast + brand glow + faint chromatic edge
         filter:
-          'drop-shadow(0 3px 5px rgba(0,0,0,0.4)) drop-shadow(0 26px 42px rgba(0,0,0,0.5)) drop-shadow(0 0 46px rgba(56,161,105,0.4))',
+          'drop-shadow(0 3px 5px rgba(0,0,0,0.4)) drop-shadow(0 26px 42px rgba(0,0,0,0.5)) drop-shadow(0 0 46px rgba(56,161,105,0.4)) drop-shadow(1px 0 0 rgba(255,40,90,0.1)) drop-shadow(-1px 0 0 rgba(0,210,255,0.1))',
       }}
     >
       {/* FRONT — the sheet */}
@@ -284,11 +327,13 @@ function CVPaper({ rotateY }: { rotateY: number }) {
 }
 
 /* ------------------------------- Fragments -------------------------------- */
-function FragmentToken({ f, k, delay }: { f: Frag; k: number; delay: number }) {
-  void delay;
-  // Depth-of-field: far fragments (negative z) soften and desaturate.
+function FragmentToken({ f, k }: { f: Frag; k: number }) {
+  // Depth-of-field: far fragments (negative z) soften.
   const depth = (f.z + 200) / 400; // 0 far … 1 near
-  const blur = (1 - depth) * 2.2;
+  const dofBlur = (1 - depth) * 2.2;
+  // Motion blur: peaks mid-plunge, when the token moves fastest toward the core.
+  const speedBlur = Math.sin((1 - k) * Math.PI) * 3.6;
+  const blur = dofBlur + speedBlur;
   const isIcon = f.kind === 'icon';
   return (
     <div className="absolute left-0 top-0" style={{ transform: `translate3d(${f.x * k}px, ${f.y * k}px, ${f.z * k}px) rotateY(${f.rot + (1 - k) * 220}deg) scale(${Math.max(k, 0.001)})`, opacity: k }}>
@@ -363,6 +408,9 @@ export default function ForgeSequence() {
   const cvRotateY = (1 - cvT) * 540; // 1.5 turns, settling flat to face the viewer
   // Halo intensifies through the forge, cools as the CV appears.
   const haloBoost = smooth(0.2, 0.55, p) * (1 - smooth(0.66, 0.8, p));
+  // Cube spins faster as the fragments plunge (scroll-linked inertia), then shatters.
+  const cubeSpin = smooth(0.28, 0.6, p) * 240;
+  const shardBurst = smooth(0.58, 0.82, p);
 
   return (
     <section ref={ref} className="relative h-[320vh] bg-[#0E1219]">
@@ -437,15 +485,24 @@ export default function ForgeSequence() {
               {FRAGMENTS.map((f, i) => {
                 const stagger = (i / FRAGMENTS.length) * 0.12;
                 const k = 1 - smooth(0.12 + stagger, 0.52 + stagger, p);
-                return <FragmentToken key={i} f={f} k={k} delay={0} />;
+                return <FragmentToken key={i} f={f} k={k} />;
               })}
 
-              {/* Glass cube */}
+              {/* Glass cube (spins faster as it fills, scroll-linked) */}
               <div
                 className="absolute left-1/2 top-1/2"
-                style={{ transform: `translate(-50%, -50%) scale(${Math.max(boxScale, 0.001)})`, opacity: boxOpacity }}
+                style={{
+                  transform: `translate(-50%, -50%) rotateY(${cubeSpin.toFixed(1)}deg) scale(${Math.max(boxScale, 0.001)})`,
+                  opacity: boxOpacity,
+                  transformStyle: 'preserve-3d',
+                }}
               >
                 <GlassCube />
+              </div>
+
+              {/* Cube shattering into shards at the forge moment */}
+              <div className="absolute left-1/2 top-1/2" style={{ transformStyle: 'preserve-3d' }}>
+                <ShardBurst burst={shardBurst} />
               </div>
 
               {/* CV paper — emerges from the cube's core */}
