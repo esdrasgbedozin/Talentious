@@ -72,6 +72,10 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
 
   // Landing page navbar with section links
   if (variant === 'landing' && pathname === '/') {
+    // At the top the navbar floats over the dark hero → light text; once scrolled
+    // the bar turns white → dark text.
+    const onDark = !isScrolled;
+    const navLink = `${onDark ? 'text-white/85' : 'text-primary'} hover:text-action transition-colors font-medium`;
     return (
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -92,7 +96,7 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                   height={96}
                   className="w-14 h-14 md:w-16 md:h-16 drop-shadow-md"
                 />
-                <span className="text-2xl font-bold text-primary">
+                <span className={`text-2xl font-bold ${onDark ? 'text-white' : 'text-primary'}`}>
                   Talentious
                 </span>
               </Link>
@@ -102,25 +106,25 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
             <div className="hidden md:flex items-center gap-8">
               <button
                 onClick={() => scrollToSection('features')}
-                className="text-primary hover:text-action transition-colors font-medium"
+                className={navLink}
               >
                 Fonctionnalités
               </button>
               <button
-                onClick={() => scrollToSection('how-it-works')}
-                className="text-primary hover:text-action transition-colors font-medium"
+                onClick={() => scrollToSection('how')}
+                className={navLink}
               >
                 Comment ça marche
               </button>
               <button
                 onClick={() => scrollToSection('security')}
-                className="text-primary hover:text-action transition-colors font-medium"
+                className={navLink}
               >
                 Sécurité
               </button>
               <button
                 onClick={() => scrollToSection('testimonials')}
-                className="text-primary hover:text-action transition-colors font-medium"
+                className={navLink}
               >
                 Témoignages
               </button>
@@ -128,10 +132,11 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
 
             {/* CTA Buttons */}
             <div className="hidden md:flex items-center gap-4">
-              <Link href="/login">
-                <Button variant="ghost" size="sm">
-                  Se connecter
-                </Button>
+              <Link
+                href="/login"
+                className={`text-sm font-medium transition-colors ${onDark ? 'text-white/85 hover:text-white' : 'text-primary hover:text-action'}`}
+              >
+                Se connecter
               </Link>
               <Link href="/register">
                 <Button variant="primary" size="sm" className="shadow-lg shadow-action/20">
@@ -144,7 +149,7 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
             <div className="md:hidden">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="text-primary p-2"
+                className={`p-2 ${onDark ? 'text-white' : 'text-primary'}`}
                 aria-label="Toggle menu"
               >
                 {isMobileMenuOpen ? (
@@ -172,7 +177,7 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                 Fonctionnalités
               </button>
               <button
-                onClick={() => scrollToSection('how-it-works')}
+                onClick={() => scrollToSection('how')}
                 className="block w-full text-left text-primary hover:text-action transition-colors font-medium py-2"
               >
                 Comment ça marche
