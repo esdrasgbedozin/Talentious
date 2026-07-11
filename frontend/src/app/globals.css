@@ -40,6 +40,24 @@ body {
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+/* --- Forge sequence (CSS 3D) ------------------------------------------------
+   Continuous self-rotation for the magic box and the emerging CV "stele".
+   Placed on an inner wrapper so scroll-driven placement (outer) composes cleanly. */
+@keyframes forge-spin-y {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}
+@keyframes forge-spin-box {
+  from { transform: rotateX(-18deg) rotateY(0deg); }
+  to { transform: rotateX(-18deg) rotateY(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .forge-spin-y,
+  .forge-spin-box {
+    animation: none !important;
+  }
+}
+
 /* --- CV print / PDF export -------------------------------------------------
    The .cv-sheet renders at A4 width on screen; when printing we drop the page
    margins (the sheet has its own) and force background colors so the brand

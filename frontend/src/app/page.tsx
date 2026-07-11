@@ -6,10 +6,10 @@
  * between. Motion is scroll-driven and reduced-motion aware; the WebGL hero
  * degrades to a static glow on mobile / reduced motion.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useReducedMotion, motion } from 'motion/react';
+import { useReducedMotion, useInView, motion } from 'motion/react';
 import {
   ArrowRight,
   ChevronDown,
@@ -28,7 +28,7 @@ import {
 import Navbar from '@/components/Navbar';
 import Button from '@/components/ui/Button';
 import Reveal from '@/components/landing/Reveal';
-import SmoothScroll from '@/components/landing/SmoothScroll';
+import ForgeSequence from '@/components/landing/ForgeSequence';
 
 const HeroScene = dynamic(() => import('@/components/landing/HeroScene'), {
   ssr: false,
@@ -50,15 +50,23 @@ function useIsCompact() {
 export default function Home() {
   const reduce = useReducedMotion();
   const compact = useIsCompact();
-  const showWebGL = !compact && !reduce;
+  const heroRef = useRef<HTMLElement>(null);
+  // Only mount the hero WebGL while the hero is on screen — this releases its GL
+  // context before the Forge scene claims one (a page never runs two at once).
+  // The hero is the page's single WebGL scene (the Forge below is CSS-3D), so it can
+  // stay mounted while in view without competing for a GL context.
+  const heroInView = useInView(heroRef);
+  const showWebGL = !compact && !reduce && heroInView;
 
   return (
     <div className="bg-white">
-      <SmoothScroll />
       <Navbar variant="landing" />
 
       {/* ============================== HERO (dark) ============================== */}
-      <section className="relative flex min-h-screen items-center overflow-hidden bg-[#12161F]">
+      <section
+        ref={heroRef}
+        className="relative flex min-h-screen items-center overflow-hidden bg-[#12161F]"
+      >
         {/* WebGL particle field (desktop) or static glow (mobile / reduced motion) */}
         <div className="absolute inset-0" aria-hidden="true">
           {showWebGL ? (
@@ -141,6 +149,9 @@ export default function Home() {
           <ChevronDown className="h-6 w-6 animate-bounce motion-reduce:animate-none" />
         </a>
       </section>
+
+      {/* ===================== FORGE — scroll-driven 3D sequence ================= */}
+      <ForgeSequence />
 
       {/* ============================== CONSTAT (light) ========================== */}
       <section id="constat" className="bg-white px-6 py-28 md:py-36">
