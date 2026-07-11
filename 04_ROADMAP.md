@@ -230,6 +230,36 @@ Les dépendances inter-tickets sont notées dans la colonne **Dépend de**. Un t
 
 ---
 
+## 3 bis. Avancement hors-jalon (session 2026-07-11)
+
+Travaux réalisés en dehors du séquencement initial, à réconcilier avec les jalons :
+
+- **RGPD Art. 17 — suppression de compte : FAIT.** Couvre **M5-T05** (backend `DELETE /users/me`) et **M4-T13** (UI zone de danger). Écarts vs ticket : effacement dur en cascade DB (pas de purge GCS car stockage PDF GCS non implémenté — reste M5-T06) ; confirmation par re-saisie d'email côté front. ADR : `docs/adr/ADR-RGPD-ERASURE.md`.
+- **Session / révocation JWT : FAIT.** Access token court (15 min) + refresh token en base (rotation, cascade RGPD). Remplace l'option « blacklist Redis » évoquée en M5-T05/M5-T10. ADR : `docs/adr/ADR-SESSION-REFRESH.md`. Résout la dette « session courte / pas de révocation ». (ADR-SECURITY M5-T10 reste à écrire pour les décisions restantes : agents privés, moindre privilège SA.)
+- **UI/UX : FAIT** (hors périmètre initial) — CV garanti sur une seule page A4 + aperçu fidèle au PDF (WYSIWYG) ; responsive mobile (profil, export PDF, dashboard) ; refonte landing + animation 3D « forge ». Docs : `docs/PROMPT_3D_DESIGN.md`.
+
+## 3 ter. M7 — Comptes vérifiés & emails transactionnels (ajout 2026-07-11)
+
+Lacune identifiée : l'inscription ne vérifie pas l'adresse email et il n'existe ni « mot de passe oublié » ni envoi d'email. Requis pour une V1 publique crédible.
+
+| Ticket | Tâche | Description | Fichiers | Dépend | Estim. | Critère de fin |
+|---|---|---|---|---|---|---|
+| M7-T01 | ADR + provider email transactionnel | Choisir le fournisseur (Resend / SendGrid / Mailgun / Amazon SES / SMTP GCP). Critères : RGPD (données UE), coût, simplicité solo. Config via secret. Service d'envoi abstrait (`email_service`) testable (mock). | `backend/app/services/email_service.py`, `docs/adr/ADR-EMAIL.md` | — | 1,5 h | Envoi mocké testé ; secret configuré ; ADR rédigé |
+| M7-T02 | Vérification d'email à l'inscription | Colonne `email_verified` (+ token signé à usage unique, expirant). Email « confirmez votre adresse » à l'inscription. Endpoint `GET/POST /auth/verify-email`. Renvoi de l'email possible. | migration Alembic, `backend/app/routes/auth.py`, `email_service` | M7-T01 | 2 h | TDD : inscription → email envoyé (mock) ; lien valide → `email_verified=true` ; lien expiré/réutilisé → 400 |
+| M7-T03 | Mot de passe oublié / réinitialisation | `POST /auth/password/forgot` (réponse constante anti-énumération, comme le login) → email avec lien token ; `POST /auth/password/reset` → nouveau mot de passe. Token usage unique, expirant, invalidé après usage. Révoque les refresh tokens de l'utilisateur. | `backend/app/routes/auth.py`, migration, `email_service` | M7-T01 | 2 h | TDD : forgot → 204 constant ; reset avec token valide → mot de passe changé + sessions révoquées ; token réutilisé → 400 |
+| M7-T04 | Emails transactionnels de base | Templates : bienvenue (après vérification), confirmation d'achat de pass (déclenché par le webhook Stripe). Contenu FR, sobre, sans tracking. | `email_service`, `backend/app/routes/billing.py` | M7-T01 | 1,5 h | Achat de pass en test → email de confirmation (mock) déclenché |
+| M7-T05 | UI parcours email | Pages/écrans : bannière « vérifiez votre email », page de confirmation, « mot de passe oublié » + « réinitialiser ». Refresh silencieux et guards inchangés. | `frontend/src/app/(auth)/…`, `frontend/src/lib/auth.ts` | M7-T02, M7-T03 | 2,5 h | e2e : inscription → vérif → connexion ; oubli → email → reset → connexion |
+| M7-T06 | Rate-limit anti-abus emails | Limiter forgot-password et renvoi de vérification par IP + par compte (slowapi). | `backend/app/core/rate_limit.py`, `backend/app/routes/auth.py` | M7-T02, M7-T03 | 0,5 h | TDD : au-delà du seuil → 429 |
+
+## 3 quater. Pages légales & prérequis d'immatriculation (ajout 2026-07-11)
+
+| Ticket | Tâche | Description | Dépend | Estim. | Critère de fin |
+|---|---|---|---|---|---|
+| M7-T07 | Pages légales | Mentions légales (LCEN), Politique de confidentialité (RGPD — traitements réels : GCP/Vertex, Stripe), CGU. **CGV + droit de rétractation** uniquement si monétisation active (voir prérequis ci-dessous). Routes `/legal/*` + liens footer. | — | 2,5 h | 3 pages accessibles, liées au footer, cohérentes avec le traitement réel des données |
+| M7-T08 | **[PRÉREQUIS LÉGAL] Immatriculation micro-entreprise avant tout encaissement réel** | Encaisser des paiements pour un service en ligne = **activité commerciale** → obligation d'immatriculation (micro-entrepreneur, obtention d'un **SIRET**) AVANT de passer Stripe en live. Tant que le service est **gratuit / bêta** (Stripe en test, aucun revenu réel), publication possible en tant que **particulier** (nom + email + hébergeur), sans SIRET. Décision fondateur requise. | — | — | Statut tranché ; si monétisation → SIRET obtenu + mentions/CGV complétées |
+
+---
+
 ## 4. ADR à produire
 
 Ces trois ADR conditionnent des décisions de code et d'infrastructure. Ils doivent être rédigés et validés [PAH] aux moments indiqués dans les jalons.
