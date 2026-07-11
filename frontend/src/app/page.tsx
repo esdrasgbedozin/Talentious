@@ -504,10 +504,28 @@ export default function Home() {
             </div>
             <div>
               <h3 className="font-semibold">Légal</h3>
-              <ul className="mt-4 space-y-2 text-sm text-white/40">
-                <li>CGU (à venir)</li>
-                <li>Confidentialité (à venir)</li>
-                <li>Mentions légales (à venir)</li>
+              <ul className="mt-4 space-y-2 text-sm text-white/60">
+                <li>
+                  <Link href="/legal/cgu" className="transition-colors hover:text-action">
+                    CGU
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/legal/confidentialite"
+                    className="transition-colors hover:text-action"
+                  >
+                    Confidentialité
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/legal/mentions-legales"
+                    className="transition-colors hover:text-action"
+                  >
+                    Mentions légales
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
