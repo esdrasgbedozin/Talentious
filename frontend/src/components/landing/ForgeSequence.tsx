@@ -167,9 +167,9 @@ function GlassCube() {
 }
 
 /* ------------------------- Cube shattering into shards --------------------- */
-const SHARD_DIRS = Array.from({ length: 14 }, (_, i) => {
+const SHARD_DIRS = Array.from({ length: 9 }, (_, i) => {
   const a = i * 2.3999632;
-  const phi = Math.acos(2 * ((i + 0.5) / 14) - 1);
+  const phi = Math.acos(2 * ((i + 0.5) / 9) - 1);
   return {
     x: Math.sin(phi) * Math.cos(a),
     y: Math.sin(phi) * Math.sin(a),
@@ -212,26 +212,25 @@ function CVPaper({ progress }: { progress: MotionValue<number> }) {
     return `rotateY(${((1 - cvT) * 540).toFixed(1)}deg)`; // spins out, settles facing viewer
   });
   return (
-    <div
-      style={{
-        filter:
-          'drop-shadow(0 3px 5px rgba(0,0,0,0.4)) drop-shadow(0 26px 42px rgba(0,0,0,0.5)) drop-shadow(0 0 46px rgba(56,161,105,0.4)) drop-shadow(1px 0 0 rgba(255,40,90,0.1)) drop-shadow(-1px 0 0 rgba(0,210,255,0.1))',
-      }}
-    >
-      <div style={{ perspective: '1000px' }}>
-        <motion.div
-          className="relative"
-          style={{ width: PAPER_W, height: PAPER_H, transformStyle: 'preserve-3d', transform }}
+    // Cheap depth: perspective + preserve-3d only. Shadows/glow are handled by a
+    // static box-shadow on the sheet + a glow plate behind (no per-frame filter,
+    // which was the compositing bottleneck on a rotating 3D group).
+    <div style={{ perspective: '1000px' }}>
+      <motion.div
+        className="relative"
+        style={{ width: PAPER_W, height: PAPER_H, transformStyle: 'preserve-3d', transform, willChange: 'transform' }}
+      >
+        {/* FRONT */}
+        <div
+          className="absolute inset-0 overflow-hidden rounded-[6px]"
+          style={{
+            transform: `translateZ(${PAPER_D / 2}px)`,
+            background: 'linear-gradient(152deg, #FFFFFF 0%, #F5F8FB 42%, #E6ECF2 100%)',
+            backfaceVisibility: 'hidden',
+            boxShadow:
+              '0 24px 48px rgba(0,0,0,0.55), 0 4px 10px rgba(0,0,0,0.4), 0 0 50px rgba(56,161,105,0.35)',
+          }}
         >
-          {/* FRONT */}
-          <div
-            className="forge-grain absolute inset-0 overflow-hidden rounded-[6px]"
-            style={{
-              transform: `translateZ(${PAPER_D / 2}px)`,
-              background: 'linear-gradient(152deg, #FFFFFF 0%, #F5F8FB 42%, #E6ECF2 100%)',
-              backfaceVisibility: 'hidden',
-            }}
-          >
             <div className="p-5">
               <div className="flex items-start justify-between">
                 <div>
@@ -307,14 +306,15 @@ function CVPaper({ progress }: { progress: MotionValue<number> }) {
           />
         </motion.div>
       </div>
-    </div>
   );
 }
 
 /* -------------------------------- Fragments -------------------------------- */
 function FragmentToken({ f, stagger, progress }: { f: Frag; stagger: number; progress: MotionValue<number> }) {
   const depth = (f.z + 200) / 400;
-  const dofBlur = (1 - depth) * 2.2;
+  // STATIC depth-of-field blur: a constant filter is rasterized once and cached,
+  // so transforming it is cheap. (An animated blur re-rasterizes every frame.)
+  const dofBlur = (1 - depth) * 1.8;
   const kOf = (v: number) => 1 - smooth(0.12 + stagger, 0.52 + stagger, v);
 
   const transform = useTransform(progress, (v) => {
@@ -322,16 +322,11 @@ function FragmentToken({ f, stagger, progress }: { f: Frag; stagger: number; pro
     return `translate3d(${(f.x * k).toFixed(1)}px, ${(f.y * k).toFixed(1)}px, ${(f.z * k).toFixed(1)}px) rotateY(${(f.rot + (1 - k) * 220).toFixed(1)}deg) scale(${Math.max(k, 0.001).toFixed(3)})`;
   });
   const opacity = useTransform(progress, (v) => kOf(v));
-  const filter = useTransform(progress, (v) => {
-    const k = kOf(v);
-    const speedBlur = Math.sin((1 - k) * Math.PI) * 3.6;
-    return `blur(${(dofBlur + speedBlur).toFixed(2)}px)`;
-  });
 
   const isIcon = f.kind === 'icon';
   return (
-    <motion.div className="absolute left-0 top-0" style={{ transform, opacity }}>
-      <motion.div className="-translate-x-1/2 -translate-y-1/2" style={{ filter }}>
+    <motion.div className="absolute left-0 top-0" style={{ transform, opacity, willChange: 'transform, opacity' }}>
+      <div className="-translate-x-1/2 -translate-y-1/2" style={{ filter: `blur(${dofBlur.toFixed(2)}px)` }}>
         <div
           className="flex items-center justify-center rounded-xl"
           style={{
@@ -351,7 +346,7 @@ function FragmentToken({ f, stagger, progress }: { f: Frag; stagger: number; pro
             </span>
           )}
         </div>
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -395,7 +390,7 @@ export default function ForgeSequence() {
 
   return (
     <section ref={ref} className="relative h-[320vh] bg-[#0E1219]">
-      <div className="forge-vignette forge-grain sticky top-0 flex h-screen w-full items-center justify-center overflow-hidden">
+      <div className="forge-vignette sticky top-0 flex h-screen w-full items-center justify-center overflow-hidden">
         <motion.div
           className="pointer-events-none absolute inset-0"
           aria-hidden="true"
@@ -425,7 +420,7 @@ export default function ForgeSequence() {
 
         {mounted && (
           <motion.div className="pointer-events-none absolute inset-0" aria-hidden="true" style={{ opacity: sparksOpacity }}>
-            {Array.from({ length: 16 }).map((_, i) => {
+            {Array.from({ length: 10 }).map((_, i) => {
               const left = 42 + ((i * 37) % 16);
               const delay = (i % 8) * 0.5;
               const dur = 2.6 + (i % 4) * 0.6;
@@ -462,7 +457,7 @@ export default function ForgeSequence() {
 
               <motion.div
                 className="absolute left-1/2 top-1/2"
-                style={{ transform: cubeTransform, transformStyle: 'preserve-3d' }}
+                style={{ transform: cubeTransform, transformStyle: 'preserve-3d', willChange: 'transform' }}
               >
                 <GlassCube />
               </motion.div>
