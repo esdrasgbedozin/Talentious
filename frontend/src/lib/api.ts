@@ -152,6 +152,15 @@ export const deleteCV = async (cvId: string): Promise<void> => {
   await apiClient.delete(`/cv/${cvId}`);
 };
 
+/**
+ * Permanently and irreversibly erase the current account and all its data
+ * (RGPD Art. 17). Backend: DELETE /users/me → 204. The caller is responsible for
+ * clearing the local session and redirecting afterwards.
+ */
+export const deleteAccount = async (): Promise<void> => {
+  await apiClient.delete('/users/me');
+};
+
 export interface CVDetail extends CVBase {
   job_offer_context: string | null;
   cv_data_json: UserProfile;

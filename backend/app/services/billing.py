@@ -128,6 +128,17 @@ def construct_event(payload: bytes, signature: str):
     )
 
 
+def delete_customer(customer_id: str) -> None:
+    """Delete a Stripe customer object (RGPD Art. 17 erasure).
+
+    Synchronous Stripe SDK call — callers on the async path must run it in a
+    threadpool. Stripe retains the underlying transaction records for its own
+    legal/tax obligations (a legitimate GDPR exception); this only detaches the
+    customer identity we hold.
+    """
+    stripe.Customer.delete(customer_id)
+
+
 def valid_until_for(pass_type: str, *, now: Optional[datetime] = None) -> datetime:
     spec = PASS_SPECS[pass_type]
     base = now or datetime.now(timezone.utc)

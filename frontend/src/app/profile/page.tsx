@@ -17,6 +17,7 @@ import ExperienceForm from '@/components/profile/ExperienceForm';
 import EducationForm from '@/components/profile/EducationForm';
 import ProjectForm from '@/components/profile/ProjectForm';
 import CertificationForm from '@/components/profile/CertificationForm';
+import DeleteAccountSection from '@/components/profile/DeleteAccountSection';
 import {
   UserProfile,
   createEmptyProfile,
@@ -581,7 +582,12 @@ export default function ProfilePage() {
               )}
             </div>
           </ProfileSection>
-          
+
+        </div>
+
+        {/* RGPD Art. 17 — irreversible account erasure */}
+        <div className="max-w-5xl mx-auto">
+          <DeleteAccountSection />
         </div>
 
         {/* Save Button - Sticky Footer */}

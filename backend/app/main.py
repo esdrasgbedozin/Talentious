@@ -16,7 +16,7 @@ from app.core.problem import (
     validation_exception_handler,
 )
 from app.core.rate_limit import limiter, rate_limit_handler
-from app.routes import auth, billing, profile, cv
+from app.routes import account, auth, billing, profile, cv
 
 # Create FastAPI application
 app = FastAPI(
@@ -64,6 +64,7 @@ app.include_router(auth.router)
 app.include_router(profile.router)
 app.include_router(cv.router)  # Phase 3.5: CV Generation Orchestration
 app.include_router(billing.router)  # M3: Stripe Checkout + webhook
+app.include_router(account.router)  # RGPD Art. 17: account erasure
 
 
 @app.get("/")
