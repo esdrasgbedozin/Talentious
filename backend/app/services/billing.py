@@ -80,8 +80,10 @@ def get_catalog() -> list[PassCatalogEntry]:
         if spec.price_id and stripe.api_key:
             try:
                 price = stripe.Price.retrieve(spec.price_id)
-                amount_cents = price.get("unit_amount")
-                currency = price.get("currency")
+                # Stripe returns a StripeObject (not a dict): use subscript access,
+                # which works on both the SDK object and the dict used in tests.
+                amount_cents = price["unit_amount"]
+                currency = price["currency"]
             except stripe.StripeError as exc:
                 logger.warning(
                     "Could not retrieve Stripe price %s: %s", spec.price_id, exc
