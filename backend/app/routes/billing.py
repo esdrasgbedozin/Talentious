@@ -140,17 +140,29 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     return {"received": True}
 
 
-async def _fulfill_checkout(session: dict, db: AsyncSession) -> None:
+def _field(obj, key):
+    """Read a key from a Stripe StripeObject (production) or a dict (tests).
+
+    StripeObject supports subscript access but not `.get()`; return None when the
+    key is absent instead of raising.
+    """
+    try:
+        return obj[key]
+    except (KeyError, AttributeError, TypeError):
+        return None
+
+
+async def _fulfill_checkout(session, db: AsyncSession) -> None:
     """Create the CareerPass for a completed checkout (idempotent)."""
-    user_id = session.get("client_reference_id") or (session.get("metadata") or {}).get(
-        "user_id"
-    )
-    pass_type = (session.get("metadata") or {}).get("pass_type")
-    payment_id = session.get("payment_intent") or session.get("id")
+    metadata = _field(session, "metadata") or {}
+    user_id = _field(session, "client_reference_id") or _field(metadata, "user_id")
+    pass_type = _field(metadata, "pass_type")
+    payment_id = _field(session, "payment_intent") or _field(session, "id")
 
     if not user_id or pass_type not in billing.PASS_SPECS:
         logger.error(
-            "Checkout completed with missing/invalid metadata: %s", session.get("id")
+            "Checkout completed with missing/invalid metadata: %s",
+            _field(session, "id"),
         )
         return
 
