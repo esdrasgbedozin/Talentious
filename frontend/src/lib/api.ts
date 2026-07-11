@@ -36,35 +36,85 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor: Handle global errors
+/**
+ * Silent refresh: exchange the httpOnly refresh cookie for a fresh access token.
+ * A single in-flight promise is shared so concurrent 401s trigger only one
+ * refresh. Uses a bare axios call (not apiClient) to avoid interceptor recursion.
+ */
+let refreshPromise: Promise<string> | null = null;
+
+function refreshAccessToken(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = axios
+      .post<{ access_token: string }>(`${API_URL}/auth/refresh`, null, {
+        withCredentials: true,
+      })
+      .then((res) => {
+        const token = res.data.access_token;
+        localStorage.setItem('access_token', token);
+        return token;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
+function clearLocalSession() {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('user');
+  // Also clear the middleware session cookie: otherwise the route guard still
+  // sees a "session", bounces /login → /onboarding → /profile, and the expired
+  // token re-triggers this 401 — an infinite redirect loop.
+  if (typeof document !== 'undefined') {
+    document.cookie =
+      'talentious_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  }
+}
+
+// Response interceptor: silent token refresh on 401, then global error handling.
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     return response;
   },
-  (error: AxiosError) => {
-    // If 401 error (Unauthorized), clear the session and redirect to login.
-    if (error.response?.status === 401) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      // Also clear the middleware session cookie: otherwise the route guard still
-      // sees a "session", bounces /login → /onboarding → /profile, and the expired
-      // token re-triggers this 401 — an infinite redirect loop.
-      if (typeof document !== 'undefined') {
-        document.cookie =
-          'talentious_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  async (error: AxiosError) => {
+    const original = error.config as
+      | (InternalAxiosRequestConfig & { _retry?: boolean })
+      | undefined;
+    const status = error.response?.status;
+    const url = original?.url ?? '';
+    const isAuthEndpoint =
+      url.includes('/auth/refresh') || url.includes('/auth/login');
+
+    if (status === 401) {
+      // First 401 on a normal request: try a silent refresh, then replay once.
+      if (original && !original._retry && !isAuthEndpoint) {
+        original._retry = true;
+        try {
+          const token = await refreshAccessToken();
+          original.headers = original.headers ?? {};
+          original.headers.Authorization = `Bearer ${token}`;
+          return apiClient(original);
+        } catch {
+          // Refresh failed → fall through to session teardown.
+        }
       }
 
-      // Redirect to login (except if already on /login or /register)
-      if (typeof window !== 'undefined' &&
-          !window.location.pathname.includes('/login') &&
-          !window.location.pathname.includes('/register')) {
+      // Refresh unavailable or failed: clear the session and bounce to login.
+      clearLocalSession();
+      if (
+        typeof window !== 'undefined' &&
+        !window.location.pathname.includes('/login') &&
+        !window.location.pathname.includes('/register')
+      ) {
         window.location.href = '/login';
       }
     }
 
     // If 402 (Payment Required), the user needs an active CareerPass → billing.
     if (
-      error.response?.status === 402 &&
+      status === 402 &&
       typeof window !== 'undefined' &&
       !window.location.pathname.includes('/billing')
     ) {

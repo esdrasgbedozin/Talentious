@@ -3,8 +3,8 @@ Authentication routes for user registration and login.
 """
 
 from datetime import timedelta
-from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from typing import Annotated, Optional
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -17,10 +17,36 @@ from app.schemas.user import UserCreate, UserResponse, Token
 from app.schemas.profile import PersonalInfo, ProfileData, Skills
 from app.services.auth import hash_password, verify_password, create_access_token
 from app.services.dependencies import get_current_active_user
+from app.services import refresh as refresh_service
 from app.config import settings
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+def _set_refresh_cookie(response: Response, raw_token: str) -> None:
+    """Attach the rotating refresh token as an httpOnly cookie (not readable by JS)."""
+    response.set_cookie(
+        key=settings.refresh_cookie_name,
+        value=raw_token,
+        httponly=True,
+        secure=settings.environment == "production",
+        samesite="lax",
+        max_age=settings.refresh_token_expire_days * 24 * 3600,
+        path="/",
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    response.delete_cookie(key=settings.refresh_cookie_name, path="/")
+
+
+def _issue_access_token(user: User) -> str:
+    return create_access_token(
+        data={"sub": str(user.id), "email": user.email},
+        expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
+    )
+
 
 # A real bcrypt hash, used to spend the same time verifying a password when the
 # email is unknown (constant-time login → no user enumeration by timing).
@@ -96,15 +122,17 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
 @limiter.limit(LOGIN_RATE_LIMIT)
 async def login(
     request: Request,
+    response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Login with email and password to get JWT access token.
+    Login with email and password.
 
     - Uses OAuth2PasswordRequestForm (username field contains email)
     - Validates credentials
-    - Returns JWT access token
+    - Returns a short-lived JWT access token in the body and sets a long-lived,
+      rotating refresh token as an httpOnly cookie (used by POST /auth/refresh).
     """
     # Get user by email (OAuth2 uses 'username' field)
     result = await db.execute(select(User).where(User.email == form_data.username))
@@ -125,14 +153,66 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Create access token
-    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
-    access_token = create_access_token(
-        data={"sub": str(user.id), "email": user.email},
-        expires_delta=access_token_expires,
-    )
+    # Short-lived access token (body) + long-lived rotating refresh token (cookie).
+    access_token = _issue_access_token(user)
+    raw_refresh = await refresh_service.issue_refresh_token(db, user.id)
+    _set_refresh_cookie(response, raw_refresh)
 
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/refresh", response_model=Token)
+async def refresh(
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    refresh_token: Optional[str] = Cookie(
+        default=None, alias=settings.refresh_cookie_name
+    ),
+):
+    """
+    Exchange a valid refresh-token cookie for a new access token.
+
+    Rotates the refresh token (single-use): the old cookie is invalidated and a
+    fresh one is set. Any invalid / expired / revoked / reused token → 401 and the
+    cookie is cleared.
+    """
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing refresh token",
+        )
+
+    try:
+        user, new_raw = await refresh_service.rotate_refresh_token(db, refresh_token)
+    except refresh_service.InvalidRefreshToken:
+        _clear_refresh_cookie(response)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        )
+
+    access_token = _issue_access_token(user)
+    _set_refresh_cookie(response, new_raw)
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    refresh_token: Optional[str] = Cookie(
+        default=None, alias=settings.refresh_cookie_name
+    ),
+):
+    """
+    Log out: revoke the current refresh token and clear its cookie.
+
+    Idempotent and unauthenticated by design — it only needs the cookie, and a
+    missing/unknown token still returns 204 (nothing to revoke).
+    """
+    if refresh_token:
+        await refresh_service.revoke_refresh_token(db, refresh_token)
+    _clear_refresh_cookie(response)
 
 
 @router.get("/me", response_model=UserResponse)

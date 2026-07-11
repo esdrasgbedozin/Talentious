@@ -29,7 +29,13 @@ class Settings(BaseSettings):
     # Security
     secret_key: str = DEFAULT_SECRET_KEY
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
+    # Access token is short-lived and stateless; the session is kept alive by a
+    # long-lived, rotating, DB-backed refresh token (revocable — see RefreshToken).
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_days: int = 30
+    # httpOnly cookie carrying the refresh token. Secure is forced in production;
+    # SameSite=Lax works for same-site setups (localhost:3000↔:8000, app↔api subdomains).
+    refresh_cookie_name: str = "talentious_refresh"
 
     # CORS
     cors_origins: Annotated[list[str], NoDecode] = [
