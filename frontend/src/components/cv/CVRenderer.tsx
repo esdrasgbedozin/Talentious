@@ -1,15 +1,34 @@
+'use client';
+
 /**
  * CVRenderer — renders a ProfileData (cv_data_json) as a clean, ATS-friendly,
  * print-optimized A4 CV. Used both for the live preview in the editor and for the
- * print/PDF route. Purely presentational: no data fetching, no side effects.
+ * print/PDF route.
+ *
+ * Single-page guarantee: the sheet is a fixed A4 box (210×297mm, overflow hidden)
+ * and the content is auto-scaled down just enough to fit exactly one page. Because
+ * the on-screen preview and the printed PDF render the *same* fitted box, the
+ * preview is a faithful WYSIWYG of the downloaded PDF (no more "aperçu ≠ PDF", no
+ * more content spilling onto a near-empty second page).
  *
  * Empty sections are skipped so partial CVs still render cleanly.
  */
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { UserProfile } from '@/types/profile';
 
 interface CVRendererProps {
   profile: UserProfile;
 }
+
+// A4 geometry and sheet padding (mm). Kept in sync with the print @page rules.
+const A4_WIDTH_MM = 210;
+const A4_HEIGHT_MM = 297;
+const PAD_Y_MM = 14;
+const PAD_X_MM = 16;
+const MM_TO_PX = 96 / 25.4;
+// Never shrink below this — past it the CV is unreadable and the user should trim
+// content instead. In practice content stays well above this floor.
+const MIN_SCALE = 0.62;
 
 /** "2020-03" | "2020-03-15" → "mars 2020"; "" → "". */
 function formatMonthYear(value?: string | null): string {
@@ -54,10 +73,45 @@ export default function CVRenderer({ profile }: CVRendererProps) {
   const hardSkills = profile.skills?.hard ?? [];
   const softSkills = profile.skills?.soft ?? [];
 
+  // Measure the natural (unscaled) content height and shrink to fit one A4 page.
+  // scrollHeight ignores the CSS transform, so measuring while scaled is stable
+  // and converges in a single pass (no resize feedback loop). A ResizeObserver
+  // keeps it correct as the user edits the CV live.
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const availableHeightPx = (A4_HEIGHT_MM - 2 * PAD_Y_MM) * MM_TO_PX;
+    const fit = () => {
+      const natural = el.scrollHeight;
+      if (!natural) return;
+      const next = Math.min(1, availableHeightPx / natural);
+      setScale(next < MIN_SCALE ? MIN_SCALE : next);
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [profile]);
+
   return (
-    <article className="cv-sheet mx-auto w-full max-w-[210mm] bg-white px-[16mm] py-[14mm] text-[11px] leading-relaxed text-text-primary">
+    <div
+      className="cv-sheet relative mx-auto overflow-hidden bg-white text-text-primary"
+      style={{ width: `${A4_WIDTH_MM}mm`, height: `${A4_HEIGHT_MM}mm` }}
+    >
+      <div style={{ padding: `${PAD_Y_MM}mm ${PAD_X_MM}mm` }}>
+        <div
+          ref={contentRef}
+          className="text-[11px] leading-relaxed"
+          style={{
+            transform: scale < 1 ? `scale(${scale})` : undefined,
+            transformOrigin: 'top center',
+          }}
+        >
       {/* Header */}
-      <header className="mb-5">
+      <header className="mb-4">
         <h1 className="text-3xl font-bold tracking-tight text-primary">
           {fullName || 'Votre nom'}
         </h1>
@@ -75,7 +129,7 @@ export default function CVRenderer({ profile }: CVRendererProps) {
 
       {/* Summary */}
       {profile.summary?.trim() && (
-        <section className="mb-5">
+        <section className="mb-4">
           <SectionTitle>Profil</SectionTitle>
           <p className="whitespace-pre-line text-text-primary">{profile.summary}</p>
         </section>
@@ -83,7 +137,7 @@ export default function CVRenderer({ profile }: CVRendererProps) {
 
       {/* Experiences */}
       {experiences.length > 0 && (
-        <section className="mb-5">
+        <section className="mb-4">
           <SectionTitle>Expérience professionnelle</SectionTitle>
           <div className="space-y-3">
             {experiences.map((exp, i) => (
@@ -120,7 +174,7 @@ export default function CVRenderer({ profile }: CVRendererProps) {
 
       {/* Education */}
       {educations.length > 0 && (
-        <section className="mb-5">
+        <section className="mb-4">
           <SectionTitle>Formation</SectionTitle>
           <div className="space-y-2">
             {educations.map((edu, i) => (
@@ -150,7 +204,7 @@ export default function CVRenderer({ profile }: CVRendererProps) {
 
       {/* Skills */}
       {(hardSkills.length > 0 || softSkills.length > 0) && (
-        <section className="mb-5 break-inside-avoid">
+        <section className="mb-4 break-inside-avoid">
           <SectionTitle>Compétences</SectionTitle>
           {hardSkills.length > 0 && (
             <div className="mb-1.5">
@@ -169,7 +223,7 @@ export default function CVRenderer({ profile }: CVRendererProps) {
 
       {/* Projects */}
       {projects.length > 0 && (
-        <section className="mb-5">
+        <section className="mb-4">
           <SectionTitle>Projets</SectionTitle>
           <div className="space-y-2">
             {projects.map((proj, i) => (
@@ -201,7 +255,7 @@ export default function CVRenderer({ profile }: CVRendererProps) {
 
       {/* Certifications */}
       {certifications.length > 0 && (
-        <section className="mb-5 break-inside-avoid">
+        <section className="mb-4 break-inside-avoid">
           <SectionTitle>Certifications</SectionTitle>
           <div className="space-y-1">
             {certifications.map((cert, i) => (
@@ -233,7 +287,9 @@ export default function CVRenderer({ profile }: CVRendererProps) {
           </p>
         </section>
       )}
-    </article>
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -66,7 +66,7 @@ export default function CVPrintPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background-light py-8">
+    <div className="min-h-screen bg-background-light py-8 print:min-h-0 print:bg-white print:py-0">
       {/* Toolbar — hidden in the printed output */}
       <div className="print-hide mx-auto mb-6 flex max-w-[210mm] items-center justify-between px-4">
         <button
@@ -82,7 +82,7 @@ export default function CVPrintPage() {
         </Button>
       </div>
 
-      <div className="mx-auto w-[210mm] max-w-full bg-white shadow-lg print:shadow-none">
+      <div className="mx-auto w-[210mm] max-w-full bg-white shadow-lg print:w-auto print:shadow-none">
         <CVRenderer profile={cv.cv_data_json} />
       </div>
     </div>
