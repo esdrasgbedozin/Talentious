@@ -110,6 +110,11 @@ body {
     box-shadow: none !important;
     margin: 0 !important;
   }
+  /* On screen the A4 sheet may be zoomed down to fit narrow phones; the printed
+     output must always be true A4, so cancel any fit-zoom when printing. */
+  .cv-print-fit {
+    zoom: 1 !important;
+  }
   * {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;

@@ -97,13 +97,13 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto px-6 py-12">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold text-text-primary">Mes CVs</h1>
+        <div className="mb-8 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-3xl font-bold text-text-primary sm:text-4xl">Mes CVs</h1>
           <Button
             variant="primary"
             size="lg"
             onClick={handleGenerateNew}
-            className="flex items-center gap-2"
+            className="flex items-center justify-center gap-2"
           >
             <Plus size={20} />
             Générer un nouveau CV

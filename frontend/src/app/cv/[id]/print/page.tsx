@@ -19,6 +19,20 @@ export default function CVPrintPage() {
 
   const [cv, setCv] = useState<CVDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Fit the fixed 210mm (~794px) A4 sheet inside narrow phone viewports so it
+  // never overflows horizontally. Print CSS resets this to 1 (true A4 PDF).
+  const [fitZoom, setFitZoom] = useState(1);
+
+  useEffect(() => {
+    const SHEET_PX = (210 * 96) / 25.4; // A4 width in CSS px
+    const compute = () => {
+      const avail = window.innerWidth - 24; // small breathing room
+      setFitZoom(Math.min(1, avail / SHEET_PX));
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
+  }, []);
 
   useEffect(() => {
     if (!cvId) return;
@@ -82,7 +96,10 @@ export default function CVPrintPage() {
         </Button>
       </div>
 
-      <div className="mx-auto w-[210mm] max-w-full bg-white shadow-lg print:w-auto print:shadow-none">
+      <div
+        className="cv-print-fit mx-auto w-[210mm] bg-white shadow-lg print:w-auto print:shadow-none"
+        style={{ zoom: fitZoom }}
+      >
         <CVRenderer profile={cv.cv_data_json} />
       </div>
     </div>
