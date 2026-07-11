@@ -129,9 +129,7 @@ function GlassCube() {
       style={{
         transformStyle: 'preserve-3d',
         animation: 'forge-spin-box 11s linear infinite',
-        // subtle chromatic aberration on the bright glass edges ("real lens")
-        filter:
-          'drop-shadow(1.5px 0 0 rgba(255,40,90,0.16)) drop-shadow(-1.5px 0 0 rgba(0,210,255,0.16))',
+        // NOTE: never put filter/opacity here — it would flatten the 3D cube.
       }}
     >
       {/* outer glass shell */}
@@ -224,19 +222,26 @@ const PAPER_D = 9; // thickness
 
 function CVPaper({ rotateY }: { rotateY: number }) {
   return (
+    // FILTER layer (shadows + chromatic) — kept OFF the 3D element so it doesn't
+    // flatten the paper. It groups the composited 3D result.
     <div
-      className="relative"
       style={{
-        width: PAPER_W,
-        height: PAPER_H,
-        transformStyle: 'preserve-3d',
-        // Scroll-driven: spins as it emerges, then settles facing the viewer.
-        transform: `rotateY(${rotateY}deg)`,
-        // layered: sharp contact + soft cast + brand glow + faint chromatic edge
         filter:
           'drop-shadow(0 3px 5px rgba(0,0,0,0.4)) drop-shadow(0 26px 42px rgba(0,0,0,0.5)) drop-shadow(0 0 46px rgba(56,161,105,0.4)) drop-shadow(1px 0 0 rgba(255,40,90,0.1)) drop-shadow(-1px 0 0 rgba(0,210,255,0.1))',
       }}
     >
+      {/* local perspective so the sheet keeps real depth while turning */}
+      <div style={{ perspective: '1000px' }}>
+        <div
+          className="relative"
+          style={{
+            width: PAPER_W,
+            height: PAPER_H,
+            transformStyle: 'preserve-3d',
+            // Scroll-driven: spins as it emerges, then settles facing the viewer.
+            transform: `rotateY(${rotateY}deg)`,
+          }}
+        >
       {/* FRONT — the sheet */}
       <div
         className="forge-grain absolute inset-0 overflow-hidden rounded-[6px]"
@@ -322,6 +327,8 @@ function CVPaper({ rotateY }: { rotateY: number }) {
           background: 'linear-gradient(#FFFFFF, #DDE4EB)',
         }}
       />
+        </div>
+      </div>
     </div>
   );
 }
@@ -488,12 +495,13 @@ export default function ForgeSequence() {
                 return <FragmentToken key={i} f={f} k={k} />;
               })}
 
-              {/* Glass cube (spins faster as it fills, scroll-linked) */}
+              {/* Glass cube (spins faster as it fills, scroll-linked). No opacity /
+                  filter on this 3D layer — it would flatten the cube. It fades via
+                  scale (0 → 1 → 0). */}
               <div
                 className="absolute left-1/2 top-1/2"
                 style={{
-                  transform: `translate(-50%, -50%) rotateY(${cubeSpin.toFixed(1)}deg) scale(${Math.max(boxScale, 0.001)})`,
-                  opacity: boxOpacity,
+                  transform: `translate(-50%, -50%) rotateY(${cubeSpin.toFixed(1)}deg) scale(${Math.max(boxScale, 0.0001)})`,
                   transformStyle: 'preserve-3d',
                 }}
               >
