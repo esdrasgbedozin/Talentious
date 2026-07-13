@@ -17,9 +17,14 @@ export default function MentionsLegalesPage() {
           à titre non professionnel, dans le cadre d&apos;un projet personnel :
         </p>
         <Field label="Éditeur">Esdras Gbedozin</Field>
-        <Field label="Adresse">50 rue du Général Crémer, 92700 Colombes, France</Field>
         <Field label="Contact">egbedozin@gmail.com</Field>
         <Field label="Directeur de la publication">Esdras Gbedozin</Field>
+        <p className="text-sm">
+          Conformément à l&apos;article 6 III 2° de la LCEN, l&apos;éditeur non
+          professionnel n&apos;est pas tenu de publier son adresse ; celle-ci a été
+          communiquée à l&apos;hébergeur et peut être obtenue sur réquisition judiciaire.
+          Pour toute demande, l&apos;adresse email ci-dessus est le moyen de contact.
+        </p>
       </Section>
 
       <Section title="Hébergement">

@@ -363,53 +363,43 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ============================ TESTIMONIALS (light) ===================== */}
-      <section id="testimonials" className="scroll-mt-20 bg-white px-6 py-28 md:py-36">
-        <div className="mx-auto max-w-6xl">
-          <Reveal className="max-w-2xl">
-            <h2 className="text-balance text-4xl font-bold leading-tight tracking-tight text-primary md:text-5xl">
-              Ils ont révélé leur potentiel.
+      {/* ============================ BETA / EARLY ACCESS (light) ============== */}
+      <section id="beta" className="scroll-mt-20 bg-white px-6 py-28 md:py-36">
+        <div className="mx-auto max-w-4xl text-center">
+          <Reveal>
+            <span className="inline-flex items-center gap-2 rounded-full border border-action/30 bg-action/5 px-4 py-1.5 text-sm font-medium text-action">
+              <span className="h-2 w-2 rounded-full bg-action" />
+              Bêta ouverte
+            </span>
+            <h2 className="mt-6 text-balance text-4xl font-bold leading-tight tracking-tight text-primary md:text-5xl">
+              Une bêta qui s&apos;écrit avec toi.
             </h2>
+            <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-text-secondary">
+              Talentious vient de naître. Plutôt que d&apos;inventer des témoignages, on
+              préfère être honnêtes : sois parmi les premiers à l&apos;utiliser, et ton
+              retour oriente directement ce qu&apos;on construit ensuite.
+            </p>
           </Reveal>
-          <div className="mt-14 grid gap-6 md:grid-cols-3">
+          <div className="mt-14 grid gap-6 text-left md:grid-cols-3">
             {[
               {
-                quote:
-                  "J'ai obtenu 3 entretiens en une semaine après avoir adapté mes CV avec Talentious. Le gain de temps est énorme.",
-                name: 'Sophie Chen',
-                role: 'Product Manager',
-                initials: 'SC',
+                title: 'Tes données t’appartiennent',
+                text: "Hébergement en France, aucune revente. Suppression de compte immédiate et définitive, à tout moment.",
               },
               {
-                quote:
-                  "Fini les heures passées à reformuler mon CV pour chaque offre. En 2 minutes, le résultat est bluffant.",
-                name: 'Marc Dubois',
-                role: 'Développeur Full-Stack',
-                initials: 'MD',
+                title: 'Un CV par offre, en 2 minutes',
+                text: "Colle une annonce, l’IA adapte ton CV à ses attentes réelles — sans repartir de zéro.",
               },
               {
-                quote:
-                  "Interface intuitive, suggestions pertinentes, rendu vraiment pro. Exactement ce qu'il me fallait.",
-                name: 'Amélie Leroux',
-                role: 'Designer UX/UI',
-                initials: 'AL',
+                title: 'Ton avis compte, vraiment',
+                text: "Un espace de retour arrive bientôt dans l’app. En attendant, écris-nous : chaque idée est lue.",
               },
-            ].map((t, i) => (
-              <Reveal key={t.name} delay={i * 0.1}>
-                <figure className="flex h-full flex-col rounded-2xl border border-border bg-background-light p-8">
-                  <blockquote className="text-pretty leading-relaxed text-primary">
-                    « {t.quote} »
-                  </blockquote>
-                  <figcaption className="mt-6 flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-action/10 text-sm font-semibold text-action">
-                      {t.initials}
-                    </span>
-                    <span>
-                      <span className="block font-semibold text-primary">{t.name}</span>
-                      <span className="block text-sm text-text-secondary">{t.role}</span>
-                    </span>
-                  </figcaption>
-                </figure>
+            ].map((c, i) => (
+              <Reveal key={c.title} delay={i * 0.1}>
+                <div className="flex h-full flex-col rounded-2xl border border-border bg-background-light p-8">
+                  <h3 className="text-lg font-semibold text-primary">{c.title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-text-secondary">{c.text}</p>
+                </div>
               </Reveal>
             ))}
           </div>

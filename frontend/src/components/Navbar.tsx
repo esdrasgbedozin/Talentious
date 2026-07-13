@@ -123,10 +123,10 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                 Sécurité
               </button>
               <button
-                onClick={() => scrollToSection('testimonials')}
+                onClick={() => scrollToSection('beta')}
                 className={navLink}
               >
-                Témoignages
+                Bêta
               </button>
             </div>
 
@@ -189,10 +189,10 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                 Sécurité
               </button>
               <button
-                onClick={() => scrollToSection('testimonials')}
+                onClick={() => scrollToSection('beta')}
                 className="block w-full text-left text-primary hover:text-action transition-colors font-medium py-2"
               >
-                Témoignages
+                Bêta
               </button>
               <div className="pt-4 border-t border-border space-y-2">
                 <Link href="/login" className="block">

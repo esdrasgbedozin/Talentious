@@ -258,6 +258,18 @@ Lacune identifiée : l'inscription ne vérifie pas l'adresse email et il n'exist
 | M7-T07 | Pages légales | Mentions légales (LCEN), Politique de confidentialité (RGPD — traitements réels : GCP/Vertex, Stripe), CGU. **CGV + droit de rétractation** uniquement si monétisation active (voir prérequis ci-dessous). Routes `/legal/*` + liens footer. | — | 2,5 h | 3 pages accessibles, liées au footer, cohérentes avec le traitement réel des données |
 | M7-T08 | **[PRÉREQUIS LÉGAL] Immatriculation micro-entreprise avant tout encaissement réel** | Encaisser des paiements pour un service en ligne = **activité commerciale** → obligation d'immatriculation (micro-entrepreneur, obtention d'un **SIRET**) AVANT de passer Stripe en live. Tant que le service est **gratuit / bêta** (Stripe en test, aucun revenu réel), publication possible en tant que **particulier** (nom + email + hébergeur), sans SIRET. Décision fondateur requise. | — | — | Statut tranché ; si monétisation → SIRET obtenu + mentions/CGV complétées |
 
+**Fait 2026-07-13 :** faux témoignages de la landing retirés (interdits — pratique commerciale trompeuse, dir. Omnibus) → section « bêta » honnête. Adresse postale retirée des mentions légales (non requise pour un éditeur particulier non professionnel, LCEN art. 6 III 2°).
+
+## 3 quinquies. Système d'avis / feedback authentique (ajout 2026-07-13)
+
+Remplacer durablement les faux avis par un vrai dispositif de collecte, comme le font les apps de prod (bouton in-app + invite post-action + NPS + opt-in de publication). Aucun avis n'est affiché tant qu'il n'est pas réel et consenti.
+
+| Ticket | Tâche | Description | Dépend | Estim. | Critère de fin |
+|---|---|---|---|---|---|
+| M7-T09 | Modèle + API feedback | Table `feedbacks` (user_id FK CASCADE, type nps/comment, score 0-10 nullable, message, consent_publish bool, created_at). Endpoints `POST /feedback`, `GET /feedback` (admin). RFC 7807, rate-limité. | M0-T05 | 2 h | TDD : POST feedback authentifié → 201 ; cascade RGPD (supprimé avec le compte) |
+| M7-T10 | Collecte in-app | Bouton « Donner mon avis » (widget accessible) + invite contextuelle après une action clé (ex. 1er CV téléchargé) ou après N jours. Formulaire : note NPS + commentaire + case « autoriser la publication (anonyme ou prénom) ». | M7-T09 | 2,5 h | e2e : soumission depuis le widget et depuis l'invite post-action |
+| M7-T11 | Témoignages consentis sur la landing | Remplacer la section « bêta » par les avis **réels et consentis** (opt-in) une fois qu'il y en a assez. Modération manuelle (admin) avant publication. Fallback : garder la section bêta tant qu'il n'y a pas d'avis. | M7-T09, M7-T10 | 1,5 h | Seuls des avis marqués `consent_publish=true` et modérés s'affichent ; sinon section bêta |
+
 ---
 
 ## 4. ADR à produire
