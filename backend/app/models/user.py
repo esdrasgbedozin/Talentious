@@ -4,7 +4,7 @@ User model for authentication and authorization.
 
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, Enum
+from sqlalchemy import Boolean, Column, String, DateTime, Enum
 from sqlalchemy.dialects.postgresql import UUID
 import enum
 
@@ -55,6 +55,8 @@ class User(Base):
         nullable=False,
     )
     stripe_customer_id = Column(String(255), nullable=True)
+    # True once the user has confirmed ownership of their email address.
+    email_verified = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     def __repr__(self):

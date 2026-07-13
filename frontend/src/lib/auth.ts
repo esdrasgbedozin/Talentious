@@ -10,6 +10,7 @@ export interface User {
   id: string;
   email: string;
   role: 'user' | 'admin';
+  email_verified?: boolean;
   created_at: string;
 }
 

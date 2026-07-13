@@ -36,6 +36,17 @@ class Settings(BaseSettings):
     # httpOnly cookie carrying the refresh token. Secure is forced in production;
     # SameSite=Lax works for same-site setups (localhost:3000↔:8000, app↔api subdomains).
     refresh_cookie_name: str = "talentious_refresh"
+    # Email verification / password reset link lifetime.
+    email_token_expire_hours: int = 24
+
+    # Transactional email (Brevo). Disabled by default: without a key, emails are
+    # logged, not sent (dev/test/CI). See docs/adr/ADR-EMAIL.md.
+    email_enabled: bool = False
+    brevo_api_key: str = ""
+    email_sender_address: str = "noreply@talentious.local"
+    email_sender_name: str = "Talentious"
+    # Public base URL of the frontend, used to build links inside emails.
+    frontend_base_url: str = "http://localhost:3000"
 
     # CORS
     cors_origins: Annotated[list[str], NoDecode] = [

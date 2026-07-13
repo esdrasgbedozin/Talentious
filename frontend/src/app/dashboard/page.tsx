@@ -11,6 +11,7 @@ import Navbar from '@/components/Navbar';
 import Button from '@/components/ui/Button';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import GenerateCVModal from '@/components/GenerateCVModal';
+import EmailVerificationBanner from '@/components/EmailVerificationBanner';
 import { useToast } from '@/components/ui/Toast';
 import { getCVs, deleteCV, type CVBase } from '@/lib/api';
 import { useState } from 'react';
@@ -76,6 +77,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
       <Navbar variant="authenticated" />
+      <EmailVerificationBanner />
 
       {/* Generate CV Modal */}
       <GenerateCVModal

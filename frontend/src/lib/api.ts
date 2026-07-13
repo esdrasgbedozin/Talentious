@@ -211,6 +211,16 @@ export const deleteAccount = async (): Promise<void> => {
   await apiClient.delete('/users/me');
 };
 
+/** Confirm an email address from the token in the verification link. */
+export const verifyEmail = async (token: string): Promise<void> => {
+  await apiClient.post('/auth/verify-email', { token });
+};
+
+/** Resend the verification email to the current (authenticated) user. */
+export const resendVerification = async (): Promise<void> => {
+  await apiClient.post('/auth/resend-verification');
+};
+
 export interface CVDetail extends CVBase {
   job_offer_context: string | null;
   cv_data_json: UserProfile;

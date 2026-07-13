@@ -2,6 +2,7 @@
 Authentication routes for user registration and login.
 """
 
+import logging
 from datetime import timedelta
 from typing import Annotated, Optional
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
@@ -13,12 +14,39 @@ from app.core.rate_limit import LOGIN_RATE_LIMIT, limiter
 from app.database import get_db
 from app.models.user import User, UserRole
 from app.models.user_profile import UserProfile
-from app.schemas.user import UserCreate, UserResponse, Token
+from app.schemas.user import UserCreate, UserResponse, Token, VerifyEmailRequest
 from app.schemas.profile import PersonalInfo, ProfileData, Skills
-from app.services.auth import hash_password, verify_password, create_access_token
+from app.services.auth import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    create_email_token,
+    decode_email_token,
+)
 from app.services.dependencies import get_current_active_user
 from app.services import refresh as refresh_service
+from app.services import email_service
 from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+EMAIL_VERIFY_PURPOSE = "email_verify"
+
+
+async def _send_verification_email(user: User) -> None:
+    """Best-effort: email a verification link. Never blocks the caller on failure."""
+    token = create_email_token(user.id, EMAIL_VERIFY_PURPOSE)
+    verify_url = f"{settings.frontend_base_url}/verify-email?token={token}"
+    # In local/dev (email disabled) log the link so it can be tested without a
+    # mailbox. Never log the token when real sending is on (it would leak in prod).
+    if not settings.email_enabled:
+        logger.info("[DEV] Verification link for %s: %s", user.email, verify_url)
+    try:
+        await email_service.send_verification_email(
+            to=user.email, verify_url=verify_url
+        )
+    except Exception:  # noqa: BLE001 - email failures must not break the flow
+        logger.exception("Failed to send verification email to user %s", user.id)
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -115,7 +143,51 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(new_user)
 
+    # Send the email-verification link (best-effort; no-op when email is disabled).
+    await _send_verification_email(new_user)
+
     return new_user
+
+
+@router.post("/verify-email", response_model=UserResponse)
+async def verify_email(payload: VerifyEmailRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Confirm an email address from a verification token.
+
+    Idempotent: verifying an already-verified account succeeds. Invalid, expired or
+    wrong-purpose tokens → 400.
+    """
+    user_id = decode_email_token(payload.token, EMAIL_VERIFY_PURPOSE)
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification link",
+        )
+
+    user = (
+        await db.execute(select(User).where(User.id == user_id))
+    ).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification link",
+        )
+
+    if not user.email_verified:
+        user.email_verified = True
+        await db.commit()
+        await db.refresh(user)
+
+    return user
+
+
+@router.post("/resend-verification", status_code=status.HTTP_204_NO_CONTENT)
+async def resend_verification(
+    current_user: User = Depends(get_current_active_user),
+):
+    """Resend the verification email to the authenticated user (no-op if already verified)."""
+    if not current_user.email_verified:
+        await _send_verification_email(current_user)
 
 
 @router.post("/login", response_model=Token)
