@@ -45,6 +45,21 @@ class VerifyEmailRequest(BaseModel):
     token: str = Field(..., description="Email verification token")
 
 
+class ForgotPasswordRequest(BaseModel):
+    """Body of POST /auth/password/forgot."""
+
+    email: EmailStr = Field(..., description="Account email address")
+
+
+class ResetPasswordRequest(BaseModel):
+    """Body of POST /auth/password/reset."""
+
+    token: str = Field(..., description="Password reset token")
+    new_password: str = Field(
+        ..., min_length=8, description="New password (min 8 characters)"
+    )
+
+
 class Token(BaseModel):
     """Schema for JWT token response."""
 

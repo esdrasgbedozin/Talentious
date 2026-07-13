@@ -110,3 +110,13 @@ async def revoke_refresh_token(db: AsyncSession, raw_token: str) -> None:
         .values(revoked=True)
     )
     await db.commit()
+
+
+async def revoke_all_user_tokens(db: AsyncSession, user_id) -> None:
+    """Revoke every refresh token of a user (e.g. after a password reset).
+
+    Does not commit — the caller commits alongside its own changes.
+    """
+    await db.execute(
+        update(RefreshToken).where(RefreshToken.user_id == user_id).values(revoked=True)
+    )

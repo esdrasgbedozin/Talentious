@@ -14,7 +14,14 @@ from app.core.rate_limit import LOGIN_RATE_LIMIT, limiter
 from app.database import get_db
 from app.models.user import User, UserRole
 from app.models.user_profile import UserProfile
-from app.schemas.user import UserCreate, UserResponse, Token, VerifyEmailRequest
+from app.schemas.user import (
+    UserCreate,
+    UserResponse,
+    Token,
+    VerifyEmailRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+)
 from app.schemas.profile import PersonalInfo, ProfileData, Skills
 from app.services.auth import (
     hash_password,
@@ -25,6 +32,7 @@ from app.services.auth import (
 )
 from app.services.dependencies import get_current_active_user
 from app.services import refresh as refresh_service
+from app.services import password_reset as reset_service
 from app.services import email_service
 from app.config import settings
 
@@ -188,6 +196,57 @@ async def resend_verification(
     """Resend the verification email to the authenticated user (no-op if already verified)."""
     if not current_user.email_verified:
         await _send_verification_email(current_user)
+
+
+@router.post("/password/forgot", status_code=status.HTTP_204_NO_CONTENT)
+async def forgot_password(
+    payload: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)
+):
+    """
+    Request a password-reset link.
+
+    Always returns 204 regardless of whether the email exists — this prevents
+    account enumeration. A reset email is sent only when the account exists.
+    """
+    user = (
+        await db.execute(select(User).where(User.email == payload.email))
+    ).scalar_one_or_none()
+
+    if user is not None:
+        raw = await reset_service.issue_reset_token(db, user.id)
+        reset_url = f"{settings.frontend_base_url}/reset-password?token={raw}"
+        if not settings.email_enabled:
+            logger.info("[DEV] Password reset link for %s: %s", user.email, reset_url)
+        try:
+            await email_service.send_password_reset_email(
+                to=user.email, reset_url=reset_url
+            )
+        except Exception:  # noqa: BLE001 - email failures must not leak existence
+            logger.exception("Failed to send reset email to user %s", user.id)
+
+
+@router.post("/password/reset", status_code=status.HTTP_204_NO_CONTENT)
+async def reset_password(
+    payload: ResetPasswordRequest, db: AsyncSession = Depends(get_db)
+):
+    """
+    Set a new password from a valid reset token.
+
+    The token is single-use (consumed here). On success every existing session is
+    revoked so a compromised session cannot survive a password reset. Invalid,
+    expired or already-used tokens → 400.
+    """
+    try:
+        user = await reset_service.consume_reset_token(db, payload.token)
+    except reset_service.InvalidResetToken:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset link",
+        )
+
+    user.hashed_password = hash_password(payload.new_password)
+    await refresh_service.revoke_all_user_tokens(db, user.id)
+    await db.commit()
 
 
 @router.post("/login", response_model=Token)

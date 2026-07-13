@@ -221,6 +221,22 @@ export const resendVerification = async (): Promise<void> => {
   await apiClient.post('/auth/resend-verification');
 };
 
+/** Request a password-reset email (always resolves — enumeration-safe on the server). */
+export const forgotPassword = async (email: string): Promise<void> => {
+  await apiClient.post('/auth/password/forgot', { email });
+};
+
+/** Set a new password from a reset-link token. */
+export const resetPassword = async (
+  token: string,
+  newPassword: string,
+): Promise<void> => {
+  await apiClient.post('/auth/password/reset', {
+    token,
+    new_password: newPassword,
+  });
+};
+
 export interface CVDetail extends CVBase {
   job_offer_context: string | null;
   cv_data_json: UserProfile;

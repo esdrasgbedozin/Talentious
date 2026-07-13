@@ -189,6 +189,14 @@ function LoginForm() {
                   autoComplete="current-password"
                   className="transition-all"
                 />
+                <div className="mt-2 text-right">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm text-text-secondary hover:text-action transition-colors"
+                  >
+                    Mot de passe oublié ?
+                  </Link>
+                </div>
               </div>
 
               {/* Submit Button */}

@@ -8,6 +8,7 @@ from app.models.career_pass import CareerPass, PassType
 from app.models.generated_cv import GeneratedCV
 from app.models.cv_job import CVJob, JobStatus
 from app.models.refresh_token import RefreshToken
+from app.models.password_reset_token import PasswordResetToken
 
 __all__ = [
     "User",
@@ -19,4 +20,5 @@ __all__ = [
     "CVJob",
     "JobStatus",
     "RefreshToken",
+    "PasswordResetToken",
 ]
