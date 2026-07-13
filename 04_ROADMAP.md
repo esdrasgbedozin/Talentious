@@ -242,6 +242,8 @@ Travaux réalisés en dehors du séquencement initial, à réconcilier avec les 
 
 Lacune identifiée : l'inscription ne vérifie pas l'adresse email et il n'existe ni « mot de passe oublié » ni envoi d'email. Requis pour une V1 publique crédible.
 
+**État (2026-07-13) : T01 ✅ (Brevo, ADR-EMAIL) · T02 ✅ · T03 ✅ · T04 ✅ (sauf rappel J-3, différé avec l'infra M6) · T05 ✅ (fait au fil de T02/T03 : bannière, /verify-email, /forgot-password, /reset-password) · T06 ✅. Reste côté fondateur : achat du domaine (talentious.app recommandé) + config Brevo (docs/EMAIL_SETUP.md) → EMAIL_ENABLED=true.**
+
 | Ticket | Tâche | Description | Fichiers | Dépend | Estim. | Critère de fin |
 |---|---|---|---|---|---|---|
 | M7-T01 | ADR + provider email transactionnel | Choisir le fournisseur (Resend / SendGrid / Mailgun / Amazon SES / SMTP GCP). Critères : RGPD (données UE), coût, simplicité solo. Config via secret. Service d'envoi abstrait (`email_service`) testable (mock). | `backend/app/services/email_service.py`, `docs/adr/ADR-EMAIL.md` | — | 1,5 h | Envoi mocké testé ; secret configuré ; ADR rédigé |
