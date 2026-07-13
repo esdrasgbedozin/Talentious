@@ -33,6 +33,7 @@ from app.database import get_db
 from app.models import User
 from app.routes.auth import get_current_active_user
 from app.services import billing
+from app.services import email_service
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,8 @@ async def delete_account(
 ):
     """Permanently erase the authenticated user's account and all their data (RGPD Art. 17)."""
     user_id = current_user.id
+    # Captured before the row is gone: needed for the post-erasure acknowledgement.
+    user_email = current_user.email
     stripe_customer_id = current_user.stripe_customer_id
 
     # Best-effort: detach the payment identity at Stripe. A Stripe failure must
@@ -65,3 +68,9 @@ async def delete_account(
 
     # Compliance evidence WITHOUT PII: pseudonymous user id (UUID) + log timestamp.
     logger.info("Account erased (RGPD Art. 17): user_id=%s", user_id)
+
+    # RGPD acknowledgement to the (now erased) address — best-effort, after commit.
+    try:
+        await email_service.send_account_deleted_email(to=user_email)
+    except Exception:  # noqa: BLE001 - the erasure already succeeded
+        logger.exception("Failed to send deletion acknowledgement for user %s", user_id)

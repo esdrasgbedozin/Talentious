@@ -27,6 +27,7 @@ from app.config import settings
 from app.database import get_db
 from app.models import CareerPass, PassType, User
 from app.services import billing
+from app.services import email_service
 from app.services.dependencies import get_current_active_user
 
 logger = logging.getLogger(__name__)
@@ -166,11 +167,12 @@ async def _fulfill_checkout(session, db: AsyncSession) -> None:
         )
         return
 
+    valid_until = billing.valid_until_for(pass_type)
     career_pass = CareerPass(
         user_id=UUID(str(user_id)),
         stripe_payment_id=payment_id,
         pass_type=billing.PASS_SPECS[pass_type].model_pass_type,
-        valid_until=billing.valid_until_for(pass_type),
+        valid_until=valid_until,
     )
     db.add(career_pass)
     try:
@@ -180,6 +182,23 @@ async def _fulfill_checkout(session, db: AsyncSession) -> None:
         # Duplicate payment_id → webhook already processed. Idempotent no-op.
         await db.rollback()
         logger.info("Duplicate webhook for payment %s ignored.", payment_id)
+        return
+
+    # Purchase confirmation email (best-effort — the pass is already granted).
+    user = (
+        await db.execute(select(User).where(User.id == UUID(str(user_id))))
+    ).scalar_one_or_none()
+    if user is not None:
+        spec = billing.PASS_SPECS[pass_type]
+        try:
+            await email_service.send_pass_purchase_email(
+                to=user.email,
+                pass_label=f"pass {spec.duration_days} jours",
+                valid_until=valid_until.strftime("%d/%m/%Y"),
+                dashboard_url=f"{settings.frontend_base_url}/dashboard",
+            )
+        except Exception:  # noqa: BLE001 - email failures must not fail the webhook
+            logger.exception("Failed to send purchase email to user %s", user_id)
 
 
 @router.get("/status", response_model=BillingStatusResponse)

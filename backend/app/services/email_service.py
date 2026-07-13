@@ -111,3 +111,70 @@ async def send_password_reset_email(*, to: str, reset_url: str) -> None:
     await send_email(
         to=to, subject="Réinitialise ton mot de passe", html=html, text=text
     )
+
+
+async def send_welcome_email(*, to: str, dashboard_url: str) -> None:
+    """Welcome email, sent once the address has been verified."""
+    html = _shell(
+        "Bienvenue sur Talentious !",
+        "<p>Ton adresse est confirmée — ton compte est prêt. Remplis ton profil "
+        "une fois, puis génère un CV taillé pour chaque offre en quelques minutes.</p>"
+        f"{_button(dashboard_url, 'Créer mon premier CV')}",
+    )
+    text = f"Bienvenue sur Talentious ! Crée ton premier CV : {dashboard_url}"
+    await send_email(to=to, subject="Bienvenue sur Talentious 🎉", html=html, text=text)
+
+
+async def send_pass_purchase_email(
+    *, to: str, pass_label: str, valid_until: str, dashboard_url: str
+) -> None:
+    """Purchase confirmation, triggered by the Stripe checkout webhook."""
+    html = _shell(
+        "Ton pass est actif",
+        f"<p>Merci pour ton achat ! Ton <strong>{pass_label}</strong> est actif "
+        f"jusqu'au <strong>{valid_until}</strong>. Tu peux générer des CV sans limite "
+        "pendant toute sa durée.</p>"
+        f"{_button(dashboard_url, 'Générer un CV')}"
+        '<p style="color:#718096;font-size:13px">Le reçu de paiement t\'est envoyé '
+        "séparément par Stripe.</p>",
+    )
+    text = f"Ton {pass_label} est actif jusqu'au {valid_until}."
+    await send_email(
+        to=to, subject="Confirmation d'achat — ton pass est actif", html=html, text=text
+    )
+
+
+async def send_account_deleted_email(*, to: str) -> None:
+    """RGPD acknowledgement: confirms the account and all data were erased."""
+    html = _shell(
+        "Ton compte a été supprimé",
+        "<p>Comme demandé, ton compte Talentious et l'ensemble de tes données "
+        "(profil, CV, pass) ont été <strong>définitivement supprimés</strong>.</p>"
+        "<p>Merci d'avoir essayé Talentious — tu peux recréer un compte à tout "
+        "moment. Bonne continuation !</p>",
+    )
+    text = (
+        "Ton compte Talentious et toutes tes données ont été définitivement supprimés."
+    )
+    await send_email(
+        to=to, subject="Confirmation de suppression de ton compte", html=html, text=text
+    )
+
+
+async def send_password_changed_email(*, to: str) -> None:
+    """Security notice sent right after a successful password change/reset."""
+    html = _shell(
+        "Ton mot de passe a été modifié",
+        "<p>Le mot de passe de ton compte Talentious vient d'être modifié, et "
+        "toutes tes sessions ont été déconnectées par sécurité.</p>"
+        "<p style=\"color:#718096;font-size:13px\">Si tu n'es pas à l'origine de ce "
+        "changement, réinitialise ton mot de passe immédiatement depuis la page "
+        "« Mot de passe oublié » et contacte-nous.</p>",
+    )
+    text = (
+        "Ton mot de passe Talentious a été modifié et tes sessions déconnectées. "
+        "Si ce n'est pas toi, réinitialise-le immédiatement."
+    )
+    await send_email(
+        to=to, subject="Ton mot de passe a été modifié", html=html, text=text
+    )

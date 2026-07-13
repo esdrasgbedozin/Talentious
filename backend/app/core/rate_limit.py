@@ -23,6 +23,9 @@ limiter = Limiter(
 
 # Applied to sensitive endpoints (e.g. login) via @limiter.limit(LOGIN_RATE_LIMIT).
 LOGIN_RATE_LIMIT = settings.login_rate_limit
+# Endpoints that trigger outbound emails (forgot-password, resend-verification):
+# abuse would spam arbitrary inboxes and burn the Brevo quota.
+EMAIL_RATE_LIMIT = settings.email_rate_limit
 
 
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:

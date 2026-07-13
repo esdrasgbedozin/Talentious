@@ -84,6 +84,9 @@ class Settings(BaseSettings):
     # Rate limiting (in-memory / single-instance; use a shared store for multi-instance prod).
     rate_limit_enabled: bool = True
     login_rate_limit: str = "5/minute"
+    # Email-sending endpoints (forgot-password, resend-verification): tighter cap —
+    # each request can trigger an outbound email (abuse = spamming arbitrary inboxes).
+    email_rate_limit: str = "3/minute"
 
     @model_validator(mode="after")
     def _enforce_production_safety(self):

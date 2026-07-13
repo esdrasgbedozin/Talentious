@@ -10,7 +10,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.core.rate_limit import LOGIN_RATE_LIMIT, limiter
+from app.core.rate_limit import EMAIL_RATE_LIMIT, LOGIN_RATE_LIMIT, limiter
 from app.database import get_db
 from app.models.user import User, UserRole
 from app.models.user_profile import UserProfile
@@ -185,12 +185,22 @@ async def verify_email(payload: VerifyEmailRequest, db: AsyncSession = Depends(g
         user.email_verified = True
         await db.commit()
         await db.refresh(user)
+        # First successful verification → welcome email (best-effort).
+        try:
+            await email_service.send_welcome_email(
+                to=user.email,
+                dashboard_url=f"{settings.frontend_base_url}/dashboard",
+            )
+        except Exception:  # noqa: BLE001 - email failures must not break the flow
+            logger.exception("Failed to send welcome email to user %s", user.id)
 
     return user
 
 
 @router.post("/resend-verification", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(EMAIL_RATE_LIMIT)
 async def resend_verification(
+    request: Request,
     current_user: User = Depends(get_current_active_user),
 ):
     """Resend the verification email to the authenticated user (no-op if already verified)."""
@@ -199,8 +209,11 @@ async def resend_verification(
 
 
 @router.post("/password/forgot", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(EMAIL_RATE_LIMIT)
 async def forgot_password(
-    payload: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)
+    request: Request,
+    payload: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Request a password-reset link.
@@ -247,6 +260,12 @@ async def reset_password(
     user.hashed_password = hash_password(payload.new_password)
     await refresh_service.revoke_all_user_tokens(db, user.id)
     await db.commit()
+
+    # Security notice (best-effort): the password changed and sessions were revoked.
+    try:
+        await email_service.send_password_changed_email(to=user.email)
+    except Exception:  # noqa: BLE001
+        logger.exception("Failed to send password-changed email to user %s", user.id)
 
 
 @router.post("/login", response_model=Token)
