@@ -1,0 +1,227 @@
+openapi: 3.0.3
+info:
+  title: Agent Parser-PDF
+  version: "1.0.0"
+  description: |
+    Microservice d'extraction de texte depuis des fichiers PDF (CV ou profil LinkedIn exporté).
+    Basé sur PyMuPDF (fitz). Actuellement déployé mais jamais branché dans le pipeline
+    backend (MIN-2 de l'audit).
+
+    ## Statut architectural V1
+    L'audit recommande de rebrancher ce service comme fonction backend (import dans
+    backend/app/services/) plutôt que de le maintenir comme 3e microservice, afin de
+    réduire la complexité opérationnelle.
+
+    Ce contrat documente l'interface actuelle. Si la décision est de l'intégrer comme
+    fonction backend, ce fichier devient la spécification de l'interface interne et
+    ce microservice peut être supprimé.
+
+    ## Accès
+    Ce service est privé (Cloud Run --no-allow-unauthenticated). Seul le compte
+    de service du backend est autorisé (rôle IAM roles/run.invoker).
+
+    ## Sortie
+    Ce service retourne le texte brut extrait du PDF. Il n'effectue aucune
+    structuration sémantique (pas d'appel IA). La structuration du texte en ProfileData
+    partiel est ensuite réalisée par le backend (via un appel Gemini ou une heuristique).
+
+    ## Erreurs
+    Toutes les erreurs suivent le standard RFC 7807 (application/problem+json).
+  license:
+    name: Proprietary
+    url: https://talentious.fr/legal/terms
+
+servers:
+  - url: http://localhost:8001
+    description: Développement local
+  - url: https://parser-pdf-placeholder-ew.a.run.app
+    description: Cloud Run (URL interne au réseau privé GCP — remplacer par l'URL réelle)
+
+security:
+  - iamAuth: []
+
+tags:
+  - name: Parsing
+    description: Extraction de texte depuis un PDF
+  - name: Health
+    description: Vérification de santé du service
+
+paths:
+
+  /parse:
+    post:
+      tags: [Parsing]
+      operationId: parsePDF
+      summary: Extraire le texte d'un fichier PDF
+      description: |
+        Reçoit un fichier PDF (CV ou export LinkedIn) en multipart/form-data et
+        retourne le texte extrait page par page, sans structuration sémantique.
+
+        Limites :
+        - Taille maximale : 10 Mo
+        - Format attendu : application/pdf
+        - PDFs scannés (images uniquement) : non supportés (retourne 422)
+
+        La structuration du texte extrait en ProfileData est à la charge du backend.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Fichier PDF à analyser (max 10 Mo, Content-Type application/pdf)
+      responses:
+        '200':
+          description: Texte extrait avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParseResult'
+        '400':
+          description: Fichier absent, type invalide, fichier vide ou trop volumineux
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "https://talentious.fr/errors/no-file-provided"
+                title: "No File Provided"
+                status: 400
+                detail: "No file was provided in the request."
+                instance: "/parse"
+        '401':
+          description: Token IAM absent ou invalide
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: PDF valide mais ne contient que des images (OCR non supporté)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "https://talentious.fr/errors/no-text-in-pdf"
+                title: "No Extractable Text"
+                status: 422
+                detail: "The PDF appears to contain only scanned images. Text extraction is not supported for scanned documents."
+                instance: "/parse"
+        '500':
+          description: Erreur interne d'extraction
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /health:
+    get:
+      tags: [Health]
+      operationId: healthCheck
+      summary: Vérification de santé du service
+      security: []
+      responses:
+        '200':
+          description: Service opérationnel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service dégradé ou indisponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+
+  securitySchemes:
+    iamAuth:
+      type: http
+      scheme: bearer
+      description: Token IAM Google. Seul le compte de service backend est autorisé (roles/run.invoker).
+
+  schemas:
+
+    Problem:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          description: URI identifiant le type d'erreur
+          example: "https://talentious.fr/errors/no-file-provided"
+        title:
+          type: string
+          description: Titre court lisible par un humain
+          example: "No File Provided"
+        status:
+          type: integer
+          description: Code HTTP
+          example: 400
+        detail:
+          type: string
+          description: Explication détaillée sans internals
+          example: "No file was provided in the request."
+        instance:
+          type: string
+          description: URI de la ressource concernée
+          example: "/parse"
+
+    ParseResult:
+      type: object
+      description: |
+        Résultat de l'extraction PDF. Contient uniquement le texte brut.
+        La structuration en ProfileData partiel est ensuite réalisée par le backend.
+      required:
+        - text
+        - page_count
+        - character_count
+      properties:
+        text:
+          type: string
+          description: Texte brut extrait de toutes les pages du PDF
+          example: "Alice Dupont\nIngénieure Logiciel\nalice@example.com\n..."
+        page_count:
+          type: integer
+          minimum: 1
+          description: Nombre de pages du PDF
+          example: 2
+        character_count:
+          type: integer
+          minimum: 1
+          description: Nombre de caractères extraits
+          example: 3450
+        filename:
+          type: string
+          nullable: true
+          description: Nom du fichier uploadé (tel que fourni par le client)
+          example: "cv_alice_dupont.pdf"
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - service
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          example: "healthy"
+        service:
+          type: string
+          example: "parser-pdf"
+        version:
+          type: string
+          nullable: true
+          example: "1.0.0"

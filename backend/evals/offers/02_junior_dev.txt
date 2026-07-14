@@ -1,0 +1,19 @@
+Développeur Web Junior (H/F) — CDI, Lyon
+
+Notre startup en forte croissance recherche un développeur web junior motivé pour rejoindre notre équipe produit. Vous participerez au développement de notre application web sous la supervision de développeurs seniors.
+
+Missions :
+- Développer et maintenir des fonctionnalités front-end en JavaScript et React
+- Participer à l'intégration d'API REST
+- Écrire des tests et corriger des bugs
+- Collaborer en méthodologie Agile (Scrum)
+
+Profil recherché :
+- 0 à 2 ans d'expérience (débutant accepté, alternance valorisée)
+- Bases solides en JavaScript, HTML, CSS ; connaissance de React appréciée
+- Notions de Git et d'intégration continue
+- Curiosité, autonomie, esprit d'équipe et bonne communication
+
+Nice to have : TypeScript, Node.js, notions de bases de données SQL.
+
+Nous offrons un environnement bienveillant, du mentorat et de réelles perspectives d'évolution.

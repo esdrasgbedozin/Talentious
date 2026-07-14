@@ -1,7 +1,10 @@
 'use client';
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
+
+const FOCUSABLE =
+  'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -28,28 +31,50 @@ const Modal: React.FC<ModalProps> = ({
   showCloseButton = true,
   className,
 }) => {
-  // Handle ESC key
-  const handleEscape = useCallback(
-    (event: KeyboardEvent) => {
-      if (closeOnEsc && event.key === 'Escape') {
-        onClose();
-      }
-    },
-    [closeOnEsc, onClose]
-  );
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      // Prevent body scroll
-      document.body.style.overflow = 'hidden';
-    }
+    if (!isOpen) return;
 
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
+    // Remember what had focus, move focus into the dialog, lock scroll.
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = 'hidden';
+
+    const getFocusable = () =>
+      Array.from(panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
+    (getFocusable()[0] ?? panelRef.current)?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && closeOnEsc) {
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      // Focus trap: keep Tab / Shift+Tab inside the dialog.
+      const items = getFocusable();
+      if (items.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-  }, [isOpen, handleEscape]);
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = 'unset';
+      previouslyFocused.current?.focus?.();
+    };
+  }, [isOpen, closeOnEsc, onClose]);
 
   // Handle overlay click
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -70,7 +95,7 @@ const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={handleOverlayClick}
       role="dialog"
       aria-modal="true"
@@ -78,8 +103,10 @@ const Modal: React.FC<ModalProps> = ({
       aria-describedby={description ? 'modal-description' : undefined}
     >
       <div
+        ref={panelRef}
+        tabIndex={-1}
         className={cn(
-          'relative w-full bg-white rounded-lg shadow-2xl animate-in zoom-in-95 duration-200',
+          'relative w-full bg-white rounded-lg shadow-2xl animate-in zoom-in-95 duration-200 focus:outline-none',
           sizes[size],
           className
         )}

@@ -36,100 +36,39 @@
       "description": "Missions ponctuelles de développement front-end pour des associations et petites entreprises. Création de landing pages, refonte de sites existants, optimisation des performances. Technologies : HTML5, CSS3, JavaScript, Bootstrap."
     }
   ],
-  "skills": [
-    {
-      "id": "skill_001",
-      "name": "JavaScript",
-      "category": "hard_skill",
-      "level": "Intermédiaire"
-    },
-    {
-      "id": "skill_002",
-      "name": "React",
-      "category": "hard_skill",
-      "level": "Intermédiaire"
-    },
-    {
-      "id": "skill_003",
-      "name": "Node.js",
-      "category": "hard_skill",
-      "level": "Débutant"
-    },
-    {
-      "id": "skill_004",
-      "name": "Python",
-      "category": "hard_skill",
-      "level": "Débutant"
-    },
-    {
-      "id": "skill_005",
-      "name": "HTML5",
-      "category": "hard_skill",
-      "level": "Avancé"
-    },
-    {
-      "id": "skill_006",
-      "name": "CSS3",
-      "category": "hard_skill",
-      "level": "Avancé"
-    },
-    {
-      "id": "skill_007",
-      "name": "Git",
-      "category": "hard_skill",
-      "level": "Intermédiaire"
-    },
-    {
-      "id": "skill_008",
-      "name": "PostgreSQL",
-      "category": "hard_skill",
-      "level": "Débutant"
-    },
-    {
-      "id": "skill_009",
-      "name": "Docker",
-      "category": "hard_skill",
-      "level": "Débutant"
-    },
-    {
-      "id": "skill_010",
-      "name": "Travail d'équipe",
-      "category": "soft_skill",
-      "level": null
-    },
-    {
-      "id": "skill_011",
-      "name": "Communication",
-      "category": "soft_skill",
-      "level": null
-    },
-    {
-      "id": "skill_012",
-      "name": "Adaptabilité",
-      "category": "soft_skill",
-      "level": null
-    },
-    {
-      "id": "skill_013",
-      "name": "Curiosité technique",
-      "category": "soft_skill",
-      "level": null
-    }
-  ],
+  "skills": {
+    "hard": [
+      "JavaScript",
+      "React",
+      "Node.js",
+      "Python",
+      "HTML5",
+      "CSS3",
+      "Git",
+      "PostgreSQL",
+      "Docker"
+    ],
+    "soft": [
+      "Travail d'équipe",
+      "Communication",
+      "Adaptabilité",
+      "Curiosité technique"
+    ]
+  },
   "educations": [
     {
       "id": "edu_001",
       "degree": "Master 2 Informatique - Développement Logiciel",
       "institution": "Université Claude Bernard Lyon 1",
-      "graduation_date": "2023-06",
-      "description": "Spécialisation en développement web et mobile. Projet de fin d'études : Application de suivi de budget personnel (React + Node.js + MongoDB)."
+      "description": "Spécialisation en développement web et mobile. Projet de fin d'études : Application de suivi de budget personnel (React + Node.js + MongoDB).",
+      "end_date": "2023-06"
     },
     {
       "id": "edu_002",
       "degree": "Licence Informatique",
       "institution": "Université Claude Bernard Lyon 1",
-      "graduation_date": "2021-06",
-      "description": null
+      "description": null,
+      "end_date": "2021-06"
     }
   ],
   "projects": [
@@ -154,14 +93,16 @@
       "name": "JavaScript Algorithms and Data Structures",
       "issuer": "freeCodeCamp",
       "issue_date": "2022-12",
-      "url": "https://www.freecodecamp.org/certification/sophiemartin/javascript-algorithms-and-data-structures"
+      "credential_url": "https://www.freecodecamp.org/certification/sophiemartin/javascript-algorithms-and-data-structures"
     },
     {
       "id": "cert_002",
       "name": "Responsive Web Design",
       "issuer": "freeCodeCamp",
       "issue_date": "2022-10",
-      "url": "https://www.freecodecamp.org/certification/sophiemartin/responsive-web-design"
+      "credential_url": "https://www.freecodecamp.org/certification/sophiemartin/responsive-web-design"
     }
-  ]
+  ],
+  "languages": [],
+  "summary": "Développeur junior motivé, formé au développement web moderne (JavaScript, React), à la recherche d'une première expérience pour consolider ses compétences."
 }

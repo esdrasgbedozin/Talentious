@@ -55,10 +55,10 @@ export default function SkillsInput({
   return (
     <div>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-text-primary mb-2">
           {label}
           {skills.length > 0 && (
-            <span className="ml-2 text-gray-500 font-normal">
+            <span className="ml-2 text-text-secondary font-normal">
               ({skills.length}/{maxSkills})
             </span>
           )}
@@ -70,7 +70,7 @@ export default function SkillsInput({
         {skills.map((skill, index) => (
           <div
             key={index}
-            className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#38A169] to-[#2F855A] text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm"
+            className="inline-flex items-center gap-1.5 bg-gradient-to-r from-action to-action-hover text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm"
           >
             <span>{skill}</span>
             <button
@@ -95,10 +95,10 @@ export default function SkillsInput({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         disabled={skills.length >= maxSkills}
-        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#38A169] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed transition-all"
+        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-action focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed transition-all"
       />
 
-      <p className="mt-2 text-xs text-gray-500">
+      <p className="mt-2 text-xs text-text-secondary">
         Tapez une compétence et appuyez sur <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono">Entrée</kbd>
       </p>
     </div>

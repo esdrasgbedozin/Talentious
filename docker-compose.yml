@@ -35,6 +35,12 @@ services:
       ANALYZER_SERVICE_URL: ${ANALYZER_SERVICE_URL:-http://analyseur-offre:8002}
       # Rédacteur-CV Agent URL (local development)
       WRITER_SERVICE_URL: ${WRITER_SERVICE_URL:-http://redacteur-cv:8003}
+      # Stripe (test-mode keys locally; Stripe CLI provides the webhook secret)
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_30_DAYS: ${STRIPE_PRICE_30_DAYS:-}
+      STRIPE_PRICE_90_DAYS: ${STRIPE_PRICE_90_DAYS:-}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
 
   parser-pdf:
     build: ./agents/parser-pdf
@@ -71,9 +77,10 @@ services:
       GCP_LOCATION: ${GCP_LOCATION:-europe-west9}
       # GCP Authentication (Application Default Credentials)
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp_creds.json
-      # Vertex AI Model
-      # Using gemini-2.5-flash (latest stable, 1M token context, optimized for speed)
-      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-2.5-flash}
+      # Vertex AI Model — voir docs/adr/ADR-MODEL.md
+      # gemini-2.5-pro en europe-west9 (gain qualité, RGPD Paris). Cible pérenne
+      # gemini-3.5-flash différée (migration google-genai, ADR-GENAI-SDK).
+      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-2.5-pro}
       # Prompt Management (false = local files, true = Secret Manager)
       USE_SECRET_MANAGER: ${USE_SECRET_MANAGER:-false}
       # Logging
@@ -98,9 +105,10 @@ services:
       GCP_LOCATION: ${GCP_LOCATION:-europe-west9}
       # GCP Authentication (Application Default Credentials)
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp_creds.json
-      # Vertex AI Model
-      # Using gemini-2.5-flash (latest stable, 1M token context, optimized for speed)
-      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-2.5-flash}
+      # Vertex AI Model — voir docs/adr/ADR-MODEL.md
+      # gemini-2.5-pro en europe-west9 (gain qualité, RGPD Paris). Cible pérenne
+      # gemini-3.5-flash différée (migration google-genai, ADR-GENAI-SDK).
+      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-2.5-pro}
       # Prompt Management (false = local files, true = Secret Manager)
       USE_SECRET_MANAGER: ${USE_SECRET_MANAGER:-false}
       # Logging
@@ -118,6 +126,13 @@ services:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
+    environment:
+      # Dev mode with file-system polling: inotify events don't cross the macOS
+      # Docker bind mount, so without polling Next never hot-reloads host edits.
+      NODE_ENV: ${FRONTEND_NODE_ENV:-development}
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     depends_on:
       - backend
 

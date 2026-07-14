@@ -1,0 +1,12 @@
+# Keep build contexts small and prod images clean.
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv*/
+venv/
+tests/
+evals/
+.env
+.env.*
+*.md
+.git/

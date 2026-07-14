@@ -10,6 +10,8 @@ from typing import Dict, Any, List
 import httpx
 from fastapi import UploadFile, HTTPException, status
 
+from app.services import iam_auth
+
 logger = logging.getLogger(__name__)
 
 # Configuration
@@ -19,12 +21,12 @@ REQUEST_TIMEOUT = 120.0  # 2 minutes for AI processing
 
 class SkillItem:
     """Individual skill item from analysis"""
-    
+
     def __init__(self, name: str, level: str = None, importance: str = None):
         self.name = name
         self.level = level
         self.importance = importance
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         result = {"name": self.name}
@@ -37,21 +39,21 @@ class SkillItem:
 
 class AnalysisResult:
     """Structured result from job offer analysis"""
-    
+
     def __init__(
         self,
         hard_skills: List[Dict[str, Any]],
         soft_skills: List[Dict[str, Any]],  # Now accepts SkillItem structure
         seniority_level: str,
         key_responsibilities: List[str],
-        tone: str
+        tone: str,
     ):
         self.hard_skills = [SkillItem(**skill) for skill in hard_skills]
         self.soft_skills = [SkillItem(**skill) for skill in soft_skills]
         self.seniority_level = seniority_level
         self.key_responsibilities = key_responsibilities
         self.tone = tone
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -59,7 +61,7 @@ class AnalysisResult:
             "soft_skills": [skill.to_dict() for skill in self.soft_skills],
             "seniority_level": self.seniority_level,
             "key_responsibilities": self.key_responsibilities,
-            "tone": self.tone
+            "tone": self.tone,
         }
 
 
@@ -67,101 +69,106 @@ class AnalyzerClient:
     """
     Async HTTP client for the Analyseur-Offre microservice
     """
-    
+
     def __init__(self):
         """Initialize the Analyzer client"""
         self.base_url = ANALYZER_SERVICE_URL.rstrip("/")
         self.timeout = httpx.Timeout(REQUEST_TIMEOUT)
         logger.info(f"Analyzer client initialized with base URL: {self.base_url}")
-    
+
     async def analyze_text(self, text: str) -> AnalysisResult:
         """
         Analyze a job offer from plain text
-        
+
         Args:
             text: Job offer text (50-200,000 characters)
-            
+
         Returns:
             AnalysisResult with structured job offer data
-            
+
         Raises:
             HTTPException: If analysis fails or service is unavailable
         """
         try:
-            logger.info(f"Sending job offer text to analyzer service ({len(text)} characters)")
-            
+            logger.info(
+                f"Sending job offer text to analyzer service ({len(text)} characters)"
+            )
+
             # Prepare request
             payload = {"text": text}
-            
+            headers = await iam_auth.auth_headers(self.base_url)
+
             # Send request to analyzer service
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
-                    f"{self.base_url}/analyze",
-                    json=payload
+                    f"{self.base_url}/analyze", json=payload, headers=headers
                 )
-                
+
                 # Handle response
                 if response.status_code == 200:
                     result = response.json()
                     logger.info("Job offer analyzed successfully")
                     return AnalysisResult(**result)
-                
+
                 # Handle analyzer service errors
                 elif response.status_code == 400:
-                    error_detail = response.json().get("detail", "Invalid job offer text")
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=error_detail
+                    error_detail = response.json().get(
+                        "detail", "Invalid job offer text"
                     )
-                
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST, detail=error_detail
+                    )
+
                 elif response.status_code == 422:
-                    error_detail = response.json().get("detail", "Failed to process job offer")
+                    error_detail = response.json().get(
+                        "detail", "Failed to process job offer"
+                    )
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        detail=error_detail
+                        detail=error_detail,
                     )
-                
+
                 else:
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail="Analyzer service returned an error"
+                        detail="Analyzer service returned an error",
                     )
-                    
+
         except HTTPException:
             # Re-raise HTTP exceptions
             raise
-            
+
         except httpx.TimeoutException:
             logger.error("Analyzer service timeout")
             raise HTTPException(
                 status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-                detail="Job offer analysis timed out. Please try again."
+                detail="Job offer analysis timed out. Please try again.",
             )
-            
+
         except httpx.HTTPError as e:
             logger.error(f"Analyzer service error: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Analyzer service is unavailable"
+                detail="Analyzer service is unavailable",
             )
-            
+
         except Exception as e:
             logger.error(f"Unexpected error calling analyzer service: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to analyze job offer"
+                detail="Failed to analyze job offer",
             )
-    
+
     async def analyze_pdf(self, file: UploadFile) -> AnalysisResult:
         """
         Analyze a job offer from a PDF file
-        
+
         Args:
             file: Uploaded PDF file
-            
+
         Returns:
             AnalysisResult with structured job offer data
-            
+
         Raises:
             HTTPException: If analysis fails or service is unavailable
         """
@@ -169,77 +176,78 @@ class AnalyzerClient:
             # Read file content
             file_content = await file.read()
             await file.seek(0)  # Reset file pointer
-            
-            logger.info(f"Sending PDF to analyzer service: {file.filename} ({len(file_content)} bytes)")
-            
+
+            logger.info(
+                f"Sending PDF to analyzer service: {file.filename} ({len(file_content)} bytes)"
+            )
+
             # Prepare multipart form data
-            files = {
-                "file": (file.filename, file_content, file.content_type)
-            }
-            
+            files = {"file": (file.filename, file_content, file.content_type)}
+            headers = await iam_auth.auth_headers(self.base_url)
+
             # Send request to analyzer service
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
-                    f"{self.base_url}/analyze/pdf",
-                    files=files
+                    f"{self.base_url}/analyze/pdf", files=files, headers=headers
                 )
-                
+
                 # Handle response
                 if response.status_code == 200:
                     result = response.json()
                     logger.info("PDF job offer analyzed successfully")
                     return AnalysisResult(**result)
-                
+
                 # Handle analyzer service errors
                 elif response.status_code == 400:
                     error_detail = response.json().get("detail", "Invalid PDF file")
                     raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=error_detail
+                        status_code=status.HTTP_400_BAD_REQUEST, detail=error_detail
                     )
-                
+
                 elif response.status_code == 422:
-                    error_detail = response.json().get("detail", "Failed to process PDF")
+                    error_detail = response.json().get(
+                        "detail", "Failed to process PDF"
+                    )
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        detail=error_detail
+                        detail=error_detail,
                     )
-                
+
                 elif response.status_code == 503:
                     raise HTTPException(
                         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                        detail="PDF parser service is unavailable"
+                        detail="PDF parser service is unavailable",
                     )
-                
+
                 else:
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail="Analyzer service returned an error"
+                        detail="Analyzer service returned an error",
                     )
-                    
+
         except HTTPException:
             # Re-raise HTTP exceptions
             raise
-            
+
         except httpx.TimeoutException:
             logger.error(f"Analyzer service timeout for file: {file.filename}")
             raise HTTPException(
                 status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-                detail="PDF analysis timed out. File may be too large or complex."
+                detail="PDF analysis timed out. File may be too large or complex.",
             )
-            
+
         except httpx.HTTPError as e:
             logger.error(f"Analyzer service error: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Analyzer service is unavailable"
+                detail="Analyzer service is unavailable",
             )
-            
+
         except Exception as e:
             logger.error(f"Unexpected error calling analyzer service: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to analyze PDF job offer"
+                detail="Failed to analyze PDF job offer",
             )
 
 

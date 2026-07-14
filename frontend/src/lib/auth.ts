@@ -10,6 +10,7 @@ export interface User {
   id: string;
   email: string;
   role: 'user' | 'admin';
+  email_verified?: boolean;
   created_at: string;
 }
 
@@ -84,11 +85,19 @@ export const getMe = async (): Promise<User> => {
 /**
  * Logout
  */
-export const logout = (): void => {
+export const logout = async (): Promise<void> => {
+  // Revoke the refresh token server-side (best-effort — the httpOnly cookie is
+  // sent automatically). Proceed with local teardown even if the call fails.
+  try {
+    await apiClient.post('/auth/logout');
+  } catch {
+    // ignore — the session is being torn down regardless
+  }
+
   // Remove the token and user
   localStorage.removeItem('access_token');
   localStorage.removeItem('user');
-  
+
   // Redirect to the homepage
   if (typeof window !== 'undefined') {
     window.location.href = '/';

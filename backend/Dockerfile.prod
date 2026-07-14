@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1
+# =============================================================================
+# Image de PRODUCTION du backend (Cloud Run).
+# Le Dockerfile de dev (./Dockerfile, uvicorn --reload, root) reste réservé à
+# docker-compose. Ici : multi-stage, non-root, dépendances isolées, pas de
+# reload, pas de code superflu (tests/alembic exclus — les migrations tournent
+# depuis la CI via le Cloud SQL proxy, pas depuis l'image).
+# =============================================================================
+
+FROM python:3.11-slim AS builder
+WORKDIR /build
+COPY requirements.txt .
+RUN python -m venv /opt/venv \
+    && /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
+    && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
+
+FROM python:3.11-slim
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+RUN useradd --create-home --uid 1000 appuser
+
+WORKDIR /app
+COPY --from=builder /opt/venv /opt/venv
+COPY app ./app
+
+USER appuser
+EXPOSE 8000
+
+# Un seul worker : Cloud Run scale par instance (1 vCPU), et le backend repose
+# sur un état in-process (rate-limit, worker BackgroundTasks) — cf. ADR-ASYNC.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

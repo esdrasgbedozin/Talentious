@@ -1,6 +1,7 @@
 """
 Pytest configuration and fixtures for testing.
 """
+
 import pytest
 from typing import AsyncGenerator
 from httpx import AsyncClient, ASGITransport
@@ -8,17 +9,20 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.pool import NullPool
 
 from app.main import app
-from app.database import get_db, Base
+from app.database import get_db, get_session_factory, Base
 from app.models.user import User, UserRole
 from app.services.auth import hash_password
 
+# Disable rate limiting during tests (the login fixture is called many times).
+from app.core.rate_limit import limiter as _limiter
 
+_limiter.enabled = False
 
 # Test database URL (configurable via environment variable)
 import os
+
 TEST_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    "postgresql+asyncpg://talentious:talentious@db/talentious_test"
+    "TEST_DATABASE_URL", "postgresql+asyncpg://talentious:talentious@db/talentious_test"
 )
 
 
@@ -34,18 +38,18 @@ async def test_db_engine():
         echo=False,
         poolclass=NullPool,
     )
-    
+
     # Create all tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-    
+
     yield engine
-    
+
     # Cleanup
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-    
+
     await engine.dispose()
 
 
@@ -59,25 +63,31 @@ async def test_db(test_db_engine) -> AsyncGenerator[AsyncSession, None]:
         autocommit=False,
         autoflush=False,
     )
-    
+
     async with async_session() as session:
         yield session
 
 
 @pytest.fixture(scope="function")
-async def client(test_db) -> AsyncGenerator[AsyncClient, None]:
-    """Create a test client with database override."""
+async def client(test_db, test_db_engine) -> AsyncGenerator[AsyncClient, None]:
+    """Create a test client with DB + background-worker session factory overrides."""
+
     async def override_get_db():
         yield test_db
-    
+
+    # Background worker uses its own session bound to the SAME test engine.
+    test_session_factory = async_sessionmaker(
+        test_db_engine, class_=AsyncSession, expire_on_commit=False
+    )
+
     app.dependency_overrides[get_db] = override_get_db
-    
+    app.dependency_overrides[get_session_factory] = lambda: test_session_factory
+
     async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test"
+        transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
         yield ac
-    
+
     app.dependency_overrides.clear()
 
 
@@ -86,15 +96,15 @@ async def test_user(test_db: AsyncSession) -> User:
     """Create a test user in the database."""
     from app.models.user_profile import UserProfile
     from app.schemas.profile import PersonalInfo, ProfileData, Skills
-    
+
     user = User(
         email="testuser@example.com",
         hashed_password=hash_password("TestPassword123!"),
-        role=UserRole.USER
+        role=UserRole.USER,
     )
     test_db.add(user)
     await test_db.flush()
-    
+
     # Create profile for user with new schema structure
     empty_profile_data = ProfileData(
         personal_info=PersonalInfo(
@@ -106,24 +116,23 @@ async def test_user(test_db: AsyncSession) -> User:
             address=None,
             city=None,
             postal_code=None,
-            country="France"
+            country="France",
         ),
         summary="",  # Empty string, not None
         experiences=[],
         educations=[],
         skills=Skills(hard=[], soft=[]),  # New structure: object with hard/soft lists
         projects=[],
-        certifications=[]
+        certifications=[],
     )
-    
+
     profile = UserProfile(
-        user_id=user.id,
-        profile_data=empty_profile_data.model_dump(mode='json')
+        user_id=user.id, profile_data=empty_profile_data.model_dump(mode="json")
     )
     test_db.add(profile)
     await test_db.commit()
     await test_db.refresh(user)
-    
+
     return user
 
 
@@ -132,10 +141,61 @@ async def auth_headers(client: AsyncClient, test_user: User) -> dict:
     """Get authentication headers for a test user."""
     response = await client.post(
         "/auth/login",
-        data={
-            "username": test_user.email,
-            "password": "TestPassword123!"
-        }
+        data={"username": test_user.email, "password": "TestPassword123!"},
+    )
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def session_factory(test_db_engine):
+    """Session factory bound to the test engine (for background-worker unit tests)."""
+    return async_sessionmaker(
+        test_db_engine, class_=AsyncSession, expire_on_commit=False
+    )
+
+
+@pytest.fixture
+async def admin_user(test_db: AsyncSession) -> User:
+    """Create an admin user with a profile (admins bypass CareerPass)."""
+    from app.models.user_profile import UserProfile
+    from app.schemas.profile import PersonalInfo, ProfileData, Skills
+
+    user = User(
+        email="admin@example.com",
+        hashed_password=hash_password("AdminPassword123!"),
+        role=UserRole.ADMIN,
+    )
+    test_db.add(user)
+    await test_db.flush()
+
+    profile_data = ProfileData(
+        personal_info=PersonalInfo(
+            first_name="Admin", last_name="User", email="admin@example.com"
+        ),
+        summary="Founder account for local testing.",
+        experiences=[],
+        educations=[],
+        skills=Skills(hard=["Python"], soft=["Leadership"]),
+        projects=[],
+        certifications=[],
+    )
+    profile = UserProfile(
+        user_id=user.id, profile_data=profile_data.model_dump(mode="json")
+    )
+    test_db.add(profile)
+    await test_db.commit()
+    await test_db.refresh(user)
+    return user
+
+
+@pytest.fixture
+async def admin_headers(client: AsyncClient, admin_user: User) -> dict:
+    """Auth headers for the admin user."""
+    response = await client.post(
+        "/auth/login",
+        data={"username": admin_user.email, "password": "AdminPassword123!"},
     )
     assert response.status_code == 200
     token = response.json()["access_token"]

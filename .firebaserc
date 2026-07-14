@@ -1,0 +1,13 @@
+{
+  "projects": {
+    "default": "talentious-project"
+  },
+  "targets": {
+    "talentious-project": {
+      "hosting": {
+        "app": ["talentious-app"],
+        "api": ["talentious-api"]
+      }
+    }
+  }
+}

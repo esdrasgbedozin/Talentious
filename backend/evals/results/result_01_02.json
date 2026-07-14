@@ -1,0 +1,323 @@
+{
+  "metadata": {
+    "profile_file": "01_junior_dev.json",
+    "offer_file": "02_junior_dev.txt",
+    "generated_at": "2026-07-09T12:29:21.171979Z",
+    "pipeline_version": "1.0.0"
+  },
+  "offer_analysis": {
+    "hard_skills": [
+      {
+        "name": "JavaScript",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "HTML",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "CSS",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "React",
+        "level": null,
+        "importance": "Nice to have"
+      },
+      {
+        "name": "API REST",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Testing",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Git",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Continuous Integration",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "TypeScript",
+        "level": null,
+        "importance": "Nice to have"
+      },
+      {
+        "name": "Node.js",
+        "level": null,
+        "importance": "Nice to have"
+      },
+      {
+        "name": "SQL",
+        "level": null,
+        "importance": "Nice to have"
+      }
+    ],
+    "soft_skills": [
+      {
+        "name": "Motivation",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Curiosity",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Autonomy",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Teamwork",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Communication",
+        "level": null,
+        "importance": "Important"
+      },
+      {
+        "name": "Agile mindset",
+        "level": null,
+        "importance": "Important"
+      }
+    ],
+    "seniority_level": "Junior",
+    "key_responsibilities": [
+      "Développer et maintenir des fonctionnalités front-end en JavaScript et React",
+      "Participer à l'intégration d'API REST",
+      "Écrire des tests et corriger des bugs",
+      "Collaborer en méthodologie Agile (Scrum)"
+    ],
+    "tone": "startup-like"
+  },
+  "generated_cv": {
+    "cv_data": {
+      "personal_info": {
+        "first_name": "Sophie",
+        "last_name": "Martin",
+        "email": "sophie.martin@example.fr",
+        "phone": "+33 6 12 34 56 78",
+        "linkedin": "https://linkedin.com/in/sophie-martin-dev",
+        "address": "Lyon, France",
+        "city": null,
+        "postal_code": null,
+        "country": null
+      },
+      "summary": "Développeuse Front-End Junior passionnée, avec plus d'un an d'expérience dans la création d'applications web modernes. Spécialisée en JavaScript, React et l'intégration d'API REST, j'ai contribué activement à des projets en méthodologie Agile. Ma curiosité technique et mon approche rigoureuse du testing me permettent de développer des fonctionnalités performantes et fiables. Je suis motivée à rejoindre une équipe dynamique pour construire des produits innovants et de haute qualité.",
+      "selected_experiences": [
+        {
+          "id": "exp_001",
+          "title": "Développeuse Full-Stack Junior",
+          "company": "StartupTech",
+          "start_date": "2023-09",
+          "end_date": null,
+          "location": "Lyon, France",
+          "description": "Développement et maintenance de fonctionnalités pour une application web SaaS en utilisant JavaScript et React. Intégration d'API REST pour la gestion des données projet. Implémentation de tests unitaires et d'intégration pour assurer la qualité du code. Collaboration quotidienne au sein d'une équipe de 4 développeurs en suivant la méthodologie Agile (Scrum), participant activement aux sprints et aux revues de code.",
+          "highlighted_skills": [
+            "JavaScript",
+            "React",
+            "API REST",
+            "Testing",
+            "Agile mindset",
+            "Teamwork"
+          ]
+        },
+        {
+          "id": "exp_002",
+          "title": "Stagiaire Développeuse Web",
+          "company": "WebAgency Pro",
+          "start_date": "2023-02",
+          "end_date": "2023-08",
+          "location": "Lyon, France",
+          "description": "Conception et développement de sites web responsives et d'applications e-commerce en utilisant React, HTML5 et CSS3. Contribution au développement de backends légers avec Node.js pour supporter les fonctionnalités front-end. Participation à la phase de test pour identifier et corriger les bugs avant la mise en production. Communication efficace avec les clients pour traduire leurs besoins en spécifications techniques claires.",
+          "highlighted_skills": [
+            "React",
+            "Node.js",
+            "HTML",
+            "CSS",
+            "JavaScript",
+            "Testing",
+            "Communication"
+          ]
+        },
+        {
+          "id": "exp_003",
+          "title": "Développeuse Front-End (Freelance)",
+          "company": "Freelance",
+          "start_date": "2022-06",
+          "end_date": "2023-01",
+          "location": "Remote",
+          "description": "Création et refonte de sites web et landing pages en utilisant HTML5, CSS3 et JavaScript pur. Développement de composants d'interface utilisateur réutilisables et optimisés pour les performances. Gestion autonome de projets de la conception à la livraison, en assurant une communication directe avec les clients pour garantir leur satisfaction.",
+          "highlighted_skills": [
+            "HTML",
+            "CSS",
+            "JavaScript",
+            "Autonomy",
+            "Communication"
+          ]
+        }
+      ],
+      "highlighted_skills": [
+        {
+          "name": "JavaScript",
+          "level": null,
+          "category": "hard_skill",
+          "importance": "Important"
+        },
+        {
+          "name": "HTML",
+          "level": null,
+          "category": "hard_skill",
+          "importance": "Important"
+        },
+        {
+          "name": "CSS",
+          "level": null,
+          "category": "hard_skill",
+          "importance": "Important"
+        },
+        {
+          "name": "API REST",
+          "level": null,
+          "category": "hard_skill",
+          "importance": "Important"
+        },
+        {
+          "name": "Testing",
+          "level": null,
+          "category": "hard_skill",
+          "importance": "Important"
+        },
+        {
+          "name": "Git",
+          "level": null,
+          "category": "hard_skill",
+          "importance": "Important"
+        },
+        {
+          "name": "Motivation",
+          "level": null,
+          "category": "soft_skill",
+          "importance": "Important"
+        },
+        {
+          "name": "Curiosity",
+          "level": null,
+          "category": "soft_skill",
+          "importance": "Important"
+        },
+        {
+          "name": "Autonomy",
+          "level": null,
+          "category": "soft_skill",
+          "importance": "Important"
+        },
+        {
+          "name": "Teamwork",
+          "level": null,
+          "category": "soft_skill",
+          "importance": "Important"
+        },
+        {
+          "name": "Communication",
+          "level": null,
+          "category": "soft_skill",
+          "importance": "Important"
+        },
+        {
+          "name": "Agile mindset",
+          "level": null,
+          "category": "soft_skill",
+          "importance": "Important"
+        },
+        {
+          "name": "React",
+          "level": null,
+          "category": "hard_skill",
+          "importance": "Nice to have"
+        },
+        {
+          "name": "Node.js",
+          "level": null,
+          "category": "hard_skill",
+          "importance": "Nice to have"
+        }
+      ],
+      "selected_educations": [
+        {
+          "id": "edu_001",
+          "degree": "Master 2 Informatique - Développement Logiciel",
+          "institution": "Université Claude Bernard Lyon 1",
+          "end_date": "2023-06",
+          "field": "Développement web et mobile",
+          "description": "Projet de fin d'études : Application de suivi de budget personnel (React + Node.js + MongoDB)."
+        },
+        {
+          "id": "edu_002",
+          "degree": "Licence Informatique",
+          "institution": "Université Claude Bernard Lyon 1",
+          "end_date": "2021-06",
+          "field": null,
+          "description": null
+        }
+      ],
+      "selected_projects": [
+        {
+          "id": "proj_001",
+          "name": "BudgetTracker - Application de gestion de budget",
+          "description": "Application web full-stack permettant de suivre ses dépenses et revenus. Interface utilisateur intuitive avec graphiques interactifs. Backend sécurisé avec authentification JWT. Déploiement sur Heroku.",
+          "url": "https://github.com/sophiemartin/budget-tracker",
+          "completion_date": null,
+          "relevant_skills": [
+            "React",
+            "Node.js",
+            "JavaScript"
+          ]
+        },
+        {
+          "id": "proj_002",
+          "name": "Portfolio Personnel",
+          "description": "Site web personnel responsive présentant mes projets et compétences. Design moderne avec animations CSS. Optimisé pour le SEO et les performances (score Lighthouse > 95).",
+          "url": "https://sophie-martin.dev",
+          "completion_date": null,
+          "relevant_skills": [
+            "HTML",
+            "CSS",
+            "JavaScript"
+          ]
+        }
+      ],
+      "selected_certifications": [
+        {
+          "id": "cert_001",
+          "name": "JavaScript Algorithms and Data Structures",
+          "issuer": "freeCodeCamp",
+          "issue_date": "2022-12",
+          "credential_url": "https://www.freecodecamp.org/certification/sophiemartin/javascript-algorithms-and-data-structures"
+        },
+        {
+          "id": "cert_002",
+          "name": "Responsive Web Design",
+          "issuer": "freeCodeCamp",
+          "issue_date": "2022-10",
+          "credential_url": "https://www.freecodecamp.org/certification/sophiemartin/responsive-web-design"
+        }
+      ]
+    },
+    "message": "CV generated successfully"
+  }
+}

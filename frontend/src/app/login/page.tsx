@@ -114,15 +114,11 @@ function LoginForm() {
     <>
       <Navbar variant="app" />
       
-      <div className="min-h-screen bg-gradient-to-br from-background-light via-white to-green-50 flex items-center justify-center px-4 py-24 relative overflow-hidden">
-        {/* Decorative gradient orbs */}
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-action/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
-        
+      <div className="min-h-screen bg-background-light flex items-center justify-center px-4 py-24 relative overflow-hidden">
         <div className="w-full max-w-md relative z-10">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-action bg-clip-text text-transparent mb-3">
+            <h1 className="text-4xl font-bold text-primary mb-3">
               Bon retour !
             </h1>
             <p className="text-text-secondary text-lg">Connectez-vous pour continuer</p>
@@ -193,6 +189,14 @@ function LoginForm() {
                   autoComplete="current-password"
                   className="transition-all"
                 />
+                <div className="mt-2 text-right">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm text-text-secondary hover:text-action transition-colors"
+                  >
+                    Mot de passe oublié ?
+                  </Link>
+                </div>
               </div>
 
               {/* Submit Button */}

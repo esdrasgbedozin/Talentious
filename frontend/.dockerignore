@@ -1,0 +1,8 @@
+# Keep build contexts small and prod images clean.
+node_modules/
+.next/
+.playwright-mcp/
+.env
+.env.*
+*.md
+.git/

@@ -59,3 +59,11 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright test artifacts
+.playwright-mcp/
+*.png
+*.jpeg
+
+# Impeccable skill working directory (local design critique snapshots)
+.impeccable/

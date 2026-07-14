@@ -7,6 +7,7 @@
 
 import { Education } from '@/types/profile';
 import Input from '@/components/ui/Input';
+import RemoveBlockButton from '@/components/profile/RemoveBlockButton';
 
 interface EducationFormProps {
   education: Education;
@@ -23,18 +24,10 @@ export default function EducationForm({
     <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
       {/* Header with Remove Button */}
       <div className="flex items-start justify-between gap-4">
-        <h4 className="text-lg font-semibold text-gray-900">
+        <h4 className="text-lg font-semibold text-text-primary">
           {education.degree || 'Nouvelle formation'}
         </h4>
-        <button
-          onClick={onRemove}
-          className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
-          aria-label="Supprimer cette formation"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </button>
+        <RemoveBlockButton onRemove={onRemove} label="cette formation" />
       </div>
 
       {/* Form Fields */}
@@ -53,8 +46,8 @@ export default function EducationForm({
         />
         <Input
           label="Domaine d'études"
-          value={education.field_of_study || ''}
-          onChange={(e) => onChange('field_of_study', e.target.value)}
+          value={education.field || ''}
+          onChange={(e) => onChange('field', e.target.value)}
           placeholder="Science des données"
         />
         <Input
@@ -67,7 +60,7 @@ export default function EducationForm({
           <Input
             label="Début *"
             type="month"
-            value={education.start_date}
+            value={education.start_date || ''}
             onChange={(e) => onChange('start_date', e.target.value)}
           />
           <Input
@@ -87,7 +80,7 @@ export default function EducationForm({
 
       {/* Description */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-text-primary mb-2">
           Description (optionnel)
         </label>
         <textarea
@@ -95,7 +88,7 @@ export default function EducationForm({
           onChange={(e) => onChange('description', e.target.value)}
           placeholder="Cours principaux, projets, distinctions..."
           rows={3}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#38A169] focus:border-transparent resize-none"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-action focus:border-transparent resize-none"
         />
       </div>
     </div>

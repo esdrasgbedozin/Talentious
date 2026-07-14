@@ -45,170 +45,39 @@
       "description": "Développement d'APIs REST en Node.js et Python/Django. Gestion de bases de données PostgreSQL et MySQL. Intégration de services tiers (Stripe, SendGrid, AWS S3). Première expérience avec Docker et les architectures cloud."
     }
   ],
-  "skills": [
-    {
-      "id": "skill_001",
-      "name": "JavaScript",
-      "category": "hard_skill",
-      "level": "Expert"
-    },
-    {
-      "id": "skill_002",
-      "name": "TypeScript",
-      "category": "hard_skill",
-      "level": "Expert"
-    },
-    {
-      "id": "skill_003",
-      "name": "React",
-      "category": "hard_skill",
-      "level": "Expert"
-    },
-    {
-      "id": "skill_004",
-      "name": "Node.js",
-      "category": "hard_skill",
-      "level": "Expert"
-    },
-    {
-      "id": "skill_005",
-      "name": "NestJS",
-      "category": "hard_skill",
-      "level": "Avancé"
-    },
-    {
-      "id": "skill_006",
-      "name": "Next.js",
-      "category": "hard_skill",
-      "level": "Avancé"
-    },
-    {
-      "id": "skill_007",
-      "name": "PostgreSQL",
-      "category": "hard_skill",
-      "level": "Avancé"
-    },
-    {
-      "id": "skill_008",
-      "name": "MongoDB",
-      "category": "hard_skill",
-      "level": "Avancé"
-    },
-    {
-      "id": "skill_009",
-      "name": "Redis",
-      "category": "hard_skill",
-      "level": "Intermédiaire"
-    },
-    {
-      "id": "skill_010",
-      "name": "Docker",
-      "category": "hard_skill",
-      "level": "Avancé"
-    },
-    {
-      "id": "skill_011",
-      "name": "Kubernetes",
-      "category": "hard_skill",
-      "level": "Intermédiaire"
-    },
-    {
-      "id": "skill_012",
-      "name": "AWS",
-      "category": "hard_skill",
-      "level": "Avancé"
-    },
-    {
-      "id": "skill_013",
-      "name": "CI/CD",
-      "category": "hard_skill",
-      "level": "Avancé"
-    },
-    {
-      "id": "skill_014",
-      "name": "GraphQL",
-      "category": "hard_skill",
-      "level": "Intermédiaire"
-    },
-    {
-      "id": "skill_015",
-      "name": "REST API",
-      "category": "hard_skill",
-      "level": "Expert"
-    },
-    {
-      "id": "skill_016",
-      "name": "Python",
-      "category": "hard_skill",
-      "level": "Intermédiaire"
-    },
-    {
-      "id": "skill_017",
-      "name": "Terraform",
-      "category": "hard_skill",
-      "level": "Intermédiaire"
-    },
-    {
-      "id": "skill_018",
-      "name": "GitHub Actions",
-      "category": "hard_skill",
-      "level": "Avancé"
-    },
-    {
-      "id": "skill_019",
-      "name": "Jest",
-      "category": "hard_skill",
-      "level": "Avancé"
-    },
-    {
-      "id": "skill_020",
-      "name": "Cypress",
-      "category": "hard_skill",
-      "level": "Intermédiaire"
-    },
-    {
-      "id": "skill_021",
-      "name": "Leadership",
-      "category": "soft_skill",
-      "level": null
-    },
-    {
-      "id": "skill_022",
-      "name": "Communication",
-      "category": "soft_skill",
-      "level": null
-    },
-    {
-      "id": "skill_023",
-      "name": "Mentoring",
-      "category": "soft_skill",
-      "level": null
-    },
-    {
-      "id": "skill_024",
-      "name": "Gestion de projet",
-      "category": "soft_skill",
-      "level": null
-    },
-    {
-      "id": "skill_025",
-      "name": "Résolution de problèmes",
-      "category": "soft_skill",
-      "level": null
-    },
-    {
-      "id": "skill_026",
-      "name": "Travail en équipe",
-      "category": "soft_skill",
-      "level": null
-    },
-    {
-      "id": "skill_027",
-      "name": "Agilité",
-      "category": "soft_skill",
-      "level": null
-    }
-  ],
+  "skills": {
+    "hard": [
+      "JavaScript",
+      "TypeScript",
+      "React",
+      "Node.js",
+      "NestJS",
+      "Next.js",
+      "PostgreSQL",
+      "MongoDB",
+      "Redis",
+      "Docker",
+      "Kubernetes",
+      "AWS",
+      "CI/CD",
+      "GraphQL",
+      "REST API",
+      "Python",
+      "Terraform",
+      "GitHub Actions",
+      "Jest",
+      "Cypress"
+    ],
+    "soft": [
+      "Leadership",
+      "Communication",
+      "Mentoring",
+      "Gestion de projet",
+      "Résolution de problèmes",
+      "Travail en équipe",
+      "Agilité"
+    ]
+  },
   "educations": [
     {
       "id": "edu_001",
@@ -231,17 +100,14 @@
   ],
   "languages": [
     {
-      "id": "lang_001",
       "name": "Français",
       "level": "Langue maternelle"
     },
     {
-      "id": "lang_002",
       "name": "Anglais",
       "level": "Courant (C1)"
     },
     {
-      "id": "lang_003",
       "name": "Espagnol",
       "level": "Intermédiaire (B1)"
     }
@@ -251,7 +117,12 @@
       "id": "proj_001",
       "name": "Migration Cloud AWS",
       "description": "Leadership de la migration complète de l'infrastructure on-premise vers AWS (ECS, RDS, S3, CloudFront). Infrastructure as Code avec Terraform. Réduction des coûts d'infrastructure de 35%.",
-      "technologies": ["AWS", "Terraform", "Docker", "Kubernetes"],
+      "technologies": [
+        "AWS",
+        "Terraform",
+        "Docker",
+        "Kubernetes"
+      ],
       "start_date": "2022-01",
       "end_date": "2022-08"
     },
@@ -259,7 +130,14 @@
       "id": "proj_002",
       "name": "Refonte Architecture Microservices",
       "description": "Conception et implémentation d'une architecture microservices pour remplacer un monolithe legacy. 12 services déployés avec orchestration Kubernetes. Amélioration de la scalabilité et de la maintenabilité.",
-      "technologies": ["Node.js", "NestJS", "PostgreSQL", "RabbitMQ", "Docker", "Kubernetes"],
+      "technologies": [
+        "Node.js",
+        "NestJS",
+        "PostgreSQL",
+        "RabbitMQ",
+        "Docker",
+        "Kubernetes"
+      ],
       "start_date": "2021-06",
       "end_date": "2022-12"
     },
@@ -267,7 +145,13 @@
       "id": "proj_003",
       "name": "Plateforme de Monitoring",
       "description": "Développement d'un dashboard de monitoring temps réel avec alerting automatique. Stack moderne avec React, GraphQL, et WebSockets. Utilisé quotidiennement par 50+ utilisateurs internes.",
-      "technologies": ["React", "GraphQL", "Node.js", "WebSocket", "PostgreSQL"],
+      "technologies": [
+        "React",
+        "GraphQL",
+        "Node.js",
+        "WebSocket",
+        "PostgreSQL"
+      ],
       "start_date": "2020-03",
       "end_date": "2020-09"
     }
@@ -277,22 +161,23 @@
       "id": "cert_001",
       "name": "AWS Certified Solutions Architect - Associate",
       "issuer": "Amazon Web Services",
-      "date": "2022-05",
-      "credential_id": "AWS-SA-2022-0543"
+      "credential_id": "AWS-SA-2022-0543",
+      "issue_date": "2022-05"
     },
     {
       "id": "cert_002",
       "name": "Certified Kubernetes Application Developer (CKAD)",
       "issuer": "Cloud Native Computing Foundation",
-      "date": "2021-11",
-      "credential_id": "CKAD-2021-8976"
+      "credential_id": "CKAD-2021-8976",
+      "issue_date": "2021-11"
     },
     {
       "id": "cert_003",
       "name": "Professional Scrum Master I (PSM I)",
       "issuer": "Scrum.org",
-      "date": "2019-03",
-      "credential_id": "PSM-2019-4521"
+      "credential_id": "PSM-2019-4521",
+      "issue_date": "2019-03"
     }
-  ]
+  ],
+  "summary": "Développeur full-stack senior (8+ ans) spécialisé en architectures distribuées, React/Node.js et cloud GCP. Passionné par la qualité logicielle, le mentorat et la conception de systèmes scalables."
 }
