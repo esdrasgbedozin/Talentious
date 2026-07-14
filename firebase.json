@@ -1,0 +1,26 @@
+{
+  "hosting": [
+    {
+      "target": "app",
+      "public": "firebase/public",
+      "ignore": ["**/.*"],
+      "rewrites": [
+        {
+          "source": "**",
+          "run": { "serviceId": "frontend", "region": "europe-west9" }
+        }
+      ]
+    },
+    {
+      "target": "api",
+      "public": "firebase/public",
+      "ignore": ["**/.*"],
+      "rewrites": [
+        {
+          "source": "**",
+          "run": { "serviceId": "backend", "region": "europe-west9" }
+        }
+      ]
+    }
+  ]
+}
