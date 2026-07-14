@@ -272,6 +272,17 @@ Remplacer durablement les faux avis par un vrai dispositif de collecte, comme le
 | M7-T10 | Collecte in-app | Bouton « Donner mon avis » (widget accessible) + invite contextuelle après une action clé (ex. 1er CV téléchargé) ou après N jours. Formulaire : note NPS + commentaire + case « autoriser la publication (anonyme ou prénom) ». | M7-T09 | 2,5 h | e2e : soumission depuis le widget et depuis l'invite post-action |
 | M7-T11 | Témoignages consentis sur la landing | Remplacer la section « bêta » par les avis **réels et consentis** (opt-in) une fois qu'il y en a assez. Modération manuelle (admin) avant publication. Fallback : garder la section bêta tant qu'il n'y a pas d'avis. | M7-T09, M7-T10 | 1,5 h | Seuls des avis marqués `consent_publish=true` et modérés s'affichent ; sinon section bêta |
 
+## 3 sexies. M8 — Post-lancement (backlog priorisé, ajout 2026-07-14)
+
+L'onboarding affiche désormais les imports PDF/LinkedIn en « À venir » (UI honnête, pattern GenerateCVModal) — le chantier n°1 post-lancement les rend réels.
+
+| Ticket | Tâche | Description | Estim. | Priorité |
+|---|---|---|---|---|
+| M8-T01 | **Import PDF réel** (CV + export LinkedIn) | Route `POST /profile/parse-cv` : upload → agent parser-pdf (extraction texte, IAM auth) → **structuration IA** du texte en ProfileData (nouveau prompt + contrat agent + anti-injection + evals) → pré-remplissage du profil éditable. Réactiver les 2 cartes d'onboarding. | 5-6 h | **P1 — chantier n°1** |
+| M8-T02 | Vue admin des utilisateurs | Endpoint `GET /admin/users` (rôle ADMIN, pagination : email, email_verified, created_at, pass actif, nb CVs) + page `/admin` minimale. En attendant : requête SQL via Cloud SQL Studio. | 2,5 h | P2 |
+| M8-T03 | Connexion Google (OAuth) | « Se connecter avec Google » : OAuth 2.0/OIDC, création/liaison de compte par email vérifié Google (email_verified=true d'office), coexistence avec le mot de passe. ADR court (lib : Authlib côté FastAPI vs flux custom). | 4-5 h | P3 (décidé : plus tard) |
+| M8-T04 | Feedback authentique (reporté de M7) | M7-T09→T11 : API feedback + widget in-app + témoignages consentis sur la landing. | 6 h | P2 |
+
 ---
 
 ## 4. ADR à produire

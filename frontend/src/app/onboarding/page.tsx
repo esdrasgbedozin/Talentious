@@ -108,18 +108,15 @@ export default function OnboardingPage() {
 
         {/* Options Grid */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
-          {/* Option 1: Import CV */}
+          {/* Option 1: Import CV — fonctionnalité à venir (pattern GenerateCVModal) */}
           <button
-            onClick={() => setSelectedOption('cv')}
-            className={`relative group bg-white rounded-2xl p-8 border-2 transition-all duration-300 hover:shadow-xl ${
-              selectedOption === 'cv'
-                ? 'border-action shadow-lg scale-105'
-                : 'border-gray-200 hover:border-action'
-            }`}
+            disabled
+            aria-disabled="true"
+            className="relative bg-white rounded-2xl p-8 border-2 border-gray-200 opacity-60 cursor-not-allowed"
           >
-            {/* Badge "Recommandé" */}
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-action to-action-hover text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
-              Recommandé
+            {/* Badge "À venir" */}
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gray-500 text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
+              À venir
             </div>
 
             <div className="flex flex-col items-center text-center">
@@ -134,20 +131,20 @@ export default function OnboardingPage() {
                 Importer un CV (PDF)
               </h3>
               <p className="text-sm text-text-secondary">
-                La méthode la plus rapide pour pré-remplir votre profil
+                La méthode la plus rapide pour pré-remplir votre profil — bientôt disponible
               </p>
             </div>
           </button>
 
-          {/* Option 2: Import LinkedIn */}
+          {/* Option 2: Import LinkedIn — fonctionnalité à venir */}
           <button
-            onClick={() => setSelectedOption('linkedin')}
-            className={`relative group bg-white rounded-2xl p-8 border-2 transition-all duration-300 hover:shadow-xl ${
-              selectedOption === 'linkedin'
-                ? 'border-action shadow-lg scale-105'
-                : 'border-gray-200 hover:border-action'
-            }`}
+            disabled
+            aria-disabled="true"
+            className="relative bg-white rounded-2xl p-8 border-2 border-gray-200 opacity-60 cursor-not-allowed"
           >
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gray-500 text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
+              À venir
+            </div>
             <div className="flex flex-col items-center text-center">
               {/* Icon */}
               <div className="w-16 h-16 bg-gradient-to-br from-[#0A66C2] to-[#004182] rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -184,11 +181,14 @@ export default function OnboardingPage() {
             </div>
           </button>
 
-          {/* Option 3: Manual */}
+          {/* Option 3: Manual — seul chemin actif pour l'instant */}
           <button
             onClick={handleManualStart}
-            className="group bg-white rounded-2xl p-8 border-2 border-gray-200 transition-all duration-300 hover:shadow-lg hover:border-gray-300"
+            className="relative group bg-white rounded-2xl p-8 border-2 border-gray-200 transition-all duration-300 hover:shadow-xl hover:border-action"
           >
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-action to-action-hover text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
+              Recommandé
+            </div>
             <div className="flex flex-col items-center text-center">
               {/* Icon */}
               <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-gray-200 transition-colors">
