@@ -22,7 +22,7 @@ function clearSessionAndGoHome() {
   localStorage.removeItem('user');
   if (typeof document !== 'undefined') {
     document.cookie =
-      'talentious_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      '__session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   }
   window.location.href = '/';
 }

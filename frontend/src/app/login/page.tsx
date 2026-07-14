@@ -11,6 +11,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import PasswordInput from '@/components/ui/PasswordInput';
 import Navbar from '@/components/Navbar';
 
 function LoginForm() {
@@ -134,7 +135,7 @@ function LoginForm() {
                   </svg>
                 </div>
                 <p className="text-sm text-action font-medium">
-                  Compte créé avec succès ! Connectez-vous maintenant.
+                  Compte créé ! Un email de confirmation t'attend dans ta boîte — tu peux déjà te connecter.
                 </p>
               </div>
             </div>
@@ -178,9 +179,8 @@ function LoginForm() {
                 <label htmlFor="password" className="block text-sm font-semibold text-primary mb-2">
                   Mot de passe
                 </label>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="••••••••"

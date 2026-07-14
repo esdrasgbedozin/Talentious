@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import PasswordInput from '@/components/ui/PasswordInput';
 import Navbar from '@/components/Navbar';
 
 export default function RegisterPage() {
@@ -137,7 +138,9 @@ export default function RegisterPage() {
                     Bienvenue dans Talentious !
                   </h2>
                   <p className="text-text-secondary">
-                    Votre compte a été créé avec succès
+                    Votre compte est créé. Un <strong>email de confirmation</strong> vient
+                    de vous être envoyé — cliquez sur le lien qu&apos;il contient pour
+                    valider votre adresse (pensez aux spams).
                   </p>
                 </div>
                 <div className="flex items-center justify-center gap-2 text-sm text-text-secondary">
@@ -181,9 +184,8 @@ export default function RegisterPage() {
                 <label htmlFor="password" className="block text-sm font-semibold text-primary mb-2">
                   Mot de passe
                 </label>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="••••••••"
@@ -201,9 +203,8 @@ export default function RegisterPage() {
                 <label htmlFor="passwordConfirm" className="block text-sm font-semibold text-primary mb-2">
                   Confirmer le mot de passe
                 </label>
-                <Input
+                <PasswordInput
                   id="passwordConfirm"
-                  type="password"
                   value={formData.passwordConfirm}
                   onChange={(e) => setFormData({ ...formData, passwordConfirm: e.target.value })}
                   placeholder="••••••••"

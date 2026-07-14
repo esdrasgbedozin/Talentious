@@ -16,7 +16,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Check for session cookie (set by AuthContext after login)
-  const hasSession = request.cookies.get('talentious_session')?.value;
+  const hasSession = request.cookies.get('__session')?.value;
   
   // Check if the current route is protected
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
