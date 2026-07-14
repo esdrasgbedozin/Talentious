@@ -2,8 +2,20 @@
 
 Séquence de go-live, dans l'ordre. Les commandes marquées **[TOI]** manipulent
 des secrets ou appliquent l'infra : elles se lancent depuis ton terminal (les
-secrets ne transitent jamais par l'assistant). Prérequis déjà faits : budget
-20 €, agents privés, Terraform complet (`infra/`), images prod, pipeline WIF.
+secrets ne transitent jamais par l'assistant).
+
+## ÉTAT D'AVANCEMENT (mis à jour 2026-07-14)
+
+| Étape | État |
+|---|---|
+| Pré-requis : budget 20 € + alertes, agents staging privés, Terraform complet, images prod, pipeline WIF écrit | ✅ FAIT |
+| **Étape 1** — Import + plan + **`terraform apply`** (40 ressources : 5 Cloud Run prod, 6 SA, WIF, secrets, IAM) | ✅ **FAIT** — vérifié : backend `/health` 200, frontend 200, agents 403 (privés), SA dédiés. Reprise nécessaire : vieilles images `:latest` (arm64 + code obsolète) remplacées par les images prod buildées en `--platform linux/amd64` et poussées manuellement |
+| **Étape 2** — Valeurs des secrets (STRIPE_SECRET_KEY, BREVO_API_KEY) | ✅ FAIT — sauf `STRIPE_WEBHOOK_SECRET` = **placeholder volontaire** (vrai `whsec_` à l'étape 4 bis) |
+| **Étape 3** — Variable GitHub `NEXT_PUBLIC_API_URL` | ⬜ À FAIRE |
+| **Étape 4** — Merge → `main` (1er run du pipeline : tests, images amd64, **migrations Alembic prod**, rollout, smoke) | ⬜ À FAIRE — ⚠️ la base prod n'a pas encore les tables récentes (refresh_tokens…) : le login prod échoue tant que ce n'est pas fait |
+| **Étape 4 bis** — Webhook Stripe prod + vrai `whsec_` | ⬜ À FAIRE |
+| **Étape 5** — Domain mapping `talentious.app` / `api.talentious.app` + DNS web | ⬜ À FAIRE — ⚠️ aucun enregistrement web ne pointe vers Cloud Run (les DNS déjà posés ne concernent que l'email DKIM/DMARC). Le frontend prod étant compilé avec `NEXT_PUBLIC_API_URL=https://api.talentious.app`, **il ne joint pas l'API tant que ce mapping n'existe pas** |
+| **Étape 6** — Décommission `*-staging` + smoke complet + **[PAH-5]** | ⬜ À FAIRE |
 
 ---
 
