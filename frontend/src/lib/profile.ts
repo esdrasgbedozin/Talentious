@@ -20,13 +20,54 @@ export const getProfile = async (): Promise<ProfileResponse> => {
 };
 
 /**
+ * The canonical contract validates optional dates/URLs with strict patterns
+ * (e.g. `^\d{4}-\d{2}$`). The form state initializes those fields as '' —
+ * sending '' would 422 the WHOLE profile save (bug: a project with an empty
+ * end date blocked every subsequent save). Sanitize at this single choke
+ * point: empty optional fields become null, empty list entries are dropped.
+ */
+const emptyToNull = <T extends Record<string, unknown>>(obj: T, keys: string[]): T => {
+  const copy: Record<string, unknown> = { ...obj };
+  for (const k of keys) {
+    if (copy[k] === '') copy[k] = null;
+  }
+  return copy as T;
+};
+
+export const sanitizeProfileForSave = (profile: UserProfile): UserProfile => ({
+  ...profile,
+  experiences: (profile.experiences ?? []).map((e) => ({
+    ...emptyToNull(e as Record<string, unknown>, ['end_date']),
+    achievements: (e.achievements ?? []).filter(Boolean),
+  })) as UserProfile['experiences'],
+  educations: (profile.educations ?? []).map((e) =>
+    emptyToNull(e as Record<string, unknown>, ['start_date', 'end_date']),
+  ) as UserProfile['educations'],
+  projects: (profile.projects ?? []).map((p) => ({
+    ...emptyToNull(p as Record<string, unknown>, ['start_date', 'end_date', 'url']),
+    technologies: (p.technologies ?? []).filter(Boolean),
+  })) as UserProfile['projects'],
+  certifications: (profile.certifications ?? []).map((c) =>
+    emptyToNull(c as Record<string, unknown>, [
+      'issue_date',
+      'expiration_date',
+      'credential_url',
+    ]),
+  ) as UserProfile['certifications'],
+  // Language requires name AND level — drop half-empty rows instead of 422ing.
+  languages: (profile.languages ?? []).filter((l) => l.name && l.level),
+});
+
+/**
  * Create or update user profile
  * @param profileData - Complete profile data
  * @returns Updated profile
  */
 export const saveProfile = async (profileData: UserProfile): Promise<ProfileResponse> => {
   try {
-    const payload: ProfileUpdateRequest = { profile_data: profileData };
+    const payload: ProfileUpdateRequest = {
+      profile_data: sanitizeProfileForSave(profileData),
+    };
     const response = await apiClient.put<ProfileResponse>('/profile', payload);
     return response.data;
   } catch (error) {

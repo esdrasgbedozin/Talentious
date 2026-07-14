@@ -353,6 +353,18 @@ export const formatPrice = (
 export const getErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const apiError = error.response?.data as ApiError;
+    // RFC 7807 validation errors carry invalid_params: surface WHICH fields
+    // failed instead of a generic message (a silent 422 already cost us a bug).
+    const invalidParams = (apiError as { invalid_params?: { loc?: (string | number)[]; msg?: string }[] })
+      ?.invalid_params;
+    if (Array.isArray(invalidParams) && invalidParams.length > 0) {
+      const fields = invalidParams
+        .slice(0, 3)
+        .map((p) => (p.loc ?? []).filter((x) => x !== 'body').join('.'))
+        .filter(Boolean)
+        .join(' ; ');
+      return `Certains champs sont invalides : ${fields}${invalidParams.length > 3 ? '…' : ''}`;
+    }
     return apiError?.detail || error.message || 'Une erreur est survenue';
   }
   
