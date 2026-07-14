@@ -1,6 +1,9 @@
 variable "project_id" {
   description = "ID du projet GCP"
   type        = string
+  # Valeur non sensible, fixée en dur pour rendre plan/apply déterministe
+  # (l'incohérence project_id était l'écart n°1 de l'audit 05).
+  default = "talentious-project"
 }
 
 variable "region" {

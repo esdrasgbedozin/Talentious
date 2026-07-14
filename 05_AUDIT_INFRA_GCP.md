@@ -61,6 +61,15 @@
 6. **Domaine & config prod** [M6-T06] : `talentious.app` → frontend, `api.talentious.app` → backend ; CORS + `FRONTEND_BASE_URL` + `NEXT_PUBLIC_API_URL` prod ; DNS chez le registrar.
 7. **Smoke prod + PAH-5** [M6-T11/T13] : parcours complet (inscription → email réel → génération → PDF → paiement test) avant ouverture.
 
+## 3 bis. Exécution — étapes 1-2 partiellement FAITES (2026-07-14, par le fondateur, guidé)
+
+- ✅ APIs `cloudbilling` + `billingbudgets` activées.
+- ✅ **Budget `talentious-budget-20`** créé : 20 €/mois, alertes 50/80/100 % (id `3c92aaaf-cc72-4ad8-b29e-54228ac1ccad`).
+- ✅ **Les 3 agents IA sont privés** (`allUsers` retiré de parser/analyseur/redacteur) — exposition Vertex fermée. Vérifié en lecture seule.
+- 📌 Découverte : l'admin du compte de facturation `015BF4-…` était **`ogbedozin@gmail.com`** (4e compte, une lettre du fondateur) ; `egbedozin` n'avait que `billing.user`. Droits récupérés via ogbedozin.
+- Backend/frontend `-staging` restent publics (services utilisateur, remplacés par la prod).
+- Reste des étapes : SA dédiés, durcissement Cloud SQL, Terraform réconcilié, images prod, pipeline WIF, domaine.
+
 ## 4. Questions ouvertes — TRANCHÉES par le fondateur (2026-07-14, PAH-4 validé)
 1. **`Ozesde04@gmail.com`** = second compte du fondateur → **conservé** (accès de secours).
 2. **Budget d'alerte : 20 €/mois** (alertes 50/80/100 %).
