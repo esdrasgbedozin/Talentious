@@ -70,6 +70,23 @@
 - Backend/frontend `-staging` restent publics (services utilisateur, remplacés par la prod).
 - Reste des étapes : SA dédiés, durcissement Cloud SQL, Terraform réconcilié, images prod, pipeline WIF, domaine.
 
+## 3 ter. DÉPLOIEMENT PROD APPLIQUÉ (2026-07-14, apply par le fondateur après relecture du plan)
+
+- ✅ `terraform apply` : 40 ressources (2 passes — reprise après l'échec de la
+  vieille image backend, remplacée par l'image prod amd64 buildée localement).
+- ✅ Vérifié lecture seule : backend `/health` 200, frontend 200, **agents 403
+  sans token** (privés), **5 SA dédiés** en runtime.
+- URLs run.app : backend `https://backend-uu3iv5luiq-od.a.run.app`, frontend
+  `https://frontend-uu3iv5luiq-od.a.run.app`.
+- Leçons : les vieilles images `:latest` (CORS JSON, arch **arm64** du Mac)
+  ont fait échouer les premiers démarrages → images prod re-buildées en
+  `--platform linux/amd64` et poussées à la main pour amorcer ; le pipeline
+  (runners amd64) prend le relais ensuite.
+- Reste avant PAH-5 : migrations Alembic prod (job du pipeline au merge main),
+  domain mapping talentious.app/api.talentious.app (le frontend est compilé
+  avec `NEXT_PUBLIC_API_URL=https://api.talentious.app`), variable GitHub,
+  décommission des `*-staging`, vrai `whsec_` après création du webhook Stripe.
+
 ## 4. Questions ouvertes — TRANCHÉES par le fondateur (2026-07-14, PAH-4 validé)
 1. **`Ozesde04@gmail.com`** = second compte du fondateur → **conservé** (accès de secours).
 2. **Budget d'alerte : 20 €/mois** (alertes 50/80/100 %).
