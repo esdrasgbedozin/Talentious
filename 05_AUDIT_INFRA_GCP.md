@@ -61,7 +61,7 @@
 6. **Domaine & config prod** [M6-T06] : `talentious.app` → frontend, `api.talentious.app` → backend ; CORS + `FRONTEND_BASE_URL` + `NEXT_PUBLIC_API_URL` prod ; DNS chez le registrar.
 7. **Smoke prod + PAH-5** [M6-T11/T13] : parcours complet (inscription → email réel → génération → PDF → paiement test) avant ouverture.
 
-## 4. Questions ouvertes (à trancher par le fondateur)
-1. **`Ozesde04@gmail.com` est Owner du projet + billing manager** — est-ce toi (second compte) ou un tiers ? Si tiers non nécessaire : à retirer.
-2. **Montant du budget d'alerte** : 20 €/mois proposé.
-3. **Stratégie environnements** : en bêta solo, un seul environnement de prod (renommer/replacer les `*-staging`) est le moins cher ; garder un vrai staging séparé doublerait la Cloud SQL (~+10 €/mois). Proposition : **prod seule** + docker-compose comme environnement de dev.
+## 4. Questions ouvertes — TRANCHÉES par le fondateur (2026-07-14, PAH-4 validé)
+1. **`Ozesde04@gmail.com`** = second compte du fondateur → **conservé** (accès de secours).
+2. **Budget d'alerte : 20 €/mois** (alertes 50/80/100 %).
+3. **Prod seule** : les services `*-staging` seront remplacés par la prod ; le dev/test reste en local (docker-compose).
