@@ -1,0 +1,42 @@
+# syntax=docker/dockerfile:1
+# =============================================================================
+# Image de PRODUCTION du frontend (Cloud Run).
+# Le Dockerfile de dev (./Dockerfile) reste réservé à docker-compose.
+# Multi-stage + sortie Next `standalone` (image runtime minimale), non-root.
+# NEXT_PUBLIC_* sont FIGÉS AU BUILD : la CI passe l'URL API de prod en build-arg.
+# =============================================================================
+
+FROM node:20-slim AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+
+FROM node:20-slim AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_ENVIRONMENT=production
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_ENVIRONMENT=$NEXT_PUBLIC_ENVIRONMENT \
+    NEXT_OUTPUT=standalone \
+    NEXT_TELEMETRY_DISABLED=1
+
+RUN npm run build
+
+FROM node:20-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
+
+# L'utilisateur `node` (uid 1000) est fourni par l'image de base.
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/public ./public
+
+USER node
+EXPOSE 3000
+CMD ["node", "server.js"]

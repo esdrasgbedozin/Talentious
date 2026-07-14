@@ -1,0 +1,169 @@
+# =============================================================================
+# Déploiement PRODUCTION — main → Cloud Run (europe-west9)
+# =============================================================================
+# - Auth GCP par Workload Identity Federation (aucune clé JSON — le provider
+#   est verrouillé sur ce dépôt, cf. infra/cicd.tf). SA: github-deployer@.
+# - Terraform possède la CONFIG des services (SA, secrets, scaling, env) ;
+#   la CI ne fait que mettre à jour les IMAGES (`gcloud run services update`).
+# - Ordre : tests → build/push → migrations (Cloud SQL proxy) → rollout → smoke.
+# - Secret GitHub requis : CLOUD_SQL_DB_PASSWORD (migrations uniquement).
+#   Variable GitHub optionnelle : NEXT_PUBLIC_API_URL (défaut: api.talentious.app).
+
+name: Deploy Production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "agents/**"
+      - ".github/workflows/deploy-prod.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write # requis pour l'échange OIDC (WIF)
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false # jamais interrompre un déploiement en cours
+
+env:
+  PROJECT_ID: talentious-project
+  PROJECT_NUMBER: "968343134767"
+  REGION: europe-west9
+  REGISTRY: europe-west9-docker.pkg.dev
+  REPOSITORY: talentious-images
+  SQL_CONNECTION: talentious-project:europe-west9:talentious-db-prod
+  WIF_PROVIDER: projects/968343134767/locations/global/workloadIdentityPools/github-actions/providers/github-oidc
+  DEPLOYER_SA: github-deployer@talentious-project.iam.gserviceaccount.com
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: talentious
+          POSTGRES_PASSWORD: talentious
+          POSTGRES_DB: talentious_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install backend deps
+        run: pip install -r backend/requirements.txt
+      - name: Run backend tests
+        working-directory: backend
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://talentious:talentious@localhost:5432/talentious_test
+          SECRET_KEY: test-secret-key-for-ci-only-not-production
+        run: python -m pytest -q
+
+  build-push:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: backend
+            context: backend
+            dockerfile: backend/Dockerfile.prod
+          - name: frontend
+            context: frontend
+            dockerfile: frontend/Dockerfile.prod
+          - name: parser-pdf
+            context: agents/parser-pdf
+            dockerfile: agents/parser-pdf/Dockerfile
+          - name: analyseur-offre
+            context: agents/analyseur-offre
+            dockerfile: agents/analyseur-offre/Dockerfile
+          - name: redacteur-cv
+            context: agents/redacteur-cv
+            dockerfile: agents/redacteur-cv/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOYER_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+      - name: Build and push ${{ matrix.name }}
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ matrix.name }}"
+          EXTRA_ARGS=""
+          if [ "${{ matrix.name }}" = "frontend" ]; then
+            EXTRA_ARGS="--build-arg NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://api.talentious.app' }} --build-arg NEXT_PUBLIC_ENVIRONMENT=production"
+          fi
+          docker build -f ${{ matrix.dockerfile }} $EXTRA_ARGS \
+            -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" ${{ matrix.context }}
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"
+
+  migrate:
+    needs: build-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOYER_SA }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install backend deps
+        run: pip install -r backend/requirements.txt
+      - name: Start Cloud SQL proxy
+        run: |
+          curl -sSLo cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.13.0/cloud-sql-proxy.linux.amd64
+          chmod +x cloud-sql-proxy
+          ./cloud-sql-proxy --port 5432 ${{ env.SQL_CONNECTION }} &
+          sleep 5
+      - name: Run Alembic migrations
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://talentious-app:${{ secrets.CLOUD_SQL_DB_PASSWORD }}@127.0.0.1:5432/talentious
+        run: alembic upgrade head
+
+  deploy:
+    needs: migrate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOYER_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Roll out new images (config stays Terraform-owned)
+        run: |
+          for SVC in backend frontend parser-pdf analyseur-offre redacteur-cv; do
+            IMAGE="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/$SVC:${{ github.sha }}"
+            echo "→ $SVC ($IMAGE)"
+            gcloud run services update "$SVC" \
+              --region "${{ env.REGION }}" \
+              --image "$IMAGE" \
+              --quiet
+          done
+      - name: Smoke test
+        run: |
+          BACKEND_URL=$(gcloud run services describe backend --region ${{ env.REGION }} --format 'value(status.url)')
+          FRONTEND_URL=$(gcloud run services describe frontend --region ${{ env.REGION }} --format 'value(status.url)')
+          echo "backend:  $BACKEND_URL"
+          echo "frontend: $FRONTEND_URL"
+          curl -sf --retry 5 --retry-delay 5 "$BACKEND_URL/health" | grep -q healthy
+          curl -sf --retry 5 --retry-delay 5 -o /dev/null "$FRONTEND_URL/"
+          echo "✅ Smoke OK"
