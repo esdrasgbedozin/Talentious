@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     # Email verification / password reset link lifetime.
     email_token_expire_hours: int = 24
 
+    # Service-to-service auth: when true, backend→agent calls carry a Google ID
+    # token (the agents are private on Cloud Run — invoker = backend SA only).
+    # False in local dev/tests (agents reachable directly via docker-compose).
+    enable_iam_auth: bool = False
+
     # Transactional email (Brevo). Disabled by default: without a key, emails are
     # logged, not sent (dev/test/CI). See docs/adr/ADR-EMAIL.md.
     email_enabled: bool = False
