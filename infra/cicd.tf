@@ -81,6 +81,15 @@ resource "google_project_iam_member" "deployer_sql_client" {
   member  = "serviceAccount:${google_service_account.deployer.email}"
 }
 
+# Redéployer la façade Firebase Hosting après chaque rollout : c'est ce qui
+# PURGE le cache CDN (Next émet s-maxage=1an sur les pages pré-rendues — sans
+# purge, les POP serviraient l'ancien HTML jusqu'à un an après un déploiement).
+resource "google_project_iam_member" "deployer_firebase_hosting" {
+  project = var.project_id
+  role    = "roles/firebasehosting.admin"
+  member  = "serviceAccount:${google_service_account.deployer.email}"
+}
+
 # Nécessaire pour déployer des révisions qui tournent sous les SA runtime
 # (actAs) — restreint aux 5 SA de service, pas au niveau projet.
 resource "google_service_account_iam_member" "deployer_acts_as" {

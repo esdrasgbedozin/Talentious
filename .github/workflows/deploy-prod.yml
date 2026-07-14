@@ -158,6 +158,13 @@ jobs:
               --image "$IMAGE" \
               --quiet
           done
+      - uses: actions/checkout@v4
+      - name: Purge Firebase Hosting CDN cache
+        # Next émet s-maxage=1an sur les pages pré-rendues ; sans redéploiement
+        # de la façade Hosting, les POP CDN serviraient l'ancien HTML.
+        run: |
+          npm install -g firebase-tools
+          firebase deploy --only hosting --project ${{ env.PROJECT_ID }} --non-interactive
       - name: Smoke test
         run: |
           BACKEND_URL=$(gcloud run services describe backend --region ${{ env.REGION }} --format 'value(status.url)')
@@ -166,4 +173,5 @@ jobs:
           echo "frontend: $FRONTEND_URL"
           curl -sf --retry 5 --retry-delay 5 "$BACKEND_URL/health" | grep -q healthy
           curl -sf --retry 5 --retry-delay 5 -o /dev/null "$FRONTEND_URL/"
+          curl -sf --retry 3 --retry-delay 5 -o /dev/null "https://talentious.app/"
           echo "✅ Smoke OK"
