@@ -325,6 +325,13 @@ resource "google_cloud_run_v2_service" "backend" {
         value = "true"
       }
       env {
+        # Firebase Hosting (façade domaine) supprime tous les cookies entrants
+        # SAUF celui nommé "__session" — le cookie de refresh doit donc porter
+        # ce nom en prod, sinon /auth/refresh ne le reçoit jamais.
+        name  = "REFRESH_COOKIE_NAME"
+        value = "__session"
+      }
+      env {
         name  = "GCP_PROJECT_ID"
         value = var.project_id
       }

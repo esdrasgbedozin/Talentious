@@ -45,13 +45,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(currentUser);
           
           // Set session cookie for middleware
-          document.cookie = 'talentious_session=true; path=/; max-age=2592000; SameSite=Strict';
+          document.cookie = '__session=true; path=/; max-age=2592000; SameSite=Strict';
         } catch (error) {
           // If error (expired/invalid token), clean up
           console.error('Failed to load user:', error);
           setUser(null);
           // Remove session cookie
-          document.cookie = 'talentious_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+          document.cookie = '__session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
         }
       }
       setIsLoading(false);
@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Set session cookie for middleware (add Secure flag in production)
       const secureCookie = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-      document.cookie = `talentious_session=true; path=/; max-age=2592000; SameSite=Strict${secureCookie}`;
+      document.cookie = `__session=true; path=/; max-age=2592000; SameSite=Strict${secureCookie}`;
     } catch (error) {
       setUser(null);
       throw error; // Re-throw so the component can display the error
@@ -101,7 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     
     // Remove session cookie
-    document.cookie = 'talentious_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = '__session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   };
 
   // Refresh user info

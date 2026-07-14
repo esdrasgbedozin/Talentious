@@ -10,7 +10,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
+import PasswordInput from '@/components/ui/PasswordInput';
 import { resetPassword, getErrorMessage } from '@/lib/api';
 
 function ResetPasswordForm() {
@@ -86,9 +86,8 @@ function ResetPasswordForm() {
             <label htmlFor="password" className="mb-2 block text-sm font-semibold text-primary">
               Nouveau mot de passe
             </label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -100,9 +99,8 @@ function ResetPasswordForm() {
             <label htmlFor="confirm" className="mb-2 block text-sm font-semibold text-primary">
               Confirme le mot de passe
             </label>
-            <Input
+            <PasswordInput
               id="confirm"
-              type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="••••••••"
