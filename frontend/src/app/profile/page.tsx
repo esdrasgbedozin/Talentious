@@ -82,6 +82,10 @@ export default function ProfilePage() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la sauvegarde');
+      // The error banner lives at the top of the page — without this scroll a
+      // failed save is INVISIBLE from the sticky footer (real bug: the user
+      // thought the save silently did nothing).
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsSaving(false);
     }
