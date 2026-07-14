@@ -93,6 +93,18 @@ Parcours réel sur https://talentious.app : inscription (email de vérification
 reçu), profil, génération d'un CV, export PDF, paiement test Stripe, suppression
 de compte. **⛔ [PAH-5]** : validation humaine avant toute communication publique.
 
+## Pièges appris (2026-07-14)
+
+- **Jamais appliquer un `tf.plan` périmé** : si un déploiement pipeline est passé
+  entre le `plan` et l'`apply`, l'apply rejoue l'ancienne image capturée dans le
+  plan (rollback silencieux constaté sur le frontend). Toujours re-`plan` juste
+  avant d'`apply`.
+- **CDN Firebase** : Next émet `s-maxage=1an` sur les pages pré-rendues ; toute
+  purge manuelle (`firebase deploy --only hosting`) doit se faire APRÈS que la
+  bonne révision Cloud Run est en service, sinon le CDN re-cache l'ancienne.
+- **GitHub Actions** : `actions/checkout` nettoie le workspace — il doit précéder
+  `google-github-actions/auth` (sinon le fichier de credentials WIF est effacé).
+
 ## Post-go-live (rappels)
 
 - Basculer `FRONTEND_BASE_URL` local à `http://localhost:3000` si modifié.

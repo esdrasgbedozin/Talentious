@@ -143,6 +143,10 @@ jobs:
     needs: migrate
     runs-on: ubuntu-latest
     steps:
+      # checkout DOIT précéder auth : il nettoie le workspace et effacerait le
+      # fichier de credentials WIF créé par l'action auth (cause de l'échec du
+      # premier run de purge).
+      - uses: actions/checkout@v4
       - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
@@ -158,7 +162,6 @@ jobs:
               --image "$IMAGE" \
               --quiet
           done
-      - uses: actions/checkout@v4
       - name: Purge Firebase Hosting CDN cache
         # Next émet s-maxage=1an sur les pages pré-rendues ; sans redéploiement
         # de la façade Hosting, les POP CDN serviraient l'ancien HTML.
