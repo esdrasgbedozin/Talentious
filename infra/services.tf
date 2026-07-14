@@ -344,6 +344,14 @@ resource "google_cloud_run_v2_service" "backend" {
         value = var.frontend_public_url
       }
       env {
+        # URLs de retour du checkout Stripe (succès/annulation). Variable
+        # distincte de FRONTEND_BASE_URL dans le code (défaut localhost:3000 —
+        # bug vécu : redirection vers localhost après paiement en prod).
+        # TODO code : unifier app_base_url et frontend_base_url.
+        name  = "APP_BASE_URL"
+        value = var.frontend_public_url
+      }
+      env {
         name  = "EMAIL_ENABLED"
         value = "true"
       }
