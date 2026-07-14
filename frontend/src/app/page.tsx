@@ -372,12 +372,12 @@ export default function Home() {
               Bêta ouverte
             </span>
             <h2 className="mt-6 text-balance text-4xl font-bold leading-tight tracking-tight text-primary md:text-5xl">
-              Une bêta qui s&apos;écrit avec toi.
+              Le moteur est prêt. À toi de jouer.
             </h2>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-text-secondary">
-              Talentious vient de naître. Plutôt que d&apos;inventer des témoignages, on
-              préfère être honnêtes : sois parmi les premiers à l&apos;utiliser, et ton
-              retour oriente directement ce qu&apos;on construit ensuite.
+              Analyse de l&apos;offre, sélection de tes expériences les plus pertinentes,
+              rédaction optimisée et export PDF impeccable : tout est déjà fonctionnel.
+              Rejoins la bêta et prends une longueur d&apos;avance sur tes candidatures.
             </p>
           </Reveal>
           <div className="mt-14 grid gap-6 text-left md:grid-cols-3">
@@ -391,8 +391,8 @@ export default function Home() {
                 text: "Colle une annonce, l’IA adapte ton CV à ses attentes réelles — sans repartir de zéro.",
               },
               {
-                title: 'Ton avis compte, vraiment',
-                text: "Un espace de retour arrive bientôt dans l’app. En attendant, écris-nous : chaque idée est lue.",
+                title: 'Un produit qui évolue vite',
+                text: "Nouvelles fonctionnalités chaque semaine. Les utilisateurs de la bêta profitent de tout, en premier.",
               },
             ].map((c, i) => (
               <Reveal key={c.title} delay={i * 0.1}>
