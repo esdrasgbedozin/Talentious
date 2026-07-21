@@ -51,6 +51,12 @@ class ForgotPasswordRequest(BaseModel):
     email: EmailStr = Field(..., description="Account email address")
 
 
+class ResendVerificationRequest(BaseModel):
+    """Body of POST /auth/verify-email/resend (public, enumeration-safe)."""
+
+    email: EmailStr = Field(..., description="Account email address")
+
+
 class ResetPasswordRequest(BaseModel):
     """Body of POST /auth/password/reset."""
 

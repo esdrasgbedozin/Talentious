@@ -107,6 +107,7 @@ class TestDeleteAccount:
             hashed_password=hash_password("TestPassword123!"),
             role=UserRole.USER,
             stripe_customer_id="cus_test_123",
+            email_verified=True,
         )
         test_db.add(user)
         await test_db.flush()
@@ -140,6 +141,7 @@ class TestDeleteAccount:
             hashed_password=hash_password("TestPassword123!"),
             role=UserRole.USER,
             stripe_customer_id="cus_test_456",
+            email_verified=True,
         )
         test_db.add(user)
         await test_db.flush()

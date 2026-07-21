@@ -87,17 +87,36 @@ class TestEmailVerification:
         assert response.status_code == 400
 
     async def test_me_exposes_email_verified(self, client, auth_headers, test_user):
+        # La fixture standard est vérifiée (le login l'exige désormais).
         response = await client.get("/auth/me", headers=auth_headers)
         assert response.status_code == 200
-        assert response.json()["email_verified"] is False
+        assert response.json()["email_verified"] is True
 
-    async def test_resend_verification(
-        self, client, auth_headers, test_user, captured_emails
+    async def test_resend_verification_legacy_session(
+        self, client, test_db, captured_emails
     ):
-        response = await client.post("/auth/resend-verification", headers=auth_headers)
+        """Session héritée : un non-vérifié détenant encore un access token
+        (émis avant le durcissement du login) peut redemander l'email."""
+        from app.models.user import User, UserRole
+        from app.services.auth import create_access_token, hash_password
+
+        user = User(
+            email="legacy@example.com",
+            hashed_password=hash_password("TestPassword123!"),
+            role=UserRole.USER,
+            email_verified=False,
+        )
+        test_db.add(user)
+        await test_db.commit()
+
+        token = create_access_token(data={"sub": str(user.id)})
+        response = await client.post(
+            "/auth/resend-verification",
+            headers={"Authorization": f"Bearer {token}"},
+        )
         assert response.status_code == 204
         assert len(captured_emails) == 1
-        assert captured_emails[0]["to"] == test_user.email
+        assert captured_emails[0]["to"] == "legacy@example.com"
 
     async def test_resend_noop_when_verified(
         self, client, auth_headers, test_user, test_db, captured_emails

@@ -101,6 +101,9 @@ async def test_user(test_db: AsyncSession) -> User:
         email="testuser@example.com",
         hashed_password=hash_password("TestPassword123!"),
         role=UserRole.USER,
+        # Login now requires a verified address; the standard fixture is verified
+        # (unverified paths are covered by dedicated tests).
+        email_verified=True,
     )
     test_db.add(user)
     await test_db.flush()
@@ -166,6 +169,7 @@ async def admin_user(test_db: AsyncSession) -> User:
         email="admin@example.com",
         hashed_password=hash_password("AdminPassword123!"),
         role=UserRole.ADMIN,
+        email_verified=True,
     )
     test_db.add(user)
     await test_db.flush()
