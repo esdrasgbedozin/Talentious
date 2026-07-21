@@ -229,6 +229,33 @@ export const resendVerificationPublic = async (email: string): Promise<void> => 
   await apiClient.post('/auth/verify-email/resend', { email });
 };
 
+/** Change the password of the signed-in user (re-auth with current password). */
+export const changePassword = async (
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> => {
+  await apiClient.post('/auth/password/change', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
+};
+
+/** Request an email change: a confirmation link is sent to the NEW address. */
+export const requestEmailChange = async (
+  newEmail: string,
+  currentPassword: string,
+): Promise<void> => {
+  await apiClient.post('/auth/email/change', {
+    new_email: newEmail,
+    current_password: currentPassword,
+  });
+};
+
+/** Apply an email change from the token received on the new mailbox (public). */
+export const confirmEmailChange = async (token: string): Promise<void> => {
+  await apiClient.post('/auth/email/confirm', { token });
+};
+
 /** Request a password-reset email (always resolves — enumeration-safe on the server). */
 export const forgotPassword = async (email: string): Promise<void> => {
   await apiClient.post('/auth/password/forgot', { email });

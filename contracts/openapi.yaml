@@ -200,6 +200,118 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /auth/password/change:
+    post:
+      tags: [Auth]
+      operationId: changePassword
+      summary: Changer son mot de passe (connecté)
+      description: |
+        Change le mot de passe de l'utilisateur authentifié. Exige le mot de
+        passe actuel (ré-authentification). Par sécurité, toutes les sessions
+        (refresh tokens) sont révoquées et une notification est envoyée par email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password:
+                  type: string
+                new_password:
+                  type: string
+                  minLength: 8
+      responses:
+        '204':
+          description: Mot de passe changé, sessions révoquées
+        '401':
+          description: Mot de passe actuel incorrect (ou non authentifié)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/email/change:
+    post:
+      tags: [Auth]
+      operationId: requestEmailChange
+      summary: Demander le changement d'adresse email (connecté)
+      description: |
+        Envoie un lien de confirmation à la NOUVELLE adresse (l'adresse du compte
+        ne change qu'après confirmation — la nouvelle boîte fait autorité). Exige
+        le mot de passe actuel. Rate-limité (envoi d'email).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new_email, current_password]
+              properties:
+                new_email:
+                  type: string
+                  format: email
+                current_password:
+                  type: string
+      responses:
+        '204':
+          description: Lien de confirmation envoyé à la nouvelle adresse
+        '400':
+          description: Nouvelle adresse invalide (déjà utilisée ou identique à l'actuelle)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Mot de passe actuel incorrect (ou non authentifié)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Trop de demandes (rate limit)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /auth/email/confirm:
+    post:
+      tags: [Auth]
+      operationId: confirmEmailChange
+      summary: Confirmer le changement d'adresse email (lien reçu)
+      description: |
+        Applique le changement d'adresse depuis le jeton reçu sur la NOUVELLE
+        boîte. Endpoint public (le lien est cliqué depuis l'email). L'ancienne
+        adresse reçoit une notification de sécurité.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Adresse mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Jeton invalide/expiré, ou adresse devenue indisponible
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
   /auth/me:
     get:
       tags: [Auth]
@@ -859,6 +971,15 @@ components:
           $ref: '#/components/schemas/UserRole'
         is_active:
           type: boolean
+        email_verified:
+          type: boolean
+          description: L'adresse email a été confirmée (obligatoire pour se connecter)
+        display_name:
+          type: string
+          nullable: true
+          description: |
+            Nom d'affichage (prénom du profil). Modifiable par l'utilisateur via
+            son profil ; null si le profil n'a pas encore de prénom.
         stripe_customer_id:
           type: string
           nullable: true

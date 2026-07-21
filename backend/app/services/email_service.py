@@ -161,6 +161,38 @@ async def send_account_deleted_email(*, to: str) -> None:
     )
 
 
+async def send_email_change_email(*, to: str, confirm_url: str) -> None:
+    """Confirmation link sent to the NEW address when the user changes email."""
+    html = _shell(
+        "Confirme ta nouvelle adresse",
+        "<p>Tu as demandé à utiliser cette adresse pour ton compte Talentious. "
+        "Clique pour confirmer le changement — l'adresse actuelle reste active "
+        "tant que tu n'as pas confirmé.</p>"
+        f"{_button(confirm_url, 'Confirmer ma nouvelle adresse')}"
+        '<p style="color:#718096;font-size:13px">Ce lien expire dans 24 heures. '
+        "Si tu n'es pas à l'origine de cette demande, ignore cet email.</p>",
+    )
+    text = f"Confirme ta nouvelle adresse Talentious : {confirm_url}"
+    await send_email(
+        to=to, subject="Confirme ta nouvelle adresse email", html=html, text=text
+    )
+
+
+async def send_email_changed_notice(*, to: str, new_email: str) -> None:
+    """Security notice sent to the OLD address after an email change."""
+    html = _shell(
+        "Ton adresse email a été changée",
+        f"<p>L'adresse de ton compte Talentious est désormais "
+        f"<strong>{new_email}</strong>.</p>"
+        "<p style=\"color:#718096;font-size:13px\">Si tu n'es pas à l'origine de "
+        "ce changement, contacte-nous immédiatement en répondant à cet email.</p>",
+    )
+    text = f"L'adresse de ton compte Talentious est désormais {new_email}."
+    await send_email(
+        to=to, subject="Ton adresse email a été changée", html=html, text=text
+    )
+
+
 async def send_password_changed_email(*, to: str) -> None:
     """Security notice sent right after a successful password change/reset."""
     html = _shell(

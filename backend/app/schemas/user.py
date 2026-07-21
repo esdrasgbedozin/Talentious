@@ -34,6 +34,10 @@ class UserResponse(BaseModel):
     email_verified: bool = Field(
         default=False, description="Whether the user confirmed their email address"
     )
+    display_name: Optional[str] = Field(
+        default=None,
+        description="Nom d'affichage (prénom du profil), modifiable via /profile",
+    )
     created_at: datetime = Field(..., description="Account creation timestamp")
 
     model_config = ConfigDict(from_attributes=True)
@@ -55,6 +59,26 @@ class ResendVerificationRequest(BaseModel):
     """Body of POST /auth/verify-email/resend (public, enumeration-safe)."""
 
     email: EmailStr = Field(..., description="Account email address")
+
+
+class ChangePasswordRequest(BaseModel):
+    """Body of POST /auth/password/change (authenticated re-auth)."""
+
+    current_password: str = Field(..., description="Current password (re-auth)")
+    new_password: str = Field(..., min_length=8, description="New password")
+
+
+class ChangeEmailRequest(BaseModel):
+    """Body of POST /auth/email/change (authenticated re-auth)."""
+
+    new_email: EmailStr = Field(..., description="New email address")
+    current_password: str = Field(..., description="Current password (re-auth)")
+
+
+class ConfirmEmailChangeRequest(BaseModel):
+    """Body of POST /auth/email/confirm (public, token from the new mailbox)."""
+
+    token: str = Field(..., description="Email-change confirmation token")
 
 
 class ResetPasswordRequest(BaseModel):

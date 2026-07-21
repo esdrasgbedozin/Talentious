@@ -79,6 +79,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/password/change": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Changer son mot de passe (connecté)
+         * @description Change le mot de passe de l'utilisateur authentifié. Exige le mot de
+         *     passe actuel (ré-authentification). Par sécurité, toutes les sessions
+         *     (refresh tokens) sont révoquées et une notification est envoyée par email.
+         */
+        post: operations["changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/email/change": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Demander le changement d'adresse email (connecté)
+         * @description Envoie un lien de confirmation à la NOUVELLE adresse (l'adresse du compte
+         *     ne change qu'après confirmation — la nouvelle boîte fait autorité). Exige
+         *     le mot de passe actuel. Rate-limité (envoi d'email).
+         */
+        post: operations["requestEmailChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/email/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirmer le changement d'adresse email (lien reçu)
+         * @description Applique le changement d'adresse depuis le jeton reçu sur la NOUVELLE
+         *     boîte. Endpoint public (le lien est cliqué depuis l'email). L'ancienne
+         *     adresse reçoit une notification de sécurité.
+         */
+        post: operations["confirmEmailChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/me": {
         parameters: {
             query?: never;
@@ -454,6 +520,13 @@ export interface components {
             email: string;
             role: components["schemas"]["UserRole"];
             is_active: boolean;
+            /** @description L'adresse email a été confirmée (obligatoire pour se connecter) */
+            email_verified?: boolean;
+            /**
+             * @description Nom d'affichage (prénom du profil). Modifiable par l'utilisateur via
+             *     son profil ; null si le profil n'a pas encore de prénom.
+             */
+            display_name?: string | null;
             /** @description Identifiant client Stripe (null si jamais passé en caisse) */
             stripe_customer_id?: string | null;
         };
@@ -1196,6 +1269,129 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             /** @description Trop de demandes (rate limit) */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    current_password: string;
+                    new_password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Mot de passe changé, sessions révoquées */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mot de passe actuel incorrect (ou non authentifié) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    requestEmailChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    new_email: string;
+                    current_password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Lien de confirmation envoyé à la nouvelle adresse */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Nouvelle adresse invalide (déjà utilisée ou identique à l'actuelle) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Mot de passe actuel incorrect (ou non authentifié) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Trop de demandes (rate limit) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    confirmEmailChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Adresse mise à jour */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Jeton invalide/expiré, ou adresse devenue indisponible */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

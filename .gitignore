@@ -67,3 +67,11 @@ lerna-debug.log*
 
 # Impeccable skill working directory (local design critique snapshots)
 .impeccable/
+
+# Terraform — artefacts locaux (les plans peuvent contenir des valeurs sensibles)
+infra/.terraform/
+infra/*.tfplan
+infra/tf.plan
+infra/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*

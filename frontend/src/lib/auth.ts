@@ -11,6 +11,7 @@ export interface User {
   email: string;
   role: 'user' | 'admin';
   email_verified?: boolean;
+  display_name?: string | null;
   created_at: string;
 }
 
