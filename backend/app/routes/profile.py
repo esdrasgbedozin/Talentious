@@ -2,18 +2,88 @@
 Profile management routes.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+import logging
+
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime, timezone
 
+from app.core.rate_limit import IMPORT_RATE_LIMIT, limiter
 from app.database import get_db
 from app.models import User, UserProfile
 from app.schemas.user import UserResponse
 from app.schemas.profile import ProfileResponse, ProfileUpdate, ProfileData
 from app.services.dependencies import get_current_active_user
+from app.services.parser_client import parser_client
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/profile", tags=["profile"])
+
+# Pré-contrôle avant d'expédier le fichier à l'agent (économie réseau/coût).
+MAX_IMPORT_FILE_SIZE = 10 * 1024 * 1024  # 10 Mo (contrat)
+
+
+@router.post("/import-cv")
+@limiter.limit(IMPORT_RATE_LIMIT)
+async def import_cv(
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Importe un CV ou un export LinkedIn (PDF) et renvoie un BROUILLON de profil.
+
+    RIEN n'est persisté ici : le brouillon est relu par l'utilisateur dans le
+    formulaire de profil puis sauvegardé via PUT /profile (validation
+    canonique). Cette relecture humaine est le garde-fou final contre
+    l'injection de prompt (le contenu d'un PDF est une entrée non fiable).
+    """
+    if file.content_type != "application/pdf":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Format invalide : seul le PDF est accepté",
+        )
+
+    content = await file.read()
+    if len(content) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Fichier vide"
+        )
+    if len(content) > MAX_IMPORT_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Fichier trop volumineux (maximum 10 Mo)",
+        )
+    await file.seek(0)
+
+    result = await parser_client.extract_profile(file)
+
+    # Défense en profondeur : le brouillon DOIT valider le ProfileData canonique
+    # (même si l'agent est censé coercer). Un brouillon hors contrat = 502,
+    # jamais transmis au client.
+    try:
+        draft = ProfileData.model_validate(result.get("profile_data"))
+    except ValidationError as e:
+        logger.error(
+            "Agent returned an out-of-contract draft for user %s: %s",
+            current_user.id,
+            str(e)[:300],
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="L'import a produit un résultat invalide. Réessayez.",
+        )
+
+    warnings = [w for w in result.get("warnings", []) if isinstance(w, str)]
+    logger.info(
+        "CV imported for user %s (%d warnings) — draft only, nothing persisted",
+        current_user.id,
+        len(warnings),
+    )
+    return {"profile_data": draft.model_dump(mode="json"), "warnings": warnings}
 
 
 @router.get("", response_model=ProfileResponse)
