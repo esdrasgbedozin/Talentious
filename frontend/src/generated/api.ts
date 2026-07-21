@@ -16,7 +16,16 @@ export interface paths {
         /**
          * Créer un nouveau compte utilisateur
          * @description Crée un utilisateur avec le rôle `USER` par défaut et initialise
-         *     un profil vide. Aucun JWT n'est requis.
+         *     un profil vide. Aucun JWT n'est requis. Un email de vérification est
+         *     envoyé ; la connexion est refusée (403) tant que l'adresse n'est pas
+         *     confirmée.
+         *
+         *     Anti-squat : si l'email correspond à un compte existant NON vérifié,
+         *     aucune erreur « déjà utilisé » n'est renvoyée — l'email de vérification
+         *     est simplement renvoyé à l'adresse (le compte n'est pas modifié). Le
+         *     titulaire réel de l'adresse récupère le compte via vérification puis
+         *     « mot de passe oublié ». Le 400 « déjà enregistré » n'est renvoyé que
+         *     pour un compte VÉRIFIÉ.
          */
         post: operations["registerUser"];
         delete?: never;
@@ -41,6 +50,29 @@ export interface paths {
          *     (convention OAuth2PasswordRequestForm).
          */
         post: operations["loginUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/verify-email/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Renvoyer l'email de vérification (public)
+         * @description Renvoie l'email de vérification d'un compte non vérifié. Endpoint PUBLIC
+         *     (écran de connexion, avant authentification). Réponse constante 204
+         *     quelle que soit l'existence du compte (anti-énumération) ; envoi effectif
+         *     uniquement si le compte existe et n'est pas vérifié. Rate-limité.
+         */
+        post: operations["resendVerificationPublic"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1112,7 +1144,65 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            /**
+             * @description Adresse email non vérifiée. Les identifiants sont corrects mais la
+             *     connexion est refusée tant que l'adresse n'a pas été confirmée
+             *     (empêche l'usage d'un compte créé avec l'adresse d'autrui). Le client
+             *     doit proposer le renvoi de l'email (POST /auth/verify-email/resend).
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "https://talentious.fr/errors/email-not-verified",
+                     *       "title": "Forbidden",
+                     *       "status": 403,
+                     *       "detail": "Adresse email non vérifiée. Consultez votre boîte mail ou renvoyez l'email de confirmation.",
+                     *       "instance": "/v1/auth/login"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
+        };
+    };
+    resendVerificationPublic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Demande acceptée (réponse constante, anti-énumération) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Trop de demandes (rate limit) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getCurrentUser: {

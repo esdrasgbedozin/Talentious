@@ -73,7 +73,16 @@ paths:
       summary: Créer un nouveau compte utilisateur
       description: |
         Crée un utilisateur avec le rôle `USER` par défaut et initialise
-        un profil vide. Aucun JWT n'est requis.
+        un profil vide. Aucun JWT n'est requis. Un email de vérification est
+        envoyé ; la connexion est refusée (403) tant que l'adresse n'est pas
+        confirmée.
+
+        Anti-squat : si l'email correspond à un compte existant NON vérifié,
+        aucune erreur « déjà utilisé » n'est renvoyée — l'email de vérification
+        est simplement renvoyé à l'adresse (le compte n'est pas modifié). Le
+        titulaire réel de l'adresse récupère le compte via vérification puis
+        « mot de passe oublié ». Le 400 « déjà enregistré » n'est renvoyé que
+        pour un compte VÉRIFIÉ.
       security: []
       requestBody:
         required: true
@@ -138,8 +147,58 @@ paths:
                 status: 401
                 detail: "Incorrect email or password."
                 instance: "/v1/auth/login"
+        '403':
+          description: |
+            Adresse email non vérifiée. Les identifiants sont corrects mais la
+            connexion est refusée tant que l'adresse n'a pas été confirmée
+            (empêche l'usage d'un compte créé avec l'adresse d'autrui). Le client
+            doit proposer le renvoi de l'email (POST /auth/verify-email/resend).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "https://talentious.fr/errors/email-not-verified"
+                title: "Forbidden"
+                status: 403
+                detail: "Adresse email non vérifiée. Consultez votre boîte mail ou renvoyez l'email de confirmation."
+                instance: "/v1/auth/login"
         '422':
           $ref: '#/components/responses/ValidationError'
+
+  /auth/verify-email/resend:
+    post:
+      tags: [Auth]
+      operationId: resendVerificationPublic
+      summary: Renvoyer l'email de vérification (public)
+      description: |
+        Renvoie l'email de vérification d'un compte non vérifié. Endpoint PUBLIC
+        (écran de connexion, avant authentification). Réponse constante 204
+        quelle que soit l'existence du compte (anti-énumération) ; envoi effectif
+        uniquement si le compte existe et n'est pas vérifié. Rate-limité.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '204':
+          description: Demande acceptée (réponse constante, anti-énumération)
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          description: Trop de demandes (rate limit)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
 
   /auth/me:
     get:

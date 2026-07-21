@@ -13,6 +13,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import PasswordInput from '@/components/ui/PasswordInput';
 import Navbar from '@/components/Navbar';
+import { resendVerificationPublic } from '@/lib/api';
 
 function LoginForm() {
   const router = useRouter();
@@ -34,6 +35,9 @@ function LoginForm() {
   });
 
   const [showRegisteredMessage, setShowRegisteredMessage] = useState(isJustRegistered);
+  // Email non vérifié (403 au login) : proposer le renvoi du lien de confirmation.
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent'>('idle');
 
   // Hide success message after 5 seconds
   useEffect(() => {
@@ -83,15 +87,28 @@ function LoginForm() {
       return;
     }
 
+    setUnverifiedEmail(null);
+    setResendState('idle');
+
     try {
       await login(formData.email, formData.password);
-      
+
       // Login successful - redirect handled by useEffect above
       // The useAuth will set isAuthenticated to true
     } catch (error: unknown) {
       // Handle API errors
-      const apiError = error as { response?: { data?: { detail?: string } }; message?: string };
-      
+      const apiError = error as {
+        response?: { status?: number; data?: { detail?: string } };
+        message?: string;
+      };
+
+      // 403 = identifiants corrects mais adresse non vérifiée → proposer le renvoi.
+      const msg = apiError.response?.data?.detail ?? apiError.message ?? '';
+      if (apiError.response?.status === 403 || /non vérifiée/i.test(msg)) {
+        setUnverifiedEmail(formData.email);
+        return;
+      }
+
       if (apiError.response?.data?.detail) {
         setErrors(prev => ({
           ...prev,
@@ -144,6 +161,39 @@ function LoginForm() {
           {/* Card */}
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-border p-8 shadow-xl">
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Email non vérifié : identifiants OK mais adresse à confirmer */}
+              {unverifiedEmail && (
+                <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl space-y-3">
+                  <p className="text-sm text-amber-800">
+                    Ton adresse <span className="font-semibold">{unverifiedEmail}</span> n&apos;est
+                    pas encore vérifiée. Clique sur le lien reçu par email pour activer ton
+                    compte (pense aux spams).
+                  </p>
+                  {resendState === 'sent' ? (
+                    <p className="text-sm font-medium text-action">
+                      ✓ Email renvoyé — vérifie ta boîte.
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={resendState === 'sending'}
+                      onClick={async () => {
+                        setResendState('sending');
+                        try {
+                          await resendVerificationPublic(unverifiedEmail);
+                          setResendState('sent');
+                        } catch {
+                          setResendState('idle');
+                        }
+                      }}
+                      className="text-sm font-semibold text-action hover:underline disabled:opacity-60"
+                    >
+                      {resendState === 'sending' ? 'Envoi…' : "Renvoyer l'email de vérification"}
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* General error */}
               {errors.general && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-xl">

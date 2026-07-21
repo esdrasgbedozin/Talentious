@@ -57,6 +57,7 @@ async def seed_admin() -> None:
             email=ADMIN_EMAIL,
             hashed_password=hash_password(ADMIN_PASSWORD),
             role=UserRole.ADMIN,
+            email_verified=True,  # le login exige désormais une adresse vérifiée
         )
         db.add(admin)
         await db.flush()

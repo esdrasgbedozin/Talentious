@@ -20,6 +20,7 @@ from app.schemas.user import (
     Token,
     VerifyEmailRequest,
     ForgotPasswordRequest,
+    ResendVerificationRequest,
     ResetPasswordRequest,
 )
 from app.schemas.profile import PersonalInfo, ProfileData, Skills
@@ -107,6 +108,14 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     existing_user = result.scalar_one_or_none()
 
     if existing_user:
+        if not existing_user.email_verified:
+            # Anti-squat : le compte existe mais son adresse n'a jamais été
+            # prouvée. On ne dit pas « déjà utilisé » et on ne modifie RIEN
+            # (surtout pas le mot de passe — seule la boîte mail fait autorité) :
+            # on renvoie simplement le lien de vérification. Le titulaire réel
+            # récupère le compte via vérification puis « mot de passe oublié ».
+            await _send_verification_email(existing_user)
+            return existing_user
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
@@ -208,6 +217,26 @@ async def resend_verification(
         await _send_verification_email(current_user)
 
 
+@router.post("/verify-email/resend", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(EMAIL_RATE_LIMIT)
+async def resend_verification_public(
+    request: Request,
+    payload: ResendVerificationRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Public resend (login screen: the user can't authenticate while unverified).
+
+    Constant 204 whether or not the account exists (anti-enumeration); the email
+    is actually sent only for an existing, unverified account. Rate-limited.
+    """
+    user = (
+        await db.execute(select(User).where(User.email == payload.email))
+    ).scalar_one_or_none()
+    if user is not None and not user.email_verified:
+        await _send_verification_email(user)
+
+
 @router.post("/password/forgot", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit(EMAIL_RATE_LIMIT)
 async def forgot_password(
@@ -301,6 +330,19 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # La connexion exige une adresse vérifiée : un compte créé avec l'adresse
+    # d'autrui est inutilisable tant que la boîte mail n'a pas confirmé.
+    # (Après le contrôle du mot de passe : un mauvais mdp reste 401 — le 403 ne
+    # fuite l'état de vérification qu'à qui possède déjà les identifiants.)
+    if not user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Adresse email non vérifiée. Consultez votre boîte mail ou "
+                "renvoyez l'email de confirmation."
+            ),
         )
 
     # Short-lived access token (body) + long-lived rotating refresh token (cookie).

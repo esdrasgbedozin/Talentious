@@ -221,6 +221,14 @@ export const resendVerification = async (): Promise<void> => {
   await apiClient.post('/auth/resend-verification');
 };
 
+/**
+ * Public resend (login screen: the user can't authenticate while unverified).
+ * Enumeration-safe on the server — always resolves with 204.
+ */
+export const resendVerificationPublic = async (email: string): Promise<void> => {
+  await apiClient.post('/auth/verify-email/resend', { email });
+};
+
 /** Request a password-reset email (always resolves — enumeration-safe on the server). */
 export const forgotPassword = async (email: string): Promise<void> => {
   await apiClient.post('/auth/password/forgot', { email });
