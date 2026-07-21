@@ -256,6 +256,27 @@ export const confirmEmailChange = async (token: string): Promise<void> => {
   await apiClient.post('/auth/email/confirm', { token });
 };
 
+// ===== Import CV (PDF) =====
+
+export interface ImportCvResult {
+  profile_data: UserProfile;
+  warnings: string[];
+}
+
+/**
+ * Import a CV / LinkedIn PDF: returns a DRAFT profile (nothing persisted).
+ * The extraction includes an LLM call — allow up to 2 minutes.
+ */
+export const importCvPdf = async (file: File): Promise<ImportCvResult> => {
+  const form = new FormData();
+  form.append('file', file);
+  const { data } = await apiClient.post<ImportCvResult>('/profile/import-cv', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120_000,
+  });
+  return data;
+};
+
 /** Request a password-reset email (always resolves — enumeration-safe on the server). */
 export const forgotPassword = async (email: string): Promise<void> => {
   await apiClient.post('/auth/password/forgot', { email });

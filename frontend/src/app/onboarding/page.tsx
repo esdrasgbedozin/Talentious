@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Button from '@/components/ui/Button';
+import { importCvPdf, getErrorMessage } from '@/lib/api';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -63,7 +64,9 @@ export default function OnboardingPage() {
     }
   };
 
-  // Handle upload and parsing
+  // Import réel : PDF → agent d'extraction → BROUILLON (rien n'est sauvegardé).
+  // Le brouillon transite par sessionStorage ; /profile le charge, l'affiche
+  // avec une bannière de relecture, et l'utilisateur sauvegarde lui-même.
   const handleContinue = async () => {
     if (!uploadedFile) return;
 
@@ -71,17 +74,14 @@ export default function OnboardingPage() {
     setError(null);
 
     try {
-      // TODO: Phase 3 - Appeler l'API de parsing
-      // const formData = new FormData();
-      // formData.append('file', uploadedFile);
-      // const response = await apiClient.post('/profile/parse-cv', formData);
-      
-      // Pour l'instant, simuler un délai et rediriger
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      router.push('/profile');
-    } catch {
-      setError('Une erreur est survenue lors du traitement du fichier. Veuillez réessayer.');
+      const result = await importCvPdf(uploadedFile);
+      sessionStorage.setItem(
+        'imported_profile_draft',
+        JSON.stringify({ profile_data: result.profile_data, warnings: result.warnings }),
+      );
+      router.push('/profile?imported=1');
+    } catch (err) {
+      setError(getErrorMessage(err));
       setIsUploading(false);
     }
   };
@@ -108,15 +108,17 @@ export default function OnboardingPage() {
 
         {/* Options Grid */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
-          {/* Option 1: Import CV — fonctionnalité à venir (pattern GenerateCVModal) */}
+          {/* Option 1: Import CV */}
           <button
-            disabled
-            aria-disabled="true"
-            className="relative bg-white rounded-2xl p-8 border-2 border-gray-200 opacity-60 cursor-not-allowed"
+            onClick={() => setSelectedOption('cv')}
+            className={`relative group bg-white rounded-2xl p-8 border-2 transition-all duration-300 hover:shadow-xl ${
+              selectedOption === 'cv'
+                ? 'border-action shadow-lg scale-105'
+                : 'border-gray-200 hover:border-action'
+            }`}
           >
-            {/* Badge "À venir" */}
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gray-500 text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
-              À venir
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-action to-action-hover text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
+              Recommandé
             </div>
 
             <div className="flex flex-col items-center text-center">
@@ -131,20 +133,20 @@ export default function OnboardingPage() {
                 Importer un CV (PDF)
               </h3>
               <p className="text-sm text-text-secondary">
-                La méthode la plus rapide pour pré-remplir votre profil — bientôt disponible
+                La méthode la plus rapide pour pré-remplir votre profil
               </p>
             </div>
           </button>
 
-          {/* Option 2: Import LinkedIn — fonctionnalité à venir */}
+          {/* Option 2: Import LinkedIn */}
           <button
-            disabled
-            aria-disabled="true"
-            className="relative bg-white rounded-2xl p-8 border-2 border-gray-200 opacity-60 cursor-not-allowed"
+            onClick={() => setSelectedOption('linkedin')}
+            className={`relative group bg-white rounded-2xl p-8 border-2 transition-all duration-300 hover:shadow-xl ${
+              selectedOption === 'linkedin'
+                ? 'border-action shadow-lg scale-105'
+                : 'border-gray-200 hover:border-action'
+            }`}
           >
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gray-500 text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
-              À venir
-            </div>
             <div className="flex flex-col items-center text-center">
               {/* Icon */}
               <div className="w-16 h-16 bg-gradient-to-br from-[#0A66C2] to-[#004182] rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -181,14 +183,11 @@ export default function OnboardingPage() {
             </div>
           </button>
 
-          {/* Option 3: Manual — seul chemin actif pour l'instant */}
+          {/* Option 3: Manual */}
           <button
             onClick={handleManualStart}
-            className="relative group bg-white rounded-2xl p-8 border-2 border-gray-200 transition-all duration-300 hover:shadow-xl hover:border-action"
+            className="group bg-white rounded-2xl p-8 border-2 border-gray-200 transition-all duration-300 hover:shadow-lg hover:border-gray-300"
           >
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-action to-action-hover text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
-              Recommandé
-            </div>
             <div className="flex flex-col items-center text-center">
               {/* Icon */}
               <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-gray-200 transition-colors">
@@ -306,13 +305,19 @@ export default function OnboardingPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Analyse en cours...
+                    Extraction en cours… (jusqu&apos;à 30 s)
                   </span>
                 ) : (
                   'Continuer'
                 )}
               </Button>
             </div>
+            {isUploading && (
+              <p className="mt-3 text-right text-sm text-text-secondary">
+                L&apos;IA lit ton document et pré-remplit ton profil — rien ne sera
+                enregistré sans ta relecture.
+              </p>
+            )}
           </div>
         )}
 

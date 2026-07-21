@@ -25,7 +25,7 @@ import {
   createEmptyProject,
   createEmptyCertification,
 } from '@/types/profile';
-import { getProfile, saveProfile } from '@/lib/profile';
+import { getProfile, saveProfile, draftToFormProfile } from '@/lib/profile';
 
 // Validation constants
 const MIN_SUMMARY_LENGTH_COMPLETE = 50; // Minimum for profile completeness
@@ -39,12 +39,34 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // Brouillon issu de l'import PDF (onboarding) : affiché pour RELECTURE,
+  // rien n'est enregistré tant que l'utilisateur ne sauvegarde pas lui-même.
+  const [importWarnings, setImportWarnings] = useState<string[] | null>(null);
 
-  // Load profile on mount
+  // Load profile on mount — an imported draft (sessionStorage) takes precedence
   useEffect(() => {
     const loadProfile = async () => {
       try {
         setIsLoading(true);
+
+        // Le brouillon n'est PAS consommé ici : il survit jusqu'à la
+        // sauvegarde (ou au rejet explicite). Rend l'effet idempotent — en dev,
+        // React Strict Mode exécute l'effet deux fois, et une consommation à la
+        // lecture faisait écraser le brouillon par le profil serveur au 2e tour.
+        const rawDraft = sessionStorage.getItem('imported_profile_draft');
+        if (rawDraft) {
+          try {
+            const draft = JSON.parse(rawDraft);
+            setProfile(draftToFormProfile(draft.profile_data));
+            setImportWarnings(
+              Array.isArray(draft.warnings) ? draft.warnings : [],
+            );
+            return; // le brouillon remplace le formulaire (non sauvegardé)
+          } catch {
+            console.warn('Brouillon importé illisible — chargement du profil normal');
+          }
+        }
+
         const data = await getProfile();
         setProfile(data.profile_data);
       } catch {
@@ -76,6 +98,8 @@ export default function ProfilePage() {
       await saveProfile(profile);
       
       setSuccessMessage('Profil sauvegardé avec succès !');
+      setImportWarnings(null); // le brouillon importé est désormais enregistré
+      sessionStorage.removeItem('imported_profile_draft');
       
       // Scroll to top to show success message
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -252,6 +276,41 @@ export default function ProfilePage() {
         </div>
 
         {/* Success/Error Messages */}
+        {importWarnings !== null && (
+          <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4">
+            <p className="font-semibold text-amber-900">
+              📄 Profil importé depuis ton PDF — rien n&apos;est encore enregistré.
+            </p>
+            <p className="mt-1 text-sm text-amber-800">
+              Relis chaque section, corrige ce qui doit l&apos;être, puis clique sur
+              « Sauvegarder mon profil » en bas de page.
+            </p>
+            {importWarnings.length > 0 && (
+              <ul className="mt-2 list-disc pl-5 text-sm text-amber-800">
+                {importWarnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            )}
+            <button
+              type="button"
+              onClick={async () => {
+                sessionStorage.removeItem('imported_profile_draft');
+                setImportWarnings(null);
+                try {
+                  const data = await getProfile();
+                  setProfile(data.profile_data);
+                } catch {
+                  setProfile(createEmptyProfile());
+                }
+              }}
+              className="mt-3 text-sm font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-700"
+            >
+              Ignorer l&apos;import et revenir à mon profil actuel
+            </button>
+          </div>
+        )}
+
         {successMessage && (
           <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3 animate-fadeIn">
             <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
