@@ -92,11 +92,13 @@ def decode_access_token(token: str) -> Optional[dict]:
         return None
 
 
-def create_email_token(user_id, purpose: str) -> str:
-    """Create a short-lived signed token for an email link (verification, reset).
+def create_email_token(user_id, purpose: str, extra: Optional[dict] = None) -> str:
+    """Create a short-lived signed token for an email link (verification, reset,
+    email change).
 
     The ``purpose`` claim scopes the token so a verification link can never be
-    replayed as a reset link (and vice versa).
+    replayed as a reset link (and vice versa). ``extra`` carries additional
+    claims (e.g. the new address for an email change).
     """
     expire_ts = int(
         (
@@ -104,15 +106,14 @@ def create_email_token(user_id, purpose: str) -> str:
             + timedelta(hours=settings.email_token_expire_hours)
         ).timestamp()
     )
-    return jwt.encode(
-        {"sub": str(user_id), "purpose": purpose, "exp": expire_ts},
-        settings.secret_key,
-        algorithm=settings.algorithm,
-    )
+    claims = {"sub": str(user_id), "purpose": purpose, "exp": expire_ts}
+    if extra:
+        claims.update(extra)
+    return jwt.encode(claims, settings.secret_key, algorithm=settings.algorithm)
 
 
-def decode_email_token(token: str, expected_purpose: str) -> Optional[str]:
-    """Return the user id from a valid email token of the expected purpose, else None."""
+def decode_email_token_payload(token: str, expected_purpose: str) -> Optional[dict]:
+    """Full payload of a valid email token of the expected purpose, else None."""
     try:
         payload = jwt.decode(
             token, settings.secret_key, algorithms=[settings.algorithm]
@@ -121,4 +122,10 @@ def decode_email_token(token: str, expected_purpose: str) -> Optional[str]:
         return None
     if payload.get("purpose") != expected_purpose:
         return None
-    return payload.get("sub")
+    return payload
+
+
+def decode_email_token(token: str, expected_purpose: str) -> Optional[str]:
+    """Return the user id from a valid email token of the expected purpose, else None."""
+    payload = decode_email_token_payload(token, expected_purpose)
+    return payload.get("sub") if payload else None

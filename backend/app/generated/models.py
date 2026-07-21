@@ -603,6 +603,14 @@ class UserResponse(BaseModel):
     email: EmailStr
     role: UserRole
     is_active: bool
+    email_verified: bool | None = Field(
+        None,
+        description="L'adresse email a été confirmée (obligatoire pour se connecter)",
+    )
+    display_name: str | None = Field(
+        None,
+        description="Nom d'affichage (prénom du profil). Modifiable par l'utilisateur via\nson profil ; null si le profil n'a pas encore de prénom.\n",
+    )
     stripe_customer_id: str | None = Field(
         None, description='Identifiant client Stripe (null si jamais passé en caisse)'
     )
