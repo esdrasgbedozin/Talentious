@@ -592,10 +592,10 @@ export default function ProfilePage() {
         <div className="sticky bottom-0 left-0 right-0 mt-12 bg-gradient-to-t from-white via-white to-transparent pt-8 pb-6">
           <div className="max-w-5xl mx-auto flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/cvs')}
               className="text-center font-medium text-text-secondary transition-colors hover:text-text-primary"
             >
-              ← Retour au tableau de bord
+              ← Retour à mes CVs
             </button>
             <Button
               variant="primary"

@@ -59,7 +59,7 @@ function VerifyEmailInner() {
               Ton adresse email est vérifiée. Tu peux profiter pleinement de Talentious.
             </p>
             <Link
-              href="/dashboard"
+              href="/cvs"
               className="mt-6 inline-flex items-center justify-center rounded-lg bg-action px-6 py-3 font-medium text-white transition-colors hover:bg-action-hover"
             >
               Accéder à mon espace
