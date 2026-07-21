@@ -41,6 +41,7 @@ RUN useradd -m -u 1000 parser && \
 
 # Copy application code
 COPY --chown=parser:parser ./app /service/app
+COPY --chown=parser:parser ./prompts /service/prompts
 
 # Switch to non-root user
 USER parser
