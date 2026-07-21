@@ -69,6 +69,13 @@ resource "google_project_iam_member" "analyseur_vertex" {
   member  = "serviceAccount:${google_service_account.analyseur.email}"
 }
 
+# M8-T01 : le parser structure désormais les CV via Gemini (/extract-profile).
+resource "google_project_iam_member" "parser_vertex" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.parser.email}"
+}
+
 resource "google_project_iam_member" "redacteur_vertex" {
   project = var.project_id
   role    = "roles/aiplatform.user"
@@ -107,7 +114,8 @@ resource "google_cloud_run_v2_service" "parser" {
 
   template {
     service_account = google_service_account.parser.email
-    timeout         = "60s"
+    # 120 s : /extract-profile inclut un appel Gemini (~10-40 s) après le parsing.
+    timeout = "120s"
     scaling {
       min_instance_count = 0
       max_instance_count = 1
@@ -120,12 +128,28 @@ resource "google_cloud_run_v2_service" "parser" {
       resources {
         limits = {
           cpu    = "1"
-          memory = "512Mi"
+          memory = "1Gi" # SDK Vertex embarqué (M8-T01)
         }
       }
       env {
         name  = "LOG_LEVEL"
         value = "INFO"
+      }
+      env {
+        name  = "GCP_PROJECT_ID"
+        value = var.project_id
+      }
+      env {
+        name  = "GCP_LOCATION"
+        value = var.region
+      }
+      env {
+        name  = "VERTEX_AI_MODEL"
+        value = var.vertex_ai_model
+      }
+      env {
+        name  = "USE_SECRET_MANAGER"
+        value = "false"
       }
     }
   }

@@ -50,9 +50,17 @@ services:
       - "8001:8001"
     volumes:
       - ./agents/parser-pdf/app:/service/app
+      - ./agents/parser-pdf/prompts:/service/prompts
+      # Creds GCP hôte pour Vertex AI (extraction ProfileData, M8-T01)
+      - ~/.config/gcloud/application_default_credentials.json:/tmp/gcp_creds.json:ro
     environment:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       SERVICE_PORT: 8001
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-talentious-project}
+      GCP_LOCATION: ${GCP_LOCATION:-europe-west9}
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp_creds.json
+      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-2.5-pro}
+      USE_SECRET_MANAGER: ${USE_SECRET_MANAGER:-false}
 
   analyseur-offre:
     build: ./agents/analyseur-offre
