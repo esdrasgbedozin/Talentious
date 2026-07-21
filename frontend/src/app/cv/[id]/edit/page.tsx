@@ -157,7 +157,7 @@ export default function CVEditorPage() {
     window.confirm('Vous avez des modifications non sauvegardées. Quitter quand même ?');
 
   const handleBack = () => {
-    if (confirmLeave()) router.push('/dashboard');
+    if (confirmLeave()) router.push('/cvs');
   };
 
   const handlePreview = () => {
@@ -184,8 +184,8 @@ export default function CVEditorPage() {
         <Navbar variant="authenticated" />
         <main className="mx-auto max-w-md px-4 py-24 text-center">
           <p className="mb-6 text-text-secondary">{loadError}</p>
-          <Button variant="outline" onClick={() => router.push('/dashboard')}>
-            Retour au tableau de bord
+          <Button variant="outline" onClick={() => router.push('/cvs')}>
+            Retour à mes CVs
           </Button>
         </main>
       </div>
@@ -204,7 +204,7 @@ export default function CVEditorPage() {
             className="flex items-center gap-1.5 text-sm font-medium text-text-secondary hover:text-primary"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Tableau de bord</span>
+            <span className="hidden sm:inline">Mes CVs</span>
           </button>
           <input
             value={cvName}

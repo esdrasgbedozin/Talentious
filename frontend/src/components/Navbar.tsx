@@ -259,9 +259,9 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                 Mon Profil
               </Link>
               <Link 
-                href="/dashboard"
+                href="/cvs"
                 className={`text-sm font-medium transition-colors ${
-                  pathname === '/dashboard' 
+                  pathname === '/cvs' 
                     ? 'text-action' 
                     : 'text-text-secondary hover:text-text-primary'
                 }`}
@@ -329,7 +329,7 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
                       </div>
                     </Link>
                     <Link 
-                      href="/dashboard"
+                      href="/cvs"
                       onClick={() => setIsUserMenuOpen(false)}
                       className="block px-4 py-3 text-sm text-text-primary hover:bg-background-light transition-colors"
                     >

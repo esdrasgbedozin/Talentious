@@ -64,8 +64,8 @@ export default function CVPrintPage() {
     return (
       <main className="mx-auto max-w-md px-4 py-24 text-center">
         <p className="mb-6 text-text-secondary">{error}</p>
-        <Button variant="outline" onClick={() => router.push('/dashboard')}>
-          Retour au tableau de bord
+        <Button variant="outline" onClick={() => router.push('/cvs')}>
+          Retour à mes CVs
         </Button>
       </main>
     );
