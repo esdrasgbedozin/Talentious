@@ -26,6 +26,8 @@ LOGIN_RATE_LIMIT = settings.login_rate_limit
 # Endpoints that trigger outbound emails (forgot-password, resend-verification):
 # abuse would spam arbitrary inboxes and burn the Brevo quota.
 EMAIL_RATE_LIMIT = settings.email_rate_limit
+# Import PDF : chaque requête déclenche un appel Gemini (coût réel).
+IMPORT_RATE_LIMIT = settings.import_rate_limit
 
 
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:

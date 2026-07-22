@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 # Configuration
 PARSER_SERVICE_URL = os.getenv("PARSER_SERVICE_URL", "http://parser-pdf:8001")
 REQUEST_TIMEOUT = 60.0  # 60 seconds for PDF processing
+# L'extraction structurée inclut un appel Gemini (~10-40 s) en plus du parsing.
+EXTRACT_TIMEOUT = 120.0
 
 
 class ParserClient:
@@ -148,6 +150,71 @@ class ParserClient:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to parse PDF",
+            )
+
+    async def extract_profile(self, file: UploadFile) -> Dict[str, Any]:
+        """Import complet : PDF → ProfileData structuré via l'agent (LLM inclus).
+
+        Returns:
+            {"profile_data": <brouillon canonique>, "warnings": [...]}
+
+        Raises:
+            HTTPException: erreurs métier de l'agent transmises (400/422),
+            502/503/504 pour les indisponibilités.
+        """
+        file_content = await file.read()
+        await file.seek(0)
+
+        headers = await iam_auth.auth_headers(self.base_url)
+        files = {"file": (file.filename, file_content, file.content_type)}
+
+        try:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(EXTRACT_TIMEOUT)
+            ) as client:
+                response = await client.post(
+                    f"{self.base_url}/extract-profile", files=files, headers=headers
+                )
+
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(
+                    "Profile extracted from %s (%d warnings)",
+                    file.filename,
+                    len(result.get("warnings", [])),
+                )
+                return result
+
+            if response.status_code in (400, 422):
+                # Erreurs métier (non-PDF, trop de pages, scan sans texte) :
+                # transmises telles quelles au client final.
+                detail = response.json().get("detail", "Invalid PDF file")
+                raise HTTPException(status_code=response.status_code, detail=detail)
+
+            # 502 agent (Vertex KO) et tout le reste → passerelle en échec.
+            logger.error(
+                "Extract-profile agent error %d: %s",
+                response.status_code,
+                response.text[:200],
+            )
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="L'import du CV a échoué. Réessayez dans quelques instants.",
+            )
+
+        except HTTPException:
+            raise
+        except httpx.TimeoutException:
+            logger.error("Extract-profile timeout for file: %s", file.filename)
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail="L'import du CV a pris trop de temps. Réessayez.",
+            )
+        except httpx.HTTPError as e:
+            logger.error("Extract-profile service error: %s", e)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Service d'import indisponible",
             )
 
 

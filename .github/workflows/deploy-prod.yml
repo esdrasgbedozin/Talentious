@@ -68,6 +68,9 @@ jobs:
           TEST_DATABASE_URL: postgresql+asyncpg://talentious:talentious@localhost:5432/talentious_test
           SECRET_KEY: test-secret-key-for-ci-only-not-production
         run: python -m pytest -q
+      - name: Run parser-pdf agent tests (coercition ProfileData, sans dépendances)
+        working-directory: agents/parser-pdf
+        run: python -m pytest tests -q
 
   build-push:
     needs: test

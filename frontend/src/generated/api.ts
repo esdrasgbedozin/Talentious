@@ -162,6 +162,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/profile/import-cv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Importer un CV ou un export LinkedIn (PDF) en brouillon de profil
+         * @description Chaîne d'import : le PDF est transmis à l'agent parser-pdf
+         *     (extraction PyMuPDF puis structuration Gemini) et le ProfileData
+         *     BROUILLON est renvoyé au client. RIEN n'est persisté : l'utilisateur
+         *     relit le brouillon dans le formulaire de profil puis sauvegarde via
+         *     PUT /profile (validation canonique). Cette relecture humaine est le
+         *     garde-fou final contre l'injection de prompt (le PDF est une entrée
+         *     non fiable).
+         *
+         *     Gère les CV classiques et les exports PDF LinkedIn (fr/en).
+         *     Limites : 10 Mo, 20 pages, 5 imports/heure/utilisateur (rate limit).
+         */
+        post: operations["importCvPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/profile": {
         parameters: {
             query?: never;
@@ -1420,6 +1449,76 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    importCvPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description Fichier PDF (max 10 Mo, application/pdf)
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Brouillon de profil extrait (non persisté) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        profile_data: components["schemas"]["ProfileData"];
+                        /** @description Avertissements non bloquants (troncature, sections non détectées…) */
+                        warnings: string[];
+                    };
+                };
+            };
+            /** @description Fichier absent, non-PDF, vide, trop volumineux ou trop de pages */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description PDF sans texte extractible (document scanné) ou structuration impossible */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Limite d'imports atteinte (5/heure) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Agent d'import indisponible */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getProfile: {

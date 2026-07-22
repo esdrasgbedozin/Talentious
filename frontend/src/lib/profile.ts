@@ -59,6 +59,60 @@ export const sanitizeProfileForSave = (profile: UserProfile): UserProfile => ({
 });
 
 /**
+ * Inverse of the save-sanitizer: the canonical draft (from the PDF import)
+ * uses null for optional fields, but the form state expects '' strings for
+ * controlled inputs. Normalizes a draft into a form-ready UserProfile.
+ */
+export const draftToFormProfile = (draft: UserProfile): UserProfile => {
+  const s = (v: unknown) => (typeof v === 'string' ? v : '');
+  return {
+    ...draft,
+    personal_info: Object.fromEntries(
+      Object.entries(draft.personal_info ?? {}).map(([k, v]) => [k, s(v)]),
+    ) as UserProfile['personal_info'],
+    summary: s(draft.summary),
+    experiences: (draft.experiences ?? []).map((e) => ({
+      ...e,
+      location: s(e.location),
+      start_date: s(e.start_date),
+      end_date: s(e.end_date),
+      is_current: !!e.is_current,
+      description: s(e.description),
+      achievements: e.achievements ?? [],
+    })),
+    educations: (draft.educations ?? []).map((e) => ({
+      ...e,
+      location: s(e.location),
+      field: s(e.field),
+      start_date: s(e.start_date),
+      end_date: s(e.end_date),
+      description: s(e.description),
+      grade: s(e.grade),
+    })),
+    skills: {
+      hard: draft.skills?.hard ?? [],
+      soft: draft.skills?.soft ?? [],
+    },
+    languages: draft.languages ?? [],
+    projects: (draft.projects ?? []).map((p) => ({
+      ...p,
+      role: s(p.role),
+      url: s(p.url),
+      start_date: s(p.start_date),
+      end_date: s(p.end_date),
+      technologies: p.technologies ?? [],
+    })),
+    certifications: (draft.certifications ?? []).map((c) => ({
+      ...c,
+      issue_date: s(c.issue_date),
+      expiration_date: s(c.expiration_date),
+      credential_id: s(c.credential_id),
+      credential_url: s(c.credential_url),
+    })),
+  };
+};
+
+/**
  * Create or update user profile
  * @param profileData - Complete profile data
  * @returns Updated profile

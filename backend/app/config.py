@@ -92,6 +92,8 @@ class Settings(BaseSettings):
     # Email-sending endpoints (forgot-password, resend-verification): tighter cap —
     # each request can trigger an outbound email (abuse = spamming arbitrary inboxes).
     email_rate_limit: str = "3/minute"
+    # Import PDF (appel LLM coûteux) : plafond par utilisateur/IP.
+    import_rate_limit: str = "5/hour"
 
     @model_validator(mode="after")
     def _enforce_production_safety(self):

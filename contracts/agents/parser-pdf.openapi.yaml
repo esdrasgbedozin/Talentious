@@ -3,27 +3,27 @@ info:
   title: Agent Parser-PDF
   version: "1.0.0"
   description: |
-    Microservice d'extraction de texte depuis des fichiers PDF (CV ou profil LinkedIn exporté).
-    Basé sur PyMuPDF (fitz). Actuellement déployé mais jamais branché dans le pipeline
-    backend (MIN-2 de l'audit).
+    Microservice d'import de PDF (CV ou profil LinkedIn exporté), basé sur
+    PyMuPDF (fitz) pour l'extraction de texte et Vertex AI (Gemini) pour la
+    structuration en ProfileData.
 
-    ## Statut architectural V1
-    L'audit recommande de rebrancher ce service comme fonction backend (import dans
-    backend/app/services/) plutôt que de le maintenir comme 3e microservice, afin de
-    réduire la complexité opérationnelle.
-
-    Ce contrat documente l'interface actuelle. Si la décision est de l'intégrer comme
-    fonction backend, ce fichier devient la spécification de l'interface interne et
-    ce microservice peut être supprimé.
+    ## Décision architecturale (M8-T01, 2026-07-21)
+    Ce service EST l'agent d'import : il possède la chaîne complète
+    PDF → texte → ProfileData structuré (endpoint /extract-profile). L'ancienne
+    recommandation « rebrancher comme fonction backend » est remplacée : l'IA
+    vit dans les agents (cohérence avec analyseur-offre et redacteur-cv).
 
     ## Accès
     Ce service est privé (Cloud Run --no-allow-unauthenticated). Seul le compte
     de service du backend est autorisé (rôle IAM roles/run.invoker).
 
-    ## Sortie
-    Ce service retourne le texte brut extrait du PDF. Il n'effectue aucune
-    structuration sémantique (pas d'appel IA). La structuration du texte en ProfileData
-    partiel est ensuite réalisée par le backend (via un appel Gemini ou une heuristique).
+    ## Sécurité de l'extraction (entrée non fiable)
+    Le contenu d'un PDF est une entrée NON FIABLE (injection de prompt
+    possible). Garde-fous imposés par ce contrat : texte cloisonné dans des
+    délimiteurs, sortie contrainte par response_schema (JSON structuré Gemini),
+    validation stricte contre le ProfileData canonique, texte tronqué à
+    30 000 caractères avant l'appel IA. Le résultat est un BROUILLON : le
+    backend/le client ne doivent JAMAIS le persister sans relecture humaine.
 
     ## Erreurs
     Toutes les erreurs suivent le standard RFC 7807 (application/problem+json).
@@ -62,7 +62,8 @@ paths:
         - Format attendu : application/pdf
         - PDFs scannés (images uniquement) : non supportés (retourne 422)
 
-        La structuration du texte extrait en ProfileData est à la charge du backend.
+        Cet endpoint retourne du texte BRUT, sans structuration sémantique.
+        Pour un ProfileData structuré, utiliser POST /extract-profile.
       requestBody:
         required: true
         content:
@@ -115,6 +116,74 @@ paths:
                 instance: "/parse"
         '500':
           description: Erreur interne d'extraction
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /extract-profile:
+    post:
+      tags: [Parsing]
+      operationId: extractProfile
+      summary: Extraire un ProfileData structuré depuis un PDF (CV ou export LinkedIn)
+      description: |
+        Chaîne complète d'import : extraction du texte (PyMuPDF) puis
+        structuration par Gemini en ProfileData canonique
+        (contracts/openapi.yaml#/components/schemas/ProfileData).
+
+        Gère les CV classiques ET les exports PDF de profils LinkedIn
+        (libellés fr/en). Les champs introuvables sont laissés vides ('' / []) —
+        jamais inventés. Le résultat est un BROUILLON destiné à la relecture
+        humaine ; il ne doit jamais être persisté tel quel.
+
+        Limites : 10 Mo, 20 pages, texte tronqué à 30 000 caractères avant
+        l'appel IA (signalé dans warnings).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Fichier PDF (max 10 Mo, application/pdf)
+      responses:
+        '200':
+          description: ProfileData extrait (brouillon à relire)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractResult'
+        '400':
+          description: Fichier absent, type invalide, vide, trop volumineux ou trop de pages
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Token IAM absent ou invalide
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: PDF sans texte extractible (scan) ou structuration impossible
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: Vertex AI indisponible ou réponse invalide après retries
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Erreur interne
           content:
             application/problem+json:
               schema:
@@ -178,11 +247,36 @@ components:
           description: URI de la ressource concernée
           example: "/parse"
 
+    ExtractResult:
+      type: object
+      description: |
+        Brouillon de profil structuré extrait d'un PDF. Le champ profile_data
+        suit le schéma canonique ProfileData
+        (contracts/openapi.yaml#/components/schemas/ProfileData) — non dupliqué
+        ici (source de vérité unique). Les champs introuvables sont vides,
+        jamais inventés. À faire relire par l'utilisateur avant toute
+        persistance.
+      required:
+        - profile_data
+        - warnings
+      properties:
+        profile_data:
+          type: object
+          description: ProfileData canonique (voir contracts/openapi.yaml)
+        warnings:
+          type: array
+          items:
+            type: string
+          description: |
+            Avertissements non bloquants (ex. « texte tronqué à 30000
+            caractères », « aucune expérience détectée »).
+          example: ["Texte tronqué à 30000 caractères (PDF de 26 pages)"]
+
     ParseResult:
       type: object
       description: |
-        Résultat de l'extraction PDF. Contient uniquement le texte brut.
-        La structuration en ProfileData partiel est ensuite réalisée par le backend.
+        Résultat de l'extraction PDF. Contient uniquement le texte brut
+        (pour un ProfileData structuré, voir /extract-profile et ExtractResult).
       required:
         - text
         - page_count

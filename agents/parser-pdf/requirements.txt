@@ -16,3 +16,6 @@ httpx==0.28.1
 
 # Environment Variables
 python-dotenv==1.0.1
+
+# Vertex AI (structuration ProfileData — /extract-profile)
+google-cloud-aiplatform==1.73.0
