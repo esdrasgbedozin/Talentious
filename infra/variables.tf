@@ -37,15 +37,16 @@ variable "frontend_public_url" {
 }
 
 # IDs de prix Stripe (non sensibles — ce sont des identifiants publics de
-# catalogue, pas des clés). Fournis à l'apply : TF_VAR_stripe_price_30_days=...
+# catalogue, pas des clés — sans valeur par défaut, un apply sans TF_VAR_...
+# effaçait les IDs posés en prod et cassait le checkout.
 variable "stripe_price_30_days" {
   description = "ID du prix Stripe du pass 30 jours (price_...)"
   type        = string
-  default     = ""
+  default     = "price_1TryiVLgApLstvmEf1vOvl0K"
 }
 
 variable "stripe_price_90_days" {
   description = "ID du prix Stripe du pass 90 jours (price_...)"
   type        = string
-  default     = ""
+  default     = "price_1TryiWLgApLstvmEzswHD8Bm"
 }
