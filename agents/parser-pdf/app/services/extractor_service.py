@@ -57,7 +57,11 @@ class ExtractorService:
         document_text: str,
         prompt_template: str,
         temperature: float = 0.1,
-        max_output_tokens: int = 8192,
+        # 32k et non 8k : les tokens de « thinking » des modèles 2.5 comptent
+        # dans ce budget (non désactivable avec le SDK actuel — cf. chantier
+        # ADR-GENAI-SDK). À 8k, la réflexion sur un CV riche consommait le
+        # budget et tronquait le JSON en plein milieu (incident du 2026-07-23).
+        max_output_tokens: int = 32768,
         max_retries: int = 2,
     ) -> tuple[dict, list]:
         """Structure le texte d'un CV en ProfileData canonique.

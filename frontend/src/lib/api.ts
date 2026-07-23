@@ -272,7 +272,9 @@ interface ImportJobStatus {
 }
 
 const IMPORT_POLL_INTERVAL_MS = 3_000;
-const IMPORT_POLL_TIMEOUT_MS = 180_000;
+// Aligné sur la chaîne serveur : agent ≤ 300 s (thinking Gemini ×2 retries)
+// + marge. Le job échoue de lui-même avant cette borne dans les cas réels.
+const IMPORT_POLL_TIMEOUT_MS = 360_000;
 
 /**
  * Import a CV / LinkedIn PDF: returns a DRAFT profile (nothing persisted).
