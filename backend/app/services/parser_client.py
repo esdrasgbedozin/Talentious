@@ -17,8 +17,11 @@ logger = logging.getLogger(__name__)
 # Configuration
 PARSER_SERVICE_URL = os.getenv("PARSER_SERVICE_URL", "http://parser-pdf:8001")
 REQUEST_TIMEOUT = 60.0  # 60 seconds for PDF processing
-# L'extraction structurée inclut un appel Gemini (~10-40 s) en plus du parsing.
-EXTRACT_TIMEOUT = 120.0
+# L'extraction structurée inclut un appel Gemini dont le thinking peut durer
+# 60-90 s par tentative (×2 retries côté agent). Le service parser coupe à
+# 300 s : on attend un peu plus pour recevoir SON erreur qualifiée plutôt
+# qu'un timeout brut. Sans enjeu UX : l'appel vit dans une tâche de fond.
+EXTRACT_TIMEOUT = 320.0
 
 
 class ParserClient:

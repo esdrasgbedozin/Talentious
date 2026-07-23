@@ -114,8 +114,11 @@ resource "google_cloud_run_v2_service" "parser" {
 
   template {
     service_account = google_service_account.parser.email
-    # 120 s : /extract-profile inclut un appel Gemini (~10-40 s) après le parsing.
-    timeout = "120s"
+    # 300 s : /extract-profile inclut un appel Gemini dont le « thinking »
+    # (non désactivable, SDK actuel) peut durer 60-90 s par tentative, ×2
+    # retries. Sans risque côté client : l'import est asynchrone (job +
+    # polling), aucune requête navigateur n'attend cette durée.
+    timeout = "300s"
     scaling {
       min_instance_count = 0
       max_instance_count = 1
