@@ -152,8 +152,16 @@ class ParserClient:
                 detail="Failed to parse PDF",
             )
 
-    async def extract_profile(self, file: UploadFile) -> Dict[str, Any]:
+    async def extract_profile(
+        self,
+        content: bytes,
+        filename: str,
+        content_type: str = "application/pdf",
+    ) -> Dict[str, Any]:
         """Import complet : PDF → ProfileData structuré via l'agent (LLM inclus).
+
+        Prend les octets (pas l'UploadFile) : l'appel vit dans une tâche de
+        fond, après la fin de la requête HTTP d'origine.
 
         Returns:
             {"profile_data": <brouillon canonique>, "warnings": [...]}
@@ -162,11 +170,8 @@ class ParserClient:
             HTTPException: erreurs métier de l'agent transmises (400/422),
             502/503/504 pour les indisponibilités.
         """
-        file_content = await file.read()
-        await file.seek(0)
-
         headers = await iam_auth.auth_headers(self.base_url)
-        files = {"file": (file.filename, file_content, file.content_type)}
+        files = {"file": (filename, content, content_type)}
 
         try:
             async with httpx.AsyncClient(
@@ -180,7 +185,7 @@ class ParserClient:
                 result = response.json()
                 logger.info(
                     "Profile extracted from %s (%d warnings)",
-                    file.filename,
+                    filename,
                     len(result.get("warnings", [])),
                 )
                 return result
@@ -205,7 +210,7 @@ class ParserClient:
         except HTTPException:
             raise
         except httpx.TimeoutException:
-            logger.error("Extract-profile timeout for file: %s", file.filename)
+            logger.error("Extract-profile timeout for file: %s", filename)
             raise HTTPException(
                 status_code=status.HTTP_504_GATEWAY_TIMEOUT,
                 detail="L'import du CV a pris trop de temps. Réessayez.",
