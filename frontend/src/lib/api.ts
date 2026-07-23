@@ -256,25 +256,54 @@ export const confirmEmailChange = async (token: string): Promise<void> => {
   await apiClient.post('/auth/email/confirm', { token });
 };
 
-// ===== Import CV (PDF) =====
+// ===== Import CV (PDF) — asynchrone (job + polling) =====
 
 export interface ImportCvResult {
   profile_data: UserProfile;
   warnings: string[];
 }
 
+interface ImportJobStatus {
+  job_id: string;
+  status: 'running' | 'succeeded' | 'failed';
+  profile_data?: UserProfile;
+  warnings?: string[];
+  error_message?: string;
+}
+
+const IMPORT_POLL_INTERVAL_MS = 3_000;
+const IMPORT_POLL_TIMEOUT_MS = 180_000;
+
 /**
  * Import a CV / LinkedIn PDF: returns a DRAFT profile (nothing persisted).
- * The extraction includes an LLM call — allow up to 2 minutes.
+ * Asynchronous under the hood (the CDN facade cuts any request at 60s while
+ * the extraction can take longer): starts a job then polls until completion.
  */
 export const importCvPdf = async (file: File): Promise<ImportCvResult> => {
   const form = new FormData();
   form.append('file', file);
-  const { data } = await apiClient.post<ImportCvResult>('/profile/import-cv', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 120_000,
-  });
-  return data;
+  const { data: job } = await apiClient.post<ImportJobStatus>(
+    '/profile/import-cv',
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+
+  const deadline = Date.now() + IMPORT_POLL_TIMEOUT_MS;
+  for (;;) {
+    await new Promise((r) => setTimeout(r, IMPORT_POLL_INTERVAL_MS));
+    const { data: status } = await apiClient.get<ImportJobStatus>(
+      `/profile/import-cv/jobs/${job.job_id}`,
+    );
+    if (status.status === 'succeeded' && status.profile_data) {
+      return { profile_data: status.profile_data, warnings: status.warnings ?? [] };
+    }
+    if (status.status === 'failed') {
+      throw new Error(status.error_message || "L'import a échoué. Réessayez.");
+    }
+    if (Date.now() > deadline) {
+      throw new Error("L'import prend trop de temps. Réessayez.");
+    }
+  }
 };
 
 /** Request a password-reset email (always resolves — enumeration-safe on the server). */
