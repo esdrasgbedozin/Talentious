@@ -52,6 +52,9 @@ CAPS = {
 }
 
 MAX_LIST_ITEMS = 30  # garde-fou anti-explosion (30 expériences suffisent à tous)
+MAX_SKILLS = (
+    20  # plafond du CONTRAT (Skills.hard/soft maxItems: 20) — au-delà, 502 backend
+)
 
 
 def neutralize_fences(text: str) -> str:
@@ -80,7 +83,7 @@ def _date(value: Any) -> Optional[str]:
     return None
 
 
-def _str_list(value: Any, cap: int) -> list:
+def _str_list(value: Any, cap: int, max_items: int = MAX_LIST_ITEMS) -> list:
     """Liste de chaînes uniques, non vides, plafonnées."""
     if not isinstance(value, list):
         return []
@@ -90,6 +93,8 @@ def _str_list(value: Any, cap: int) -> list:
         if s and s.lower() not in seen:
             seen.add(s.lower())
             out.append(s)
+            if len(out) >= max_items:
+                break
     return out
 
 
@@ -160,9 +165,16 @@ def coerce_profile(raw: Any) -> tuple[dict, list]:
 
     sk = raw.get("skills") if isinstance(raw.get("skills"), dict) else {}
     skills = {
-        "hard": _str_list(sk.get("hard"), CAPS["skill"]),
-        "soft": _str_list(sk.get("soft"), CAPS["skill"]),
+        "hard": _str_list(sk.get("hard"), CAPS["skill"], MAX_SKILLS),
+        "soft": _str_list(sk.get("soft"), CAPS["skill"], MAX_SKILLS),
     }
+    for key, label in (("hard", "techniques"), ("soft", "humaines")):
+        source = sk.get(key)
+        if isinstance(source, list) and len(source) > len(skills[key]) >= MAX_SKILLS:
+            warnings.append(
+                f"Plus de {MAX_SKILLS} compétences {label} détectées — "
+                f"les {MAX_SKILLS} premières ont été conservées"
+            )
 
     languages = []
     for lang in _dicts(raw.get("languages")):

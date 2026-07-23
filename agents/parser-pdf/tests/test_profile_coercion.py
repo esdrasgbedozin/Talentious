@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.services.profile_coercion import (  # noqa: E402
     MAX_LIST_ITEMS,
+    MAX_SKILLS,
     coerce_profile,
     neutralize_fences,
 )
@@ -166,3 +167,24 @@ class TestCoerceDefenses:
         raw = {"experiences": [{"title": f"T{i}", "company": "X"} for i in range(500)]}
         profile, _ = coerce_profile(raw)
         assert len(profile["experiences"]) == MAX_LIST_ITEMS
+
+    def test_skills_capped_at_contract_max_with_warning(self):
+        # Incident prod 2026-07-23 : un CV DevOps à 30 compétences produisait un
+        # brouillon hors-contrat (Skills.hard maxItems: 20) rejeté en 502 par la
+        # revalidation backend. La coercition doit tronquer À 20, pas à 30.
+        raw = {
+            "skills": {
+                "hard": [f"Tech{i}" for i in range(30)],
+                "soft": [f"Soft{i}" for i in range(25)],
+            }
+        }
+        profile, warnings = coerce_profile(raw)
+        assert len(profile["skills"]["hard"]) == MAX_SKILLS
+        assert len(profile["skills"]["soft"]) == MAX_SKILLS
+        assert profile["skills"]["hard"][0] == "Tech0"
+        assert sum("compétences" in w for w in warnings) == 2
+
+    def test_skills_under_cap_no_trim_warning(self):
+        raw = {"skills": {"hard": ["Python", "SQL"], "soft": ["Rigueur"]}}
+        _, warnings = coerce_profile(raw)
+        assert not any("conservées" in w for w in warnings)

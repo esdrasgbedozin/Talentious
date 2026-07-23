@@ -172,19 +172,60 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Importer un CV ou un export LinkedIn (PDF) en brouillon de profil
-         * @description Chaîne d'import : le PDF est transmis à l'agent parser-pdf
-         *     (extraction PyMuPDF puis structuration Gemini) et le ProfileData
-         *     BROUILLON est renvoyé au client. RIEN n'est persisté : l'utilisateur
+         * Lancer l'import asynchrone d'un CV ou export LinkedIn (PDF)
+         * @description Import ASYNCHRONE : le PDF est validé (type, taille) puis un job
+         *     d'extraction est lancé en arrière-plan (agent parser-pdf : PyMuPDF
+         *     puis structuration Gemini, 20-60 s). La réponse est immédiate (`202`
+         *     + `job_id`) ; l'état se consulte via
+         *     `GET /profile/import-cv/jobs/{job_id}`.
+         *
+         *     Pourquoi asynchrone : la façade CDN coupe toute requête à 60 s ; une
+         *     extraction lente rendait la réponse synchrone imprévisible.
+         *
+         *     Le brouillon produit N'EST JAMAIS persisté : le job (et son résultat)
+         *     vit en mémoire du serveur ≤ 15 minutes puis disparaît. L'utilisateur
          *     relit le brouillon dans le formulaire de profil puis sauvegarde via
          *     PUT /profile (validation canonique). Cette relecture humaine est le
          *     garde-fou final contre l'injection de prompt (le PDF est une entrée
          *     non fiable).
          *
          *     Gère les CV classiques et les exports PDF LinkedIn (fr/en).
-         *     Limites : 10 Mo, 20 pages, 5 imports/heure/utilisateur (rate limit).
+         *     Limites : 10 Mo, 20 pages, 5 imports/heure/utilisateur (rate limit),
+         *     un seul import actif à la fois (`409`).
          */
         post: operations["importCvPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/profile/import-cv/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consulter l'état d'un job d'import de CV
+         * @description Retourne l'état courant du job d'import : `running`, `succeeded` ou
+         *     `failed`. En cas de succès, `profile_data` (brouillon) et `warnings`
+         *     sont renseignés — le client doit les présenter en relecture, rien
+         *     n'est persisté côté serveur.
+         *
+         *     Les jobs sont éphémères (mémoire, ≤ 15 minutes) et liés à leur
+         *     propriétaire : un job inconnu, expiré ou appartenant à un autre
+         *     utilisateur répond `404`. Le client doit alors proposer de relancer
+         *     l'import.
+         *
+         *     Cas d'échec (`failed`) : PDF sans texte extractible, agent
+         *     indisponible, brouillon hors contrat — `error_message` précise la
+         *     cause à afficher.
+         */
+        get: operations["getImportJobStatus"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -890,6 +931,44 @@ export interface components {
             /** Format: date-time */
             updated_at?: string | null;
         };
+        ImportJobAccepted: {
+            /**
+             * Format: uuid
+             * @description Identifiant du job d'import
+             */
+            job_id: string;
+            /**
+             * @example running
+             * @enum {string}
+             */
+            status: "running";
+            /** @example Import job accepted. Poll GET /v1/profile/import-cv/jobs/{job_id} for status. */
+            message?: string;
+        };
+        /**
+         * @description État d'un job d'import de CV. Transitions : running -> succeeded | failed.
+         *     Job éphémère (mémoire serveur, ≤ 15 min) — un job expiré répond 404.
+         */
+        ImportJobStatus: {
+            /** Format: uuid */
+            job_id: string;
+            /**
+             * @description - `running` : extraction en cours (20-60 s typiquement).
+             *     - `succeeded` : brouillon prêt, `profile_data` et `warnings` renseignés.
+             *     - `failed` : import échoué, `error_message` renseigné ; relancer via POST /profile/import-cv.
+             * @enum {string}
+             */
+            status: "running" | "succeeded" | "failed";
+            /** @description Brouillon extrait (non persisté). Présent uniquement si statut = `succeeded` (omis sinon). */
+            profile_data?: components["schemas"]["ProfileData"];
+            /** @description Avertissements de relecture (troncature, sections non détectées…). Renseigné si statut = `succeeded`. */
+            warnings?: string[] | null;
+            /**
+             * @description Cause de l'échec, affichable à l'utilisateur. Renseigné uniquement si statut = `failed`.
+             * @example Ce PDF ne contient pas de texte extractible (document scanné ?)
+             */
+            error_message?: string | null;
+        };
         CVListItem: {
             /** Format: uuid */
             id: string;
@@ -1470,20 +1549,18 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Brouillon de profil extrait (non persisté) */
-            200: {
+            /** @description Job d'import accepté */
+            202: {
                 headers: {
+                    /** @description URL de suivi du job (`/v1/profile/import-cv/jobs/{job_id}`) */
+                    Location?: string;
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        profile_data: components["schemas"]["ProfileData"];
-                        /** @description Avertissements non bloquants (troncature, sections non détectées…) */
-                        warnings: string[];
-                    };
+                    "application/json": components["schemas"]["ImportJobAccepted"];
                 };
             };
-            /** @description Fichier absent, non-PDF, vide, trop volumineux ou trop de pages */
+            /** @description Fichier absent, non-PDF, vide ou trop volumineux */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1492,8 +1569,9 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description PDF sans texte extractible (document scanné) ou structuration impossible */
-            422: {
+            401: components["responses"]["Unauthorized"];
+            /** @description Un import est déjà en cours pour cet utilisateur */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1510,15 +1588,30 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Agent d'import indisponible */
-            502: {
+        };
+    };
+    getImportJobStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description État du job d'import */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["Problem"];
+                    "application/json": components["schemas"]["ImportJobStatus"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
         };
     };
     getProfile: {

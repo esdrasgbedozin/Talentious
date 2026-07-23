@@ -430,6 +430,61 @@ class CVJobStatus(BaseModel):
     updated_at: AwareDatetime | None = None
 
 
+class Status2(StrEnum):
+    running = 'running'
+
+
+class ImportJobAccepted(BaseModel):
+    job_id: UUID = Field(..., description="Identifiant du job d'import")
+    status: Status2 = Field(..., examples=['running'])
+    message: str | None = Field(
+        None,
+        examples=[
+            'Import job accepted. Poll GET /v1/profile/import-cv/jobs/{job_id} for status.'
+        ],
+    )
+
+
+class Status3(StrEnum):
+    """
+    - `running` : extraction en cours (20-60 s typiquement).
+    - `succeeded` : brouillon prêt, `profile_data` et `warnings` renseignés.
+    - `failed` : import échoué, `error_message` renseigné ; relancer via POST /profile/import-cv.
+
+    """
+
+    running = 'running'
+    succeeded = 'succeeded'
+    failed = 'failed'
+
+
+class ImportJobStatus(BaseModel):
+    """
+    État d'un job d'import de CV. Transitions : running -> succeeded | failed.
+    Job éphémère (mémoire serveur, ≤ 15 min) — un job expiré répond 404.
+
+    """
+
+    job_id: UUID
+    status: Status3 = Field(
+        ...,
+        description='- `running` : extraction en cours (20-60 s typiquement).\n- `succeeded` : brouillon prêt, `profile_data` et `warnings` renseignés.\n- `failed` : import échoué, `error_message` renseigné ; relancer via POST /profile/import-cv.\n',
+    )
+    profile_data: ProfileData | None = Field(
+        None,
+        description='Brouillon extrait (non persisté). Présent uniquement si statut = `succeeded` (omis sinon).',
+    )
+    warnings: list[str] | None = Field(
+        None,
+        description='Avertissements de relecture (troncature, sections non détectées…). Renseigné si statut = `succeeded`.',
+    )
+    error_message: str | None = Field(
+        None,
+        description="Cause de l'échec, affichable à l'utilisateur. Renseigné uniquement si statut = `failed`.",
+        examples=['Ce PDF ne contient pas de texte extractible (document scanné ?)'],
+    )
+
+
 class CVListItem(BaseModel):
     id: UUID
     cv_name: str
