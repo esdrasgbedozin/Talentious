@@ -518,6 +518,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lister les comptes utilisateurs (admin uniquement)
+         * @description Vue d'administration : tous les comptes avec leur état — email vérifié,
+         *     pass actif (et son échéance), nombre de CV générés, nom issu du profil.
+         *     Tri : inscriptions les plus récentes d'abord.
+         *
+         *     Réservé au rôle `admin` : tout autre rôle reçoit `403`. Lecture seule —
+         *     aucune action d'administration sur les comptes n'est exposée en V1.
+         */
+        get: operations["listUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -930,6 +955,38 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at?: string | null;
+        };
+        AdminUserItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: email */
+            email: string;
+            /**
+             * @description Prénom + nom issus du profil (null si profil vide)
+             * @example Yanis Benali
+             */
+            full_name?: string | null;
+            /** @enum {string} */
+            role: "user" | "admin";
+            email_verified: boolean;
+            /**
+             * Format: date-time
+             * @description Date d'inscription
+             */
+            created_at: string;
+            has_active_pass: boolean;
+            /**
+             * Format: date-time
+             * @description Échéance du pass actif (null si aucun)
+             */
+            pass_valid_until?: string | null;
+            /** @description Nombre de CV générés par ce compte */
+            cv_count: number;
+        };
+        AdminUsersResponse: {
+            /** @description Nombre total de comptes (indépendant de la pagination) */
+            total: number;
+            users: components["schemas"]["AdminUserItem"][];
         };
         ImportJobAccepted: {
             /**
@@ -2031,6 +2088,33 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    listUsers: {
+        parameters: {
+            query?: {
+                /** @description Nombre maximum de comptes retournés */
+                limit?: number;
+                /** @description Décalage de pagination */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Liste paginée des comptes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUsersResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
 }
