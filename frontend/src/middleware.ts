@@ -7,7 +7,7 @@ import type { NextRequest } from 'next/server';
  */
 
 // Routes that require authentication
-const protectedRoutes = ['/onboarding', '/profile', '/cvs', '/account'];
+const protectedRoutes = ['/onboarding', '/profile', '/cvs', '/account', '/admin'];
 
 // Routes that should redirect to onboarding if user is already authenticated
 const authRoutes = ['/login', '/register'];

@@ -462,3 +462,33 @@ export const getErrorMessage = (error: unknown): string => {
   return 'Une erreur inconnue est survenue';
 };
 
+
+// ===== Administration (rôle admin uniquement) =====
+
+export interface AdminUserItem {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: 'user' | 'admin';
+  email_verified: boolean;
+  created_at: string;
+  has_active_pass: boolean;
+  pass_valid_until: string | null;
+  cv_count: number;
+}
+
+export interface AdminUsersResponse {
+  total: number;
+  users: AdminUserItem[];
+}
+
+/** Liste paginée des comptes (403 pour un non-admin — géré par l'appelant). */
+export const listAdminUsers = async (
+  limit = 50,
+  offset = 0,
+): Promise<AdminUsersResponse> => {
+  const { data } = await apiClient.get<AdminUsersResponse>('/admin/users', {
+    params: { limit, offset },
+  });
+  return data;
+};
