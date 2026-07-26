@@ -699,6 +699,10 @@ class UserResponse(BaseModel):
     stripe_customer_id: str | None = Field(
         None, description='Identifiant client Stripe (null si jamais passé en caisse)'
     )
+    has_password: bool | None = Field(
+        None,
+        description='false pour un compte créé via Google sans mot de passe : le client\nmasque alors « changer le mot de passe » et oriente vers Google.\n',
+    )
 
 
 class GeneratedCVData(BaseModel):
