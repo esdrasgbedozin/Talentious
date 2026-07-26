@@ -13,9 +13,10 @@ variable "region" {
 }
 
 variable "db_password" {
-  description = "Mot de passe pour l'utilisateur de la base de données"
+  description = "IGNORÉ depuis l'incident 2026-07-26 (lifecycle ignore_changes) : le mot de passe est géré hors Terraform. N'importe quelle valeur convient au prompt."
   type        = string
   sensitive   = true
+  default     = "ignored-managed-out-of-band"
 }
 
 variable "image_tag" {
