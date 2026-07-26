@@ -36,6 +36,15 @@ variable "frontend_public_url" {
   default     = "https://talentious.app"
 }
 
+# Client ID OAuth Google (PUBLIC — pas un secret : il sert uniquement à
+# vérifier l'audience des jetons d'identité). Vide tant que le fondateur n'a
+# pas créé l'identifiant dans la console → Sign in with Google inactif.
+variable "google_oauth_client_id" {
+  description = "Client ID OAuth Google (Sign in with Google), format *.apps.googleusercontent.com"
+  type        = string
+  default     = "968343134767-lheffarmp2cgtqq07or313l2946su70j.apps.googleusercontent.com"
+}
+
 # IDs de prix Stripe (non sensibles — ce sont des identifiants publics de
 # catalogue, pas des clés — sans valeur par défaut, un apply sans TF_VAR_...
 # effaçait les IDs posés en prod et cassait le checkout.

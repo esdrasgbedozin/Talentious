@@ -56,6 +56,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/google": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * S'authentifier avec Google (Sign in with Google)
+         * @description Authentification par jeton d'identité Google (Google Identity Services,
+         *     flux « credential »). Le backend vérifie la signature et l'audience du
+         *     jeton auprès de Google, puis :
+         *
+         *     - **compte existant avec cet email** : liaison automatique (l'email est
+         *       garanti vérifié par Google — le compte est marqué vérifié si besoin)
+         *       et connexion ;
+         *     - **aucun compte** : création d'un compte SANS mot de passe
+         *       (`google_id` renseigné), email déjà vérifié — aucune étape de
+         *       confirmation.
+         *
+         *     La session émise est identique au login classique : access token 30 min
+         *     + cookie de rafraîchissement httpOnly avec rotation. Un compte
+         *     Google-only qui tente le login par mot de passe reçoit `401` avec un
+         *     message l'invitant à utiliser Google.
+         */
+        post: operations["loginWithGoogle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/verify-email/resend": {
         parameters: {
             query?: never;
@@ -624,6 +658,11 @@ export interface components {
             display_name?: string | null;
             /** @description Identifiant client Stripe (null si jamais passé en caisse) */
             stripe_customer_id?: string | null;
+            /**
+             * @description false pour un compte créé via Google sans mot de passe : le client
+             *     masque alors « changer le mot de passe » et oriente vers Google.
+             */
+            has_password?: boolean;
         };
         /**
          * @description - `USER` : rôle par défaut, soumis au contrôle CareerPass.
@@ -1402,6 +1441,43 @@ export interface operations {
                      *       "instance": "/v1/auth/login"
                      *     }
                      */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    loginWithGoogle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Jeton d'identité (JWT) émis par Google Identity Services */
+                    credential: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Authentification réussie (compte créé ou lié si nécessaire) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Token"];
+                };
+            };
+            /** @description Jeton Google invalide, expiré ou d'audience inattendue */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };

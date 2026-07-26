@@ -2,6 +2,7 @@
 Authentication routes for user registration and login.
 """
 
+import asyncio
 import logging
 from datetime import timedelta
 from typing import Annotated, Optional
@@ -15,6 +16,7 @@ from app.database import get_db
 from app.models.user import User, UserRole
 from app.models.user_profile import UserProfile
 from app.schemas.user import (
+    GoogleAuthRequest,
     UserCreate,
     UserResponse,
     Token,
@@ -38,6 +40,7 @@ from app.services.auth import (
 from app.services.dependencies import get_current_active_user
 from app.services import refresh as refresh_service
 from app.services import password_reset as reset_service
+from app.services import google_auth
 from app.services import email_service
 from app.config import settings
 
@@ -56,7 +59,12 @@ async def _user_response(db: AsyncSession, user: User) -> UserResponse:
             "first_name"
         ) or None
     response = UserResponse.model_validate(user)
-    return response.model_copy(update={"display_name": first_name})
+    return response.model_copy(
+        update={
+            "display_name": first_name,
+            "has_password": user.hashed_password is not None,
+        }
+    )
 
 
 async def _send_verification_email(user: User) -> None:
@@ -339,6 +347,19 @@ async def login(
     if user is None:
         verify_password(form_data.password, _DUMMY_PASSWORD_HASH)
         password_ok = False
+    elif user.hashed_password is None:
+        # Compte Google-only : aucun mot de passe à comparer. Le message
+        # oriente vers Google — fuite d'existence assumée : l'adresse est déjà
+        # vérifiée par Google et inutilisable par un tiers.
+        verify_password(form_data.password, _DUMMY_PASSWORD_HASH)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=(
+                "Ce compte utilise la connexion Google. "
+                "Cliquez sur « Continuer avec Google »."
+            ),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     else:
         password_ok = verify_password(form_data.password, user.hashed_password)
 
@@ -363,6 +384,71 @@ async def login(
         )
 
     # Short-lived access token (body) + long-lived rotating refresh token (cookie).
+    access_token = _issue_access_token(user)
+    raw_refresh = await refresh_service.issue_refresh_token(db, user.id)
+    _set_refresh_cookie(response, raw_refresh)
+
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/google", response_model=Token)
+@limiter.limit(LOGIN_RATE_LIMIT)
+async def login_with_google(
+    request: Request,
+    response: Response,
+    body: GoogleAuthRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Sign in with Google (M8-T03).
+
+    Vérifie le jeton d'identité Google (signature + audience), puis lie le
+    compte existant portant cet email — Google garantissant la propriété de
+    l'adresse, la liaison marque aussi l'email vérifié (et neutralise un
+    éventuel squat) — ou crée un compte SANS mot de passe. La session émise
+    est identique au login classique.
+    """
+    try:
+        claims = await asyncio.to_thread(google_auth.verify_credential, body.credential)
+    except ValueError as e:
+        logger.warning("Google credential rejected: %s", str(e)[:120])
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Jeton Google invalide. Réessayez.",
+        )
+
+    email = (claims.get("email") or "").lower().strip()
+    google_sub = claims.get("sub") or ""
+    if not email or not google_sub or not claims.get("email_verified"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Jeton Google invalide. Réessayez.",
+        )
+
+    # Par google_id d'abord (stable même si l'email Google change), sinon par
+    # email (liaison d'un compte classique existant).
+    result = await db.execute(select(User).where(User.google_id == google_sub))
+    user = result.scalar_one_or_none()
+    if user is None:
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+
+    if user is None:
+        user = User(
+            email=email,
+            hashed_password=None,
+            google_id=google_sub,
+            email_verified=True,
+        )
+        db.add(user)
+        logger.info("Google sign-in: account created for %s", email)
+    else:
+        if user.google_id is None:
+            user.google_id = google_sub
+            logger.info("Google sign-in: account %s linked", email)
+        user.email_verified = True
+    await db.commit()
+    await db.refresh(user)
+
     access_token = _issue_access_token(user)
     raw_refresh = await refresh_service.issue_refresh_token(db, user.id)
     _set_refresh_cookie(response, raw_refresh)

@@ -6,13 +6,14 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, login as apiLogin, register as apiRegister, getMe, logout as apiLogout, isAuthenticated, getStoredUser } from '@/lib/auth';
+import { User, login as apiLogin, loginWithGoogle as apiLoginWithGoogle, register as apiRegister, getMe, logout as apiLogout, isAuthenticated, getStoredUser } from '@/lib/auth';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -81,6 +82,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Sign in with Google : même établissement de session que le login classique.
+  const loginWithGoogle = async (credential: string) => {
+    setIsLoading(true);
+    try {
+      await apiLoginWithGoogle(credential);
+      const currentUser = await getMe();
+      setUser(currentUser);
+      const secureCookie = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+      document.cookie = `__session=true; path=/; max-age=2592000; SameSite=Strict${secureCookie}`;
+    } catch (error) {
+      setUser(null);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Registration
   const register = async (email: string, password: string) => {
     setIsLoading(true);
@@ -125,6 +143,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     isAuthenticated: !!user,
     login,
+    loginWithGoogle,
     register,
     logout,
     refreshUser,

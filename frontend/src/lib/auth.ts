@@ -12,6 +12,7 @@ export interface User {
   role: 'user' | 'admin';
   email_verified?: boolean;
   display_name?: string | null;
+  has_password?: boolean;
   created_at: string;
 }
 
@@ -49,6 +50,23 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     // Store the token
     localStorage.setItem('access_token', response.data.access_token);
     
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
+};
+
+/**
+ * Sign in with Google : échange le jeton d'identité Google contre NOTRE
+ * session (access token + cookie de rafraîchissement), comme le login
+ * classique. Le backend lie ou crée le compte (email garanti vérifié).
+ */
+export const loginWithGoogle = async (credential: string): Promise<AuthResponse> => {
+  try {
+    const response = await apiClient.post<AuthResponse>('/auth/google', {
+      credential,
+    });
+    localStorage.setItem('access_token', response.data.access_token);
     return response.data;
   } catch (error) {
     throw new Error(getErrorMessage(error));

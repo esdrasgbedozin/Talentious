@@ -166,6 +166,56 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /auth/google:
+    post:
+      tags: [Auth]
+      operationId: loginWithGoogle
+      summary: S'authentifier avec Google (Sign in with Google)
+      description: |
+        Authentification par jeton d'identité Google (Google Identity Services,
+        flux « credential »). Le backend vérifie la signature et l'audience du
+        jeton auprès de Google, puis :
+
+        - **compte existant avec cet email** : liaison automatique (l'email est
+          garanti vérifié par Google — le compte est marqué vérifié si besoin)
+          et connexion ;
+        - **aucun compte** : création d'un compte SANS mot de passe
+          (`google_id` renseigné), email déjà vérifié — aucune étape de
+          confirmation.
+
+        La session émise est identique au login classique : access token 30 min
+        + cookie de rafraîchissement httpOnly avec rotation. Un compte
+        Google-only qui tente le login par mot de passe reçoit `401` avec un
+        message l'invitant à utiliser Google.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - credential
+              properties:
+                credential:
+                  type: string
+                  description: Jeton d'identité (JWT) émis par Google Identity Services
+      responses:
+        '200':
+          description: Authentification réussie (compte créé ou lié si nécessaire)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '401':
+          description: Jeton Google invalide, expiré ou d'audience inattendue
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /auth/verify-email/resend:
     post:
       tags: [Auth]
@@ -1137,6 +1187,11 @@ components:
           type: string
           nullable: true
           description: Identifiant client Stripe (null si jamais passé en caisse)
+        has_password:
+          type: boolean
+          description: |
+            false pour un compte créé via Google sans mot de passe : le client
+            masque alors « changer le mot de passe » et oriente vers Google.
 
     UserRole:
       type: string

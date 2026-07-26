@@ -383,6 +383,12 @@ resource "google_cloud_run_v2_service" "backend" {
         value = "true"
       }
       env {
+        # Client ID PUBLIC Google (vérification d'audience des jetons Sign in
+        # with Google). Vide = /auth/google refuse tout (fail-closed).
+        name  = "GOOGLE_OAUTH_CLIENT_ID"
+        value = var.google_oauth_client_id
+      }
+      env {
         name  = "EMAIL_SENDER_ADDRESS"
         value = "noreply@talentious.app"
       }

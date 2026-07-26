@@ -152,10 +152,16 @@ export default function AccountPage() {
           </form>
         </section>
 
-        {/* Mot de passe */}
+        {/* Mot de passe — masqué pour un compte Google sans mot de passe */}
         <section className="mt-6 rounded-2xl border border-border bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-text-primary">Mot de passe</h2>
-          {pwState === 'done' ? (
+          {user && user.has_password === false ? (
+            <p className="mt-4 rounded-xl border border-border bg-gray-50 p-4 text-sm text-text-secondary">
+              Ce compte est connecté via <strong>Google</strong> : il n&apos;a pas
+              de mot de passe Talentious. La connexion et sa sécurité sont
+              gérées par ton compte Google.
+            </p>
+          ) : pwState === 'done' ? (
             <p className="mt-4 rounded-xl border border-action/30 bg-action/5 p-4 text-sm text-text-primary">
               ✓ Mot de passe modifié. Par sécurité, tes autres sessions ont été
               déconnectées et un email de confirmation t&apos;a été envoyé.
