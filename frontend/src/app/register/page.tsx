@@ -13,10 +13,11 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import PasswordInput from '@/components/ui/PasswordInput';
 import Navbar from '@/components/Navbar';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register, isLoading } = useAuth();
+  const { register, loginWithGoogle, isLoading } = useAuth();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -65,6 +66,23 @@ export default function RegisterPage() {
 
     setErrors(newErrors);
     return !Object.values(newErrors).some(error => error !== '');
+  };
+
+
+  // Google sur la page d'inscription = connexion directe : le compte est créé
+  // (ou lié) côté serveur, email déjà vérifié — aucune étape de confirmation.
+  const handleGoogleCredential = async (credential: string) => {
+    setErrors({ email: '', password: '', passwordConfirm: '', general: '' });
+    try {
+      await loginWithGoogle(credential);
+      router.push('/onboarding');
+    } catch (error: unknown) {
+      const apiError = error as { message?: string };
+      setErrors(prev => ({
+        ...prev,
+        general: apiError.message || "L'inscription Google a échoué. Réessayez.",
+      }));
+    }
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -149,6 +167,7 @@ export default function RegisterPage() {
                 </div>
               </div>
             ) : (
+              <>
               <form onSubmit={handleSubmit} className="space-y-6">
               {/* General error */}
               {errors.general && (
@@ -225,6 +244,9 @@ export default function RegisterPage() {
                 {isLoading ? 'Création en cours...' : 'Créer mon compte'}
               </Button>
             </form>
+
+            <GoogleSignInButton onCredential={handleGoogleCredential} />
+              </>
           )}
         </div>
 

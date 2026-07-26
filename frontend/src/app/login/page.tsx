@@ -14,11 +14,12 @@ import Input from '@/components/ui/Input';
 import PasswordInput from '@/components/ui/PasswordInput';
 import Navbar from '@/components/Navbar';
 import { resendVerificationPublic } from '@/lib/api';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, isLoading, isAuthenticated } = useAuth();
+  const { login, loginWithGoogle, isLoading, isAuthenticated } = useAuth();
 
   // Check if user just registered (initialize state directly)
   const isJustRegistered = searchParams.get('registered') === 'true';
@@ -76,6 +77,21 @@ function LoginForm() {
 
     setErrors(newErrors);
     return !Object.values(newErrors).some(error => error !== '');
+  };
+
+
+  const handleGoogleCredential = async (credential: string) => {
+    setErrors({ email: '', password: '', general: '' });
+    try {
+      await loginWithGoogle(credential);
+      // Redirection gérée par le useEffect isAuthenticated ci-dessus.
+    } catch (error: unknown) {
+      const apiError = error as { message?: string };
+      setErrors(prev => ({
+        ...prev,
+        general: apiError.message || 'La connexion Google a échoué. Réessayez.',
+      }));
+    }
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -260,6 +276,8 @@ function LoginForm() {
                 {isLoading ? 'Connexion en cours...' : 'Se connecter'}
               </Button>
             </form>
+
+            <GoogleSignInButton onCredential={handleGoogleCredential} />
           </div>
 
           {/* Footer */}
