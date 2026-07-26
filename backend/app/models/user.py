@@ -45,7 +45,9 @@ class User(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False, index=True)
-    hashed_password = Column(String(255), nullable=False)
+    # Nullable : un compte créé via Google (google_id) n'a pas de mot de passe.
+    hashed_password = Column(String(255), nullable=True)
+    google_id = Column(String(64), unique=True, nullable=True)
     # values_callable: store the enum VALUES ("user"/"admin") to match the
     # Alembic-created Postgres enum (lowercase). Without it SQLAlchemy sends the
     # member NAMES ("USER"/"ADMIN"), which are invalid on a migrated database.

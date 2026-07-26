@@ -38,9 +38,22 @@ class UserResponse(BaseModel):
         default=None,
         description="Nom d'affichage (prénom du profil), modifiable via /profile",
     )
+    has_password: bool = Field(
+        default=True,
+        description="False pour un compte Google sans mot de passe (le client "
+        "masque alors le changement de mot de passe)",
+    )
     created_at: datetime = Field(..., description="Account creation timestamp")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class GoogleAuthRequest(BaseModel):
+    """Body of POST /auth/google."""
+
+    credential: str = Field(
+        ..., description="Jeton d'identité émis par Google Identity Services"
+    )
 
 
 class VerifyEmailRequest(BaseModel):

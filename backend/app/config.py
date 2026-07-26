@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     # Public base URL of the frontend, used to build links inside emails.
     frontend_base_url: str = "http://localhost:3000"
 
+    # Sign in with Google (M8-T03). Client ID PUBLIC (pas un secret) : sert à
+    # vérifier l'audience des jetons d'identité. Vide = /auth/google refuse tout.
+    google_oauth_client_id: str = ""
+
     # CORS
     cors_origins: Annotated[list[str], NoDecode] = [
         "http://localhost:3000",
