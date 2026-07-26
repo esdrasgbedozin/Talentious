@@ -107,7 +107,7 @@ jobs:
           IMAGE="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ matrix.name }}"
           EXTRA_ARGS=""
           if [ "${{ matrix.name }}" = "frontend" ]; then
-            EXTRA_ARGS="--build-arg NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://api.talentious.app' }} --build-arg NEXT_PUBLIC_ENVIRONMENT=production"
+            EXTRA_ARGS="--build-arg NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://api.talentious.app' }} --build-arg NEXT_PUBLIC_ENVIRONMENT=production --build-arg NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ vars.GOOGLE_OAUTH_CLIENT_ID || '' }}"
           fi
           docker build -f ${{ matrix.dockerfile }} $EXTRA_ARGS \
             -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" ${{ matrix.context }}
