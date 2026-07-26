@@ -42,7 +42,7 @@ variable "frontend_public_url" {
 variable "google_oauth_client_id" {
   description = "Client ID OAuth Google (Sign in with Google), format *.apps.googleusercontent.com"
   type        = string
-  default     = ""
+  default     = "968343134767-lheffarmp2cgtqq07or313l2946su70j.apps.googleusercontent.com"
 }
 
 # IDs de prix Stripe (non sensibles — ce sont des identifiants publics de
