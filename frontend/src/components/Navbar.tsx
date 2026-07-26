@@ -258,16 +258,28 @@ export default function Navbar({ variant = 'landing' }: NavbarProps) {
               >
                 Mon Profil
               </Link>
-              <Link 
+              <Link
                 href="/cvs"
                 className={`text-sm font-medium transition-colors ${
-                  pathname === '/cvs' 
-                    ? 'text-action' 
+                  pathname === '/cvs'
+                    ? 'text-action'
                     : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
                 Mes CV
               </Link>
+              {user?.role === 'admin' && (
+                <Link
+                  href="/admin/users"
+                  className={`text-sm font-medium transition-colors ${
+                    pathname === '/admin/users'
+                      ? 'text-action'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Admin
+                </Link>
+              )}
             </div>
 
             {/* User Menu */}

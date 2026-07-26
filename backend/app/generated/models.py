@@ -430,6 +430,36 @@ class CVJobStatus(BaseModel):
     updated_at: AwareDatetime | None = None
 
 
+class Role(StrEnum):
+    user = 'user'
+    admin = 'admin'
+
+
+class AdminUserItem(BaseModel):
+    id: UUID
+    email: EmailStr
+    full_name: str | None = Field(
+        None,
+        description='Prénom + nom issus du profil (null si profil vide)',
+        examples=['Yanis Benali'],
+    )
+    role: Role
+    email_verified: bool
+    created_at: AwareDatetime = Field(..., description="Date d'inscription")
+    has_active_pass: bool
+    pass_valid_until: AwareDatetime | None = Field(
+        None, description='Échéance du pass actif (null si aucun)'
+    )
+    cv_count: int = Field(..., description='Nombre de CV générés par ce compte', ge=0)
+
+
+class AdminUsersResponse(BaseModel):
+    total: int = Field(
+        ..., description='Nombre total de comptes (indépendant de la pagination)', ge=0
+    )
+    users: list[AdminUserItem]
+
+
 class Status2(StrEnum):
     running = 'running'
 
