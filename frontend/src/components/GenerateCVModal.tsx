@@ -51,6 +51,23 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
     if (isOpen) setDismissed(false);
   }, [isOpen]);
 
+  // Restaure le brouillon d'offre à l'ouverture : la saisie survit à un
+  // détour par /billing (402), à un échec de génération ou à une fermeture
+  // accidentelle. Sauvegardé à chaque soumission, purgé au succès.
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      const raw = sessionStorage.getItem('cv_generate_draft');
+      if (raw) {
+        const draft = JSON.parse(raw) as { cv_name?: string; offer_text?: string };
+        if (draft.cv_name) setCvName(draft.cv_name);
+        if (draft.offer_text) setOfferText(draft.offer_text);
+      }
+    } catch {
+      sessionStorage.removeItem('cv_generate_draft');
+    }
+  }, [isOpen]);
+
   // Fonction de fermeture du modal
   const handleClose = useCallback(() => {
     if (isGenerating) return; // Ne pas fermer pendant génération
@@ -103,6 +120,7 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
       setIsGenerating(false);
       setJobId(null);
       resetForm();
+      sessionStorage.removeItem('cv_generate_draft');
       setDismissed(true); // hide immediately, regardless of parent onClose
       onClose();
       toast.success('CV généré avec succès !');
@@ -208,6 +226,10 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
 
     setIsGenerating(true);
     setCurrentStep(0);
+    sessionStorage.setItem(
+      'cv_generate_draft',
+      JSON.stringify({ cv_name: cvName.trim(), offer_text: offerText.trim() }),
+    );
     startMutation.mutate({
       cv_name: cvName.trim(),
       offer_text: offerText.trim(),

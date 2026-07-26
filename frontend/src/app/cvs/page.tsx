@@ -13,7 +13,8 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import GenerateCVModal from '@/components/GenerateCVModal';
 import EmailVerificationBanner from '@/components/EmailVerificationBanner';
 import { useToast } from '@/components/ui/Toast';
-import { getCVs, deleteCV, type CVBase } from '@/lib/api';
+import { getCVs, deleteCV, getBillingStatus, type CVBase } from '@/lib/api';
+import { getMe } from '@/lib/auth';
 import { useState } from 'react';
 import { FileText, Edit, Download, Trash2, Plus } from 'lucide-react';
 
@@ -70,7 +71,25 @@ export default function DashboardPage() {
     router.push(`/cv/${cvId}/print`);
   };
 
-  const handleGenerateNew = () => {
+  // Le pass est vérifié AU CLIC, avant d'ouvrir le formulaire : sans ça,
+  // l'utilisateur saisissait toute l'offre pour découvrir le paywall au
+  // submit (402) et perdait sa saisie dans la redirection.
+  const [isCheckingPass, setIsCheckingPass] = useState(false);
+  const handleGenerateNew = async () => {
+    setIsCheckingPass(true);
+    try {
+      const [me, billing] = await Promise.all([getMe(), getBillingStatus()]);
+      if (me.role !== 'admin' && !billing.has_active_pass) {
+        toast.warning('Un pass actif est nécessaire pour générer un CV.');
+        router.push('/billing');
+        return;
+      }
+    } catch {
+      // Vérification impossible (réseau…) : on ouvre quand même, le serveur
+      // reste l'autorité au submit (402) et le brouillon est préservé.
+    } finally {
+      setIsCheckingPass(false);
+    }
     setIsGenerateModalOpen(true);
   };
 
@@ -105,6 +124,7 @@ export default function DashboardPage() {
             variant="primary"
             size="lg"
             onClick={handleGenerateNew}
+            disabled={isCheckingPass}
             className="flex items-center justify-center gap-2"
           >
             <Plus size={20} />
@@ -157,6 +177,7 @@ export default function DashboardPage() {
               variant="primary"
               size="lg"
               onClick={handleGenerateNew}
+              disabled={isCheckingPass}
               className="flex items-center gap-2 mx-auto"
             >
               <Plus size={20} />
