@@ -80,3 +80,17 @@ async def get_current_active_user(
     # if not current_user.is_active:
     #     raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
+
+async def require_admin(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """Réservé au rôle admin — 403 pour tout autre rôle (RBAC)."""
+    from app.models.user import UserRole
+
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Réservé aux administrateurs",
+        )
+    return current_user
