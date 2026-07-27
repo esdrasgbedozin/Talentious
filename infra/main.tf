@@ -74,6 +74,15 @@ resource "google_sql_user" "app_user" {
   name     = "talentious-app"
   instance = google_sql_database_instance.main.name
   password = var.db_password
+
+  # Incident 2026-07-26 : var.db_password est demandé à CHAQUE plan/apply ;
+  # une valeur mal saisie au prompt a changé le mot de passe en base → prod
+  # cassée (runtime + CI utilisent les secrets, pas Terraform). Le mot de
+  # passe est géré hors Terraform (gcloud sql users set-password + secrets) ;
+  # Terraform ne doit plus jamais le toucher.
+  lifecycle {
+    ignore_changes = [password]
+  }
 }
 
 # Bucket Cloud Storage pour les CVs
