@@ -1,5 +1,10 @@
 # Roadmap du Projet "Talentious"
 
+> **⚠️ DOCUMENT OBSOLÈTE (2026-08-08).** Cette roadmap historique est **remplacée par
+> `04_ROADMAP.md`**. Elle est conservée pour archive uniquement — ne pas s'y fier.
+> État réel du produit : `00_BIBLE_PROJET.md` / `01_ARCHITECTURE_TECHNIQUE.md`
+> (Talentious est **en production** sur https://talentious.app).
+
 Ce document est la feuille de route stratégique et technique pour le développement de "Talentious". Il est conçu pour un développeur solo et intègre les meilleures pratiques pour un cycle de développement structuré et efficace.
 
 ---

@@ -1,9 +1,10 @@
-# 00 — BIBLE DU PROJET « TALENTIOUS » (reconstruite par rétro-ingénierie)
+# 00 — BIBLE DU PROJET « TALENTIOUS »
 
-> **Statut** : document reconstruit le 2026-07-08 à partir du code réel du dépôt
-> `esdrasgbedozin/Talentious` (branche `main`, commit `743eac1`, dernier push 2026-06-28)
-> et des documents historiques `PROJECT_CONTEXT.md` / `ROADMAP.md`.
-> Les points non vérifiables dans le code sont marqués **[à confirmer]**.
+> **Statut** : document vivant, mis à jour le 2026-08-08 pour refléter l'état
+> **en production**. Talentious est déployé et ouvert sur https://talentious.app
+> (API `api.talentious.app`), région GCP `europe-west9` (Paris). Régime de
+> **bêta gratuite** (paiement Stripe en mode test tant que la structure
+> juridique n'est pas créée). Source de vérité technique : `contracts/openapi.yaml`.
 
 ---
 
@@ -15,42 +16,47 @@
   verbes d'action, alignement avec les mots-clés de l'offre), pas dans la mise en page.
 - **Cible** : chercheurs d'emploi exigeants en Europe, focus France (produit 100 % en français).
 - **Contrainte souveraineté** : toutes les données et tous les traitements IA confinés à
-  la région GCP `europe-west9` (Paris) — exigence RGPD explicite et déjà appliquée dans le code
-  (Vertex AI initialisé sur `europe-west9`, modèle `gemini-2.5-flash`).
+  la région GCP `europe-west9` (Paris) — exigence RGPD explicite et appliquée dans le code
+  (Vertex AI initialisé sur `europe-west9`, modèle `gemini-2.5-pro`).
 
 ## 2. Modèle économique
 
-- **« Pass d'Accès Temporaire »** : paiement unique Stripe → accès illimité pendant une durée
-  fixe (`PASS_30_DAYS`, `PASS_90_DAYS` — enum déjà en base). Pas d'abonnement récurrent.
-- Rôle `admin` : accès « sudo » sans paiement (bypass du CareerPass, implémenté dans `cv.py`).
-- **État réel** : la table `career_passes` et la vérification 402 existent ; **l'intégration
-  Stripe n'est pas commencée** (placeholders dans `config.py`, aucune route de paiement).
+- **« Pass d'Accès Temporaire »** : paiement unique Stripe Checkout → accès illimité pendant
+  une durée fixe (`PASS_30_DAYS`, `PASS_90_DAYS`). Pas d'abonnement récurrent.
+- Rôle `admin` : accès sans paiement (bypass du CareerPass, implémenté dans `cv.py`).
+- **État réel** : intégration Stripe complète (Checkout + webhook signé qui crée le
+  CareerPass) livrée et fonctionnelle. Tourne en **mode test** en attendant le SIRET
+  (choix juridique, pas une lacune technique) : le régime actuel est une bêta gratuite.
 
 ## 3. Personas
 
 | Persona | Besoin | Parcours |
 |---|---|---|
-| **Le candidat pressé** | Un CV adapté à une offre en < 5 min | Import PDF → génération → export PDF |
-| **Le candidat méticuleux** | Contrôler chaque ligne du CV généré | Profil manuel → génération → éditeur WYSIWYG |
-| **L'admin (fondateur)** | Tester/dépanner sans payer | Rôle `admin`, bypass paiement |
+| **Le candidat pressé** | Un CV adapté à une offre rapidement | Import PDF/LinkedIn → génération → export PDF |
+| **Le candidat méticuleux** | Contrôler chaque ligne du CV généré | Profil manuel → génération → éditeur |
+| **L'admin (fondateur)** | Tester/dépanner sans payer, superviser les inscrits | Rôle `admin`, bypass paiement, vue `/admin/users` |
 
-## 4. Périmètre V1 (constaté vs visé)
+## 4. Périmètre V1 (livré en production)
 
-| Capacité | Visé (MVP) | État réel du code |
-|---|---|---|
-| Inscription / connexion / JWT | ✅ | ✅ Fait et testé (12 tests) |
-| Profil maître (JSONB) + CRUD | ✅ | ✅ Fait et testé (9 tests) |
-| Import PDF du profil (CV / LinkedIn) | ✅ « indispensable » | ❌ **Absent** : `parser_client.py` existe côté backend mais **aucune route ne l'utilise** ; l'upload du frontend (`/onboarding`) est une simulation |
-| Analyse d'offre (agent IA) | ✅ | ✅ Service `analyseur-offre` fonctionnel (Gemini 2.5 Flash) |
-| Génération de CV (agent IA) | ✅ | ⚠️ Service `redacteur-cv` existe mais le pipeline est **cassé en production** (voir ONBOARDING.md §3) |
-| Dashboard « Mes CV » | ✅ | ❌ Absent (aucune page `/dashboard`) |
-| Éditeur WYSIWYG | ✅ | ❌ Absent |
-| Template CV + export PDF | ✅ (1 template) | ❌ Absent (`template_id="modern_v1"` codé en dur, jamais rendu) |
-| Paiement Stripe | ✅ | ❌ Absent |
-| Suppression de compte (RGPD) | ✅ | ❌ Absent |
-| Hors MVP (v1.1+) | Lettre de motivation, multi-templates, suivi de candidatures, chat de complétion | — |
+| Capacité | État réel du code |
+|---|---|
+| Inscription / connexion | ✅ Email + mot de passe **avec vérification email obligatoire au login** (anti-usurpation d'adresse) |
+| Connexion Google | ✅ « Se connecter avec Google » (Sign in with Google, `POST /auth/google`, comptes sans mot de passe possibles) |
+| Sessions | ✅ Access JWT 15 min + **refresh tokens rotatifs en base** (rotation + family burn), cookie `__session` |
+| Profil maître (JSONB) + CRUD | ✅ Fait et testé |
+| Import PDF du profil (CV / LinkedIn) | ✅ **Livré** : extraction structurée par l'agent `parser-pdf` (`/extract-profile`, Gemini), **asynchrone** (job + polling), brouillon soumis à relecture humaine — rien n'est persisté sans validation |
+| Analyse d'offre (agent IA) | ✅ Agent `analyseur-offre` (Gemini 2.5 Pro) |
+| Génération de CV (agent IA) | ✅ **Asynchrone** (202 + job_id + polling/SSE), agent `redacteur-cv` (Gemini 2.5 Pro) |
+| Dashboard « Mes CV » | ✅ Route `/cvs` |
+| Éditeur | ✅ Édition du CV généré |
+| Template CV + export PDF | ✅ Export PDF (rendu client) |
+| Paiement Stripe | ✅ Checkout + webhook signé (mode test, bêta gratuite) |
+| Vue admin | ✅ `/admin/users` (lecture seule : comptes, pass, volumétrie CV) |
+| Suppression de compte (RGPD Art. 17) | ✅ `DELETE /users/me` + UI |
+| Pages légales + emails transactionnels | ✅ CGU/Confidentialité/Mentions ; emails Brevo (domaine talentious.app, DKIM/DMARC) |
+| Hors V1 (v1.1+) | Lettre de motivation, multi-templates, suivi de candidatures, système de feedback in-app |
 
-## 5. Ubiquitous Language (inféré du code)
+## 5. Ubiquitous Language (ancré dans le code)
 
 | Terme | Définition | Ancrage code |
 |---|---|---|
@@ -58,25 +64,37 @@
 | **CareerPass** | Droit d'accès temporel à la génération, acheté via Stripe | `career_passes`, `check_career_pass_or_admin()` |
 | **Offre** / **Analyse d'offre** (`AnalysisResult`) | Texte d'une offre d'emploi et son extraction structurée (hard/soft skills, séniorité, responsabilités, ton) | agent `analyseur-offre` |
 | **CV Généré** (`GeneratedCVData`) | CV optimisé pour une offre : résumé réécrit, expériences sélectionnées, compétences priorisées | `generated_cvs.cv_data_json`, agent `redacteur-cv` |
-| **Agent** | Microservice FastAPI privé encapsulant un appel Vertex AI avec son prompt | `agents/{parser-pdf, analyseur-offre, redacteur-cv}` |
-| **Skills hard/soft** | Structure UI des compétences `{hard: string[], soft: string[]}` — ≠ structure agents `[{name, level, category}]` (source du bug historique #1) | `schemas/profile.py` vs `agents/*/models.py` |
-| **Evals** | Harnais de test qualité des prompts (profil × offre → CV, résultats JSON) | `backend/evals/run_evals.py` |
+| **Import / Brouillon** | Extraction d'un CV/LinkedIn PDF en brouillon de profil, jamais persisté sans relecture | agent `parser-pdf` (`/extract-profile`), `import_jobs` |
+| **Agent** | Microservice Cloud Run privé (auth IAM service-to-service) encapsulant un appel Vertex AI avec son prompt | `agents/{parser-pdf, analyseur-offre, redacteur-cv}` |
+| **Skills hard/soft** | Structure canonique des compétences `{hard: string[], soft: string[]}`, unifiée via le contrat OpenAPI (fin du bug historique des 4 contrats divergents) | `contracts/openapi.yaml` → types générés back + front |
+| **Evals** | Harnais de test qualité des prompts (profil × offre → CV) avec juge LLM | `backend/evals/` |
 
 ## 6. Parcours utilisateur cible (Écrans)
 
-0. **Landing** publique (✅ fait) → 1. **Onboarding** import PDF (⚠️ UI seule) →
-2. **Profil** vérification/édition (✅ fait) → 3. **Dashboard** hub des CV (❌) →
-4. **Éditeur** WYSIWYG + export PDF (❌). Paiement en interception 402 (❌).
+0. **Landing** publique → 1. **Onboarding** import CV/LinkedIn PDF (ou saisie manuelle) →
+2. **Profil** relecture/édition → 3. **Dashboard `/cvs`** hub des CV →
+4. **Éditeur** + export PDF. Le paiement se présente **avant** la saisie de l'offre
+(vérification du pass au clic sur « Générer ») ; interception 402 côté serveur en garde-fou.
 
 ## 7. Identité visuelle (actée et implémentée)
 
 - Palette : primaire anthracite `#2D3748`, action vert menthe `#38A169` ; police **Inter** ;
-  logo « T Architectural » (assets présents dans `frontend/public/logos/`).
+  logo « T Architectural » (assets dans `frontend/public/logos/`).
 
-## 8. Questions ouvertes (pour l'humain)
+## 8. Décisions tranchées (anciennes questions ouvertes)
 
-1. Le modèle « Pass temporaire » (vs freemium 1 CV gratuit) est-il toujours le choix retenu ?
-2. L'import LinkedIn PDF est-il toujours « indispensable » pour la V1, ou l'import CV PDF suffit-il ?
-3. L'export PDF doit-il être côté client (rapide, qualité moyenne) ou serveur WeasyPrint + GCS (visé « ultra-pro ») ?
-4. Le rôle admin doit-il être créé par seed/migration ? (aucun mécanisme de promotion admin dans le code)
-5. Budget GCP mensuel cible pour staging + prod ? (dimensionne Cloud Run min-instances vs cold starts de 2-5 min de génération)
+1. **Modèle économique** : « Pass temporaire » retenu (pas de freemium). ✅
+2. **Import** : CV PDF **et** export LinkedIn PDF livrés (l'agent `parser-pdf` gère les deux). ✅
+3. **Export PDF** : rendu **côté client** retenu pour la V1. ✅
+4. **Rôle admin** : promotion manuelle en base (aucun parcours utilisateur n'y mène — voulu). ✅
+5. **Budget GCP** : ~10 €/mois d'infra fixe (scale-to-zero partout, backend max 1 instance,
+   Cloud SQL `db-f1-micro` seul toujours-actif), alertes budget à 20 €. ✅
+
+## 9. Chantiers ouverts (backlog V1.1)
+
+- **ADR-GENAI-SDK** : migration vers le SDK `google-genai` (contrôle du « thinking »,
+  accès aux modèles 3.x) — échéance : fin de vie des modèles 2.5 en octobre 2026.
+- Système de feedback utilisateurs (remplacer les avis de la landing par du réel).
+- Logs structurés JSON (aujourd'hui logging standard).
+- Durcissement facultatif face au DDoS volumétrique (WAF/Cloud Armor) — différé tant
+  que le trafic et le revenu ne le justifient pas.
