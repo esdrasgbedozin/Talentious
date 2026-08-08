@@ -1,97 +1,126 @@
-# 01 — ARCHITECTURE TECHNIQUE « TALENTIOUS » (reconstruite par rétro-ingénierie)
+# 01 — ARCHITECTURE TECHNIQUE « TALENTIOUS »
 
-> **Statut** : constat du réel au 2026-07-08 (commit `743eac1` sur `main`).
-> Ce document décrit ce qui **est**, pas ce qui devrait être. Les écarts sont listés en §7.
+> **Statut** : constat du réel au 2026-08-08, **en production**. Décrit ce qui
+> **est** déployé sur https://talentious.app (europe-west9). Source de vérité
+> technique : `contracts/openapi.yaml`. Écarts résiduels / dette en §8.
 
 ---
 
-## 1. Topologie constatée
+## 1. Topologie
 
-Monorepo, 5 services conteneurisés + PostgreSQL :
+Monorepo, 5 services conteneurisés sur **Cloud Run** + PostgreSQL managé, région `europe-west9` (Paris) :
 
 ```
 Navigateur
-   │ HTTPS (JWT localStorage + cookie témoin "talentious_session")
+   │ HTTPS (access JWT 15 min en mémoire + cookie de nav "__session")
    ▼
-Frontend  Next.js 16 / React 19 / Tailwind 4        (Cloud Run public, port 3000)
-   │ REST JSON (axios, intercepteur Bearer)
+Firebase Hosting (façade CDN, domaines talentious.app / api.talentious.app)
+   │ rewrites → Cloud Run ; ne laisse passer que le cookie __session ; no-cache HTML
    ▼
-Backend   FastAPI 0.104 / SQLAlchemy 2 async        (Cloud Run public, port 8000)
-   │  ├── PostgreSQL 15  (Cloud SQL `talentious-db-prod`, JSONB profils & CV)
-   │  ├── httpx ──► parser-pdf      FastAPI + PyMuPDF          (port 8001, privé)  [client jamais branché]
-   │  ├── httpx ──► analyseur-offre FastAPI + Vertex AI Gemini (port 8002, privé)
-   │  └── httpx ──► redacteur-cv    FastAPI + Vertex AI Gemini (port 8003, privé)
+Frontend  Next.js / React / Tailwind              (Cloud Run, europe-west9)
+   │ REST JSON (axios, Bearer + refresh silencieux)
    ▼
-Vertex AI  gemini-2.5-flash, région europe-west9 (Paris), sortie JSON forcée, retry ×3
+Backend   FastAPI / SQLAlchemy 2 async            (Cloud Run, max 1 instance)
+   │  ├── PostgreSQL  (Cloud SQL `talentious-db-prod`, base `talentious`, JSONB)
+   │  ├── httpx (auth IAM) ──► parser-pdf      PyMuPDF + Vertex AI   (privé)  agent d'IMPORT
+   │  ├── httpx (auth IAM) ──► analyseur-offre Vertex AI Gemini      (privé)
+   │  └── httpx (auth IAM) ──► redacteur-cv    Vertex AI Gemini      (privé)
+   ▼
+Vertex AI  gemini-2.5-pro, région europe-west9 (Paris), sortie JSON forcée, retries
 ```
 
-- **Orchestration** : `POST /cv/generate` (backend `routes/cv.py`) = chef d'orchestre
-  séquentiel : CareerPass → profil → transformation skills → analyseur → rédacteur → INSERT.
-  Durée constatée 2-5 min, appel HTTP synchrone (pas de job/queue).
-- **Dev local** : `docker-compose.yml` avec les 5 services + `db` + conteneur `evals`.
+- **Génération** : `POST /cv/generate` retourne **202 + job_id** ; traitement en tâche
+  de fond (`cv_worker.py`), suivi par polling `GET /cv/jobs/{id}` (ou SSE). Orchestre
+  CareerPass → profil → analyseur → rédacteur → INSERT.
+- **Import** : `POST /profile/import-cv` retourne **202 + job_id** ; l'agent `parser-pdf`
+  (`/extract-profile`) extrait le texte (PyMuPDF) puis structure via Gemini ; brouillon
+  éphémère en mémoire (TTL 15 min), **jamais persisté** sans relecture humaine.
+- **Agents privés** : appelables uniquement par le backend via jeton d'identité IAM
+  (`iam_auth.py` ; `enable_iam_auth` en prod, direct en dev).
+- **Dev local** : `docker-compose.yml` avec les 5 services + `db` (base locale `talentious_app`).
 
-## 2. Contrats d'interface (état : implicites, non formalisés)
+## 2. Contrats d'interface (Contract-First)
 
-Il n'existe **aucun fichier de contrat** (pas d'`openapi.yaml` versionné). Les contrats
-vivent dans 4 jeux de modèles Pydantic/TypeScript **divergents** :
+`contracts/openapi.yaml` (+ `contracts/agents/*.openapi.yaml`) est la **source de vérité
+unique**. Les types sont générés des deux côtés :
 
-| Couche | Skills | Certification | Education |
-|---|---|---|---|
-| Frontend `types/profile.ts` & Backend `schemas/profile.py` | `{hard: string[], soft: string[]}` | `issuing_organization`, `issue_date` | `field_of_study`, `start_date` requis |
-| Backend → agents (transformation runtime dans `cv.py`) | `[{name, level, category}]` (niveaux devinés : hard=advanced, soft=intermediate) | transmis tel quel ❌ | transmis tel quel |
-| Agent `redacteur-cv/models.py` (entrée) | `List[Skill]` | **`issuer` requis** ❌, `date` | `field`, dates optionnelles |
-| Agent (sortie `GeneratedCVData`) | `HighlightedSkill{name, level, category, importance}` | `SelectedCertification.issue_date: str` **requis** | `SelectedEducation.graduation_date: str` **requis** |
+- Backend : Pydantic dans `backend/app/generated/models.py` (`datamodel-code-generator`).
+- Frontend : TypeScript dans `frontend/src/generated/api.ts` (`openapi-typescript`).
+- `make generate-types` doit être dans le **même commit** que toute édition de contrat ;
+  la **CI `contracts-types` bloque** toute dérive (`git diff --exit-code`).
 
-Un script `verify_contracts.sh` (curl manuel) fait office de test de contrat — non exécuté en CI.
+Le bug historique des 4 contrats divergents (skills/certifications/educations) est résolu :
+un `ProfileData` canonique unique, plus aucune transformation runtime.
 
 ## 3. Modèle de données (PostgreSQL, migrations Alembic)
 
-- `users` : UUID PK, email unique, `hashed_password` (bcrypt), `role` enum USER/ADMIN, `stripe_customer_id`.
-- `user_profiles` : `user_id` PK/FK cascade, `profile_data JSONB`, `updated_at` (naïf, `datetime.utcnow()`).
-- `career_passes` : `pass_type` enum PASS_30_DAYS/PASS_90_DAYS, `valid_until`, `stripe_payment_id`.
-- `generated_cvs` : `cv_name`, `template_id`, `job_offer_context` (texte brut de l'offre), `cv_data_json JSONB`, `gcs_pdf_url` (jamais renseigné), index sur `created_at`.
-- 2 migrations : schéma initial + `0a59b3039eea` (normalise skills → `{hard, soft}` ;
-  ⚠️ `jsonb_agg` sur tableau vide produit `null` et non `[]`).
+- `users` : UUID PK, email unique, `hashed_password` (bcrypt, **nullable** pour comptes Google),
+  `google_id` unique, `role` enum USER/ADMIN, `email_verified`, `stripe_customer_id`.
+- `user_profiles` : `user_id` PK/FK cascade, `profile_data JSONB`, `updated_at` (tz-aware).
+- `career_passes` : `pass_type` enum, `valid_until` (timestamptz), `stripe_payment_id` (nullable).
+- `generated_cvs` : `cv_name`, `template_id`, `job_offer_context`, `cv_data_json JSONB`, index `created_at`.
+- `cv_jobs` : suivi des jobs de génération asynchrones (un actif par utilisateur).
+- `refresh_tokens` : jetons de rafraîchissement hachés (SHA-256), rotation + famille.
+- `email_verification` / `password_reset` : jetons JWT à portée dédiée.
+- **8 migrations Alembic** (`backend/alembic/versions/`), upgrade/downgrade vérifiés.
 
-## 4. Sécurité (constatée)
+## 4. Sécurité
 
-- Auth : JWT HS256 30 min (`python-jose`), bcrypt 4.0.1 ; `get_current_active_user` dans `services/dependencies.py`.
-- **Token stocké en `localStorage`** (dette actée dans la ROADMAP §2.2) + cookie `talentious_session=true`
-  posé **côté client**, uniquement lu par le middleware Next.js → protection de route **cosmétique, spoofable**.
-- CORS backend : localhost uniquement dans `config.py` (les URLs staging Cloud Run ne sont pas dans la liste par défaut). Agents : `allow_origins=["*"]`.
-- Secrets : `SECRET_KEY`/`DATABASE_URL` via GitHub Secrets + Secret Manager (scripts `.github/scripts/create-secrets.sh`) ; défaut dangereux `"your-secret-key-change-in-production"` dans le code.
-- Agents censés être privés (IAM service account) — `parser_client.py` gère un token IAM, mais rien n'atteste que les services Cloud Run agents sont déployés en `--no-allow-unauthenticated` **[à confirmer sur GCP]**.
-- Erreurs API : format FastAPI par défaut, **pas de RFC 7807** ; les 500 renvoient `str(e)` (fuite d'internals).
+- **Auth** : access JWT HS256 **15 min** + **refresh tokens rotatifs en base** (SHA-256,
+  rotation à chaque usage, *family burn* sur détection de réutilisation) en cookie httpOnly
+  `talentious_refresh` ; cookie de navigation `__session` (lu par le middleware Next.js).
+  Vérification email **obligatoire au login** (403 sinon). **Sign in with Google**
+  (`/auth/google`, vérification signature + audience, liaison par email vérifié).
+- **Agents privés** : IAM service-to-service, un **service account dédié par service**,
+  zéro rôle superflu (remplace le SA compute par défaut à `roles/editor`).
+- **Secrets** : Secret Manager (lecture par le seul backend, par secret) ; aucun secret en
+  clair ; le défaut de `SECRET_KEY` est interdit hors dev (`config.py`).
+- **Erreurs** : **RFC 7807** (`application/problem+json`, `backend/app/core/problem.py`) ;
+  debug forcé off en prod (pas de fuite d'internals).
+- **Anti-injection de prompt** (entrées PDF non fiables) : neutralisation des fences,
+  document traité comme donnée jamais comme instruction, coercition post-LLM en liste
+  blanche, relecture humaine finale. Attaque testée et vaincue en conditions réelles.
+- **Rate limiting** applicatif : login 5/min, email 3/min, import 5/h (slowapi, en mémoire —
+  cohérent grâce au backend mono-instance). Pas de WAF/Cloud Armor (cf. §8).
 
 ## 5. Infra & CI/CD
 
-- **Terraform** (`infra/`) : APIs, Cloud SQL `db-f1-micro` (deletion_protection=false), bucket GCS `-cvs` versionné, Artifact Registry. **Non géré par Terraform** : services Cloud Run, IAM, Secret Manager, réseau → dérive IaC structurelle (les Cloud Run sont créés par `gcloud run deploy` dans les workflows).
-- **GitHub Actions** : 3 workflows staging (backend avec pytest + migration Alembic via Cloud SQL Proxy v2, frontend, agents) déclenchés sur `develop` par filtre de chemin. **Aucun workflow de production**, aucun lint/scan sécurité en CI. ⚠️ La branche `develop` **n'existe plus sur origin** (seul `main` subsiste) : la CI staging est donc actuellement morte.
+- **Terraform** (`infra/`) : source de vérité de la **forme** de l'infra — les 5 services
+  Cloud Run, IAM (SA par service), Secret Manager, Cloud SQL, bucket GCS, Artifact Registry,
+  APIs. `lifecycle ignore_changes[image]` (la CI roule les images) et `[password]` (le mot
+  de passe SQL est géré hors Terraform, cf. incident 2026-07-26).
+- **GitHub Actions** (`deploy-prod.yml`) : sur `main` — tests → build multi-images
+  `linux/amd64` → migrations Alembic (Cloud SQL Proxy) → déploiement Cloud Run + purge CDN
+  Firebase, le tout via **Workload Identity Federation** (aucune clé JSON, pool verrouillé
+  sur le repo). Staging décommissionné.
 - Docker : images multi-stage, user non-root (agents).
 
 ## 6. Tests
 
-- Backend : 23 tests (auth 12, profile 9, main 2) sur SQLite/`TEST_DATABASE_URL` — **0 test sur `routes/cv.py`**, le module le plus critique et le plus bogué.
-- Agents : **0 test unitaire** ; qualité prompts via `backend/evals/run_evals.py` (2 résultats commités).
-- Frontend : 3 suites (~20 tests smoke). Pas d'e2e, pas de couverture mesurée.
+- Backend : ~140 tests (`TEST_DATABASE_URL` Postgres), dont le pipeline CV, l'import async,
+  l'auth Google, le billing (Stripe mocké), l'admin, la coercition d'import.
+- Agents : tests unitaires de la coercition post-LLM (`parser-pdf`) ; qualité des prompts via
+  `backend/evals/` (juge LLM).
+- Frontend : suites Jest (smoke + composants clés) + validations e2e Playwright ponctuelles.
 
-## 7. ADR rétroactifs (décisions constatées)
+## 7. ADR (décisions actées)
 
-| # | Décision | Motivation apparente | Statut |
-|---|---|---|---|
-| ADR-R1 | Monorepo 3 tiers + microservices IA sur Cloud Run | Isolation des prompts/scaling IA | OK, mais 3 agents ≈ 90 % de code dupliqué (`vertex_ai_service.py`, `prompt_loader.py` copiés-collés) |
-| ADR-R2 | `europe-west9` + `gemini-2.5-flash` partout | RGPD / souveraineté FR | Respectée |
-| ADR-R3 | Profil & CV en JSONB (schéma validé par Pydantic) | Flexibilité d'itération | OK mais a produit 4 contrats divergents (cf. §2) |
-| ADR-R4 | Transformation skills à la volée dans `cv.py` (« Option A », bug 342c31f) | Débloquer vite sans refactorer | **Contredit** la reco du rapport de bug (qui préconisait d'aligner les agents) ; couche fragile |
-| ADR-R5 | JWT en localStorage + cookie témoin | Rapidité MVP | Dette actée, migration HttpOnly « avant V1 » jamais faite |
-| ADR-R6 | Génération synchrone HTTP 2-5 min (timeout httpx 600 s) | Simplicité | Incompatible Cloud Run/UX ; nécessitera jobs asynchrones ou streaming |
-| ADR-R7 | Cloud Run déployé par gcloud CLI, hors Terraform | Rapidité | Dérive IaC à résorber |
+| # | Décision | Statut |
+|---|---|---|
+| ADR-MODEL | `gemini-2.5-pro` en europe-west9 (souveraineté UE) | Actée ; +10 % qualité mesurée vs flash (juge LLM) |
+| ADR-SESSION-REFRESH | Access 15 min + refresh rotatif en base, cookies httpOnly | Livrée |
+| ADR-RGPD-ERASURE | Suppression de compte complète (DB + GCS) | Livrée |
+| ADR-EMAIL | Emails transactionnels Brevo (domaine talentious.app) | Livrée |
+| Contract-First | OpenAPI source de vérité, types générés, dérive bloquée en CI | Livrée |
+| Async | Génération ET import en jobs (202 + polling) | Livrée (async imposé aussi par la coupure CDN à 60 s) |
+| ADR-GENAI-SDK | Migration vers `google-genai` (contrôle du thinking, modèles 3.x) | **À faire** avant oct. 2026 (fin de vie des 2.5) |
 
-## 8. Écarts majeurs vs les 6 piliers
+## 8. Écarts / dette résiduelle
 
-1. **Contract-first inversé** : les contrats sont déduits du code et divergent entre couches (bug CV en est le symptôme direct).
-2. **TDD absent sur le cœur** : le pipeline de génération n'a aucun test — un `NameError` a atteint `main`.
-3. **Dette volontaire assumée** (« MVP », localStorage, transformation runtime) documentée mais jamais résorbée.
-4. **Logs non structurés** : `logging` texte + emojis, pas de JSON, pas de corrélation requête.
-5. **IaC partielle** : la moitié de l'infra vit dans des scripts CI.
-6. **Roadmap non réaliste** : phases 4-6 (dashboard, éditeur, Stripe, prod) intactes alors que la doc les présente comme « débloquées ».
+1. **Logs non structurés** : `logging` standard, pas de JSON ni de corrélation de requête (à traiter).
+2. **Pas de WAF/Cloud Armor** : protection DDoS surtout par plafond d'instances (coût borné) +
+   rate limiting ; pas de limite globale ni de bannissement au bord. Différé (bêta, faible trafic).
+3. **Budget GCP** : alertes posées en console, pas encore dans Terraform.
+4. **Dérive de contrat M7** : quelques endpoints (refresh/logout/password) restent à formaliser dans OpenAPI.
+5. **Versioning `/v1`** : billing monté hors du préfixe global (à unifier).
+6. **Duplication agents** : `prompt_loader.py` / service Vertex copiés entre agents (à mutualiser).
