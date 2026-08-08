@@ -12,6 +12,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  // Base absolue : résout les canonicals (relatifs) et les URLs Open Graph.
+  metadataBase: new URL("https://talentious.app"),
   title: "Talentious - Générez des CVs professionnels avec l'IA",
   description: "Plateforme SaaS qui utilise l'IA pour générer des CVs ultra-professionnels enrichis et adaptés aux offres d'emploi.",
   manifest: "/site.webmanifest",
