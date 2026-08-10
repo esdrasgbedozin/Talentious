@@ -125,9 +125,9 @@ un `ProfileData` canonique unique, plus aucune transformation runtime.
 5. **Versioning `/v1`** : billing monté hors du préfixe global (à unifier).
 6. **Duplication agents** : `prompt_loader.py` / service Vertex copiés entre agents (à mutualiser).
 7. **Bucket de state hors IaC (bootstrap)** : `talentious-tf-state-1000` a été créé à la main
-   (le state ne peut pas se gérer par le Terraform qu'il héberge). ⚠️ **Versioning non activé**
-   (vérifié 2026-08-10 ; une tentative d'update combinée n'a pas pris) — à corriger (récupération
-   d'un state corrompu). UBLA / public-access-prevention à confirmer. Puis à importer dans
-   Terraform (`terraform import`) pour le placer sous IaC.
+   (le state ne peut pas se gérer par le Terraform qu'il héberge). **Durci et vérifié le 2026-08-10** :
+   `versioning_enabled=True`, `uniform_bucket_level_access=True`, `public_access_prevention=enforced`,
+   soft-delete 7 j. Reste à l'importer dans Terraform (`terraform import`) pour le placer sous IaC.
+   (Champ de vérif : `versioning_enabled` — pas `versioning.enabled`, qui n'existe pas dans `gcloud storage`.)
 8. **IaC non outillée en CI** : `plan`/`apply` manuels au poste, sans `terraform plan` automatique
    en PR ni scan (tfsec/checkov). Prochain palier de maturité.
