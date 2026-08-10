@@ -114,6 +114,32 @@ resource "google_storage_bucket" "cv_bucket" {
   }
 }
 
+# Bucket du STATE Terraform (backend de ce module lui-même).
+# Créé à la main lors du bootstrap (l'œuf et la poule : le state ne peut pas se
+# provisionner par le Terraform qu'il héberge), importé sous IaC le 2026-08-10.
+# Durci : versioning (récupération d'un state corrompu), UBLA, accès public bloqué,
+# soft-delete 7 j. prevent_destroy : ce bucket ne doit JAMAIS être détruit.
+resource "google_storage_bucket" "tf_state" {
+  name          = "talentious-tf-state-1000"
+  location      = var.region
+  force_destroy = false
+
+  uniform_bucket_level_access = true
+  public_access_prevention    = "enforced"
+
+  versioning {
+    enabled = true
+  }
+
+  soft_delete_policy {
+    retention_duration_seconds = 604800 # 7 jours
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 # Repository Artifact Registry
 resource "google_artifact_registry_repository" "docker_repo" {
   location      = var.region
