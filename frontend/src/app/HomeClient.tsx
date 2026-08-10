@@ -94,7 +94,7 @@ export default function Home() {
           >
             <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-sm font-medium text-white/80 backdrop-blur-sm">
               <span className="h-1.5 w-1.5 rounded-full bg-action" />
-              IA souveraine · Hébergée en France
+              IA souveraine · Hébergé dans l&apos;UE (RGPD)
             </span>
 
             <h1 className="mt-6 text-balance text-[clamp(2.6rem,6vw,5.2rem)] font-bold leading-[1.02] tracking-[-0.04em] text-white">
@@ -134,7 +134,7 @@ export default function Home() {
                 <Target className="h-4 w-4 text-action" /> Adapté à chaque offre
               </li>
               <li className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-action" /> Données hébergées en France
+                <MapPin className="h-4 w-4 text-action" /> Données en France, IA en Europe
               </li>
             </ul>
           </motion.div>
@@ -323,11 +323,11 @@ export default function Home() {
               Souveraineté des données
             </p>
             <h2 className="mt-4 text-balance text-4xl font-bold leading-tight tracking-tight text-white md:text-5xl">
-              Ton parcours ne quitte pas la France.
+              Ton parcours ne quitte pas l&apos;Europe.
             </h2>
             <p className="mt-5 text-lg text-white/70">
-              Hébergement Google Cloud à Paris (europe-west9), conforme RGPD. Tes données
-              restent les tiennes, à tout moment.
+              Données stockées en France (Google Cloud, europe-west9), traitements IA en
+              Europe — conforme RGPD. Tes données restent les tiennes, à tout moment.
             </p>
           </Reveal>
 
@@ -335,8 +335,8 @@ export default function Home() {
             {[
               {
                 icon: MapPin,
-                title: 'Hébergement français',
-                text: 'Serveurs GCP en France (europe-west9). Aucune donnée ne quitte le territoire européen.',
+                title: 'Hébergement européen',
+                text: 'Données stockées en France (GCP europe-west9), traitements IA en Europe. Aucune donnée ne quitte l’UE.',
               },
               {
                 icon: ShieldCheck,
@@ -384,7 +384,7 @@ export default function Home() {
             {[
               {
                 title: 'Tes données t’appartiennent',
-                text: "Hébergement en France, aucune revente. Suppression de compte immédiate et définitive, à tout moment.",
+                text: "Données en France, traitements IA en Europe (UE), aucune revente. Suppression de compte immédiate et définitive, à tout moment.",
               },
               {
                 title: 'Un CV par offre, en 2 minutes',
@@ -521,7 +521,7 @@ export default function Home() {
           </div>
           <div className="mt-10 flex flex-col gap-2 border-t border-white/10 pt-8 text-sm text-white/40 sm:flex-row sm:items-center sm:justify-between">
             <p>© 2026 Talentious. Tous droits réservés.</p>
-            <p>Fièrement hébergé en France 🇫🇷 · Conforme RGPD</p>
+            <p>Données en France 🇫🇷, IA en Europe 🇪🇺 · Conforme RGPD</p>
           </div>
         </div>
       </footer>
