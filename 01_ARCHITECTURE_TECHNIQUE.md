@@ -26,7 +26,7 @@ Backend   FastAPI / SQLAlchemy 2 async            (Cloud Run, max 1 instance)
    │  ├── httpx (auth IAM) ──► analyseur-offre Vertex AI Gemini      (privé)
    │  └── httpx (auth IAM) ──► redacteur-cv    Vertex AI Gemini      (privé)
    ▼
-Vertex AI  gemini-2.5-pro, région europe-west9 (Paris), sortie JSON forcée, retries
+Vertex AI  gemini-3.5-flash (SDK google-genai), endpoint UE multi-région (résidence UE), JSON forcé
 ```
 
 - **Génération** : `POST /cv/generate` retourne **202 + job_id** ; traitement en tâche
@@ -113,7 +113,7 @@ un `ProfileData` canonique unique, plus aucune transformation runtime.
 | ADR-EMAIL | Emails transactionnels Brevo (domaine talentious.app) | Livrée |
 | Contract-First | OpenAPI source de vérité, types générés, dérive bloquée en CI | Livrée |
 | Async | Génération ET import en jobs (202 + polling) | Livrée (async imposé aussi par la coupure CDN à 60 s) |
-| ADR-GENAI-SDK | Migration vers `google-genai` (contrôle du thinking, modèles 3.x) | **À faire** avant oct. 2026 (fin de vie des 2.5) |
+| ADR-GENAI-SDK | Migration `google-genai` + `gemini-3.5-flash` sur endpoint UE (résidence UE) | **Fait (2026-08-10)** — endpoint 2.5 `europe-west9` retiré le 2027-08-06 |
 
 ## 8. Écarts / dette résiduelle
 

@@ -22,7 +22,7 @@
   - **Gestion de Compte** : inscription (email vérifié obligatoire), connexion,
     **Sign in with Google**, suppression (RGPD Art. 17), rôle `admin` (accès sans paiement) + vue `/admin/users`.
   - **Onboarding / Profil** : création manuelle et **import IA via PDF (CV ou LinkedIn)**, asynchrone, avec relecture humaine.
-  - **Agents IA** : `parser-pdf` (import), `analyseur-offre`, `rédacteur-cv` — privés, Gemini 2.5 Pro.
+  - **Agents IA** : `parser-pdf` (import), `analyseur-offre`, `rédacteur-cv` — privés, Gemini 3.5 Flash (endpoint UE).
   - **Design & Rendu** : un template de CV professionnel.
   - **Flux de Génération** : dashboard `/cvs`, saisie de l'offre, génération **asynchrone** (job + polling).
   - **Éditeur** : édition du CV généré.
@@ -44,7 +44,7 @@
 - **Agents IA (Microservices)** : FastAPI (Python) -> Déployés sur Cloud Run (services privés).
 - **Database** : PostgreSQL 15+ -> Cloud SQL (Géré).
 - **File Storage** : Google Cloud Storage (Bucket régional standard).
-- **AI Model** : Vertex AI **`gemini-2.5-pro`**, région `europe-west9` (souveraineté UE).
+- **AI Model** : Vertex AI **`gemini-3.5-flash`** (SDK `google-genai`), endpoint **UE multi-région** (résidence UE). Stockage en `europe-west9` (France).
 
 ### 3.2. Règles de Communication
 - Le Frontend ne communique qu'avec le Backend Principal.
