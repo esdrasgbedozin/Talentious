@@ -65,5 +65,7 @@ impose la migration `vertexai → google-genai`. Cette migration est de toute fa
 ## Suivi
 
 - [ ] Mesurer le gain 2.5-flash → 2.5-pro via le juge LLM sur le harnais d'evals (M2-T05).
-- [ ] Créer **ADR-GENAI-SDK** : migration `vertexai → google-genai` + `gemini-3.5-flash`,
-      à exécuter avant la fin de vie 2.5 (oct. 2026).
+- [x] Créer **ADR-GENAI-SDK** : migration `vertexai → google-genai` + `gemini-3.5-flash`
+      (créé le 2026-08-10 — voir [ADR-GENAI-SDK](ADR-GENAI-SDK.md)). Échéance réelle précisée
+      par Google : endpoint `europe-west9` retiré le **6 août 2027** (hausse de prix dès le 28 jan. 2027),
+      et non octobre 2026.
