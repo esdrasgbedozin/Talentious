@@ -1,5 +1,10 @@
 # Roadmap du Projet "Talentious"
 
+> **⚠️ DOCUMENT OBSOLÈTE (2026-08-08).** Cette roadmap historique est **remplacée par
+> `04_ROADMAP.md`**. Elle est conservée pour archive uniquement — ne pas s'y fier.
+> État réel du produit : `00_BIBLE_PROJET.md` / `01_ARCHITECTURE_TECHNIQUE.md`
+> (Talentious est **en production** sur https://talentious.app).
+
 Ce document est la feuille de route stratégique et technique pour le développement de "Talentious". Il est conçu pour un développeur solo et intègre les meilleures pratiques pour un cycle de développement structuré et efficace.
 
 ---
@@ -231,12 +236,12 @@ Pour garantir la stabilité et l'organisation du code, nous adopterons un workfl
 - [x] Créer un Service Account GCP dédié au CI/CD :
   - [x] Créer le compte : `ci-cd-deployer@talentious-project.iam.gserviceaccount.com`.
   - [x] Lui attribuer les rôles nécessaires (Cloud Run Admin, Artifact Registry Writer, Storage Admin).
-  - [x] Générer une clé JSON.
-  - [x] Ajouter cette clé comme secret GitHub (`GCP_SA_KEY`).
+  - [x] ~~Générer une clé JSON.~~ **ABANDONNÉ** — remplacé par Workload Identity Federation.
+  - [x] ~~Ajouter cette clé comme secret GitHub (`GCP_SA_KEY`).~~ **RETIRÉ (2026-08-08)** : clé et workflows staging supprimés, CI en WIF (`infra/cicd.tf`).
 - [x] Mettre à jour le Dockerfile du frontend pour supporter les build arguments.
 - [x] Créer le guide de configuration `.github/CICD_SETUP.md`.
-- [x] Configurer les secrets GitHub (DATABASE_URL, SECRET_KEY, GCP_SA_KEY).
-- [x] Tester le pipeline en poussant un commit sur `develop`.
+- [x] Configurer les secrets GitHub (DATABASE_URL, SECRET_KEY). ~~GCP_SA_KEY~~ retiré (WIF).
+- [x] ~~Tester le pipeline en poussant un commit sur `develop`.~~ Branche `develop` supprimée ; le pipeline de prod part de `main` (WIF).
 
 ---
 

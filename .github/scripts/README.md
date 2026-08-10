@@ -76,18 +76,22 @@ cd .github/scripts
 4. **Configure GitHub Secrets**:
    - Go to GitHub repository settings
    - Add secrets:
-     - `GCP_SA_KEY`: Service account JSON key
      - `CLOUD_SQL_CONNECTION_NAME`: From script output
      - `DATABASE_URL`: From script output (for migrations)
+
+   > ⚠️ **Do NOT create a `GCP_SA_KEY` (service account JSON key).** The CI
+   > authenticates to GCP via **Workload Identity Federation** — no static key
+   > is stored anywhere. See `infra/cicd.tf` (pool locked to this repo) and
+   > `.github/workflows/deploy-prod.yml`.
 
 5. **Verify configuration**:
    ```bash
    ./verify-secrets.sh
    ```
 
-6. **Deploy to staging**:
+6. **Deploy to production**:
    ```bash
-   git push origin develop
+   git push origin main   # triggers .github/workflows/deploy-prod.yml (WIF)
    ```
 
 ## Troubleshooting

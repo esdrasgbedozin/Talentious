@@ -1,9 +1,26 @@
 # 04 — ROADMAP V1 « TALENTIOUS »
 
+> **⚠️ MISE À JOUR 2026-08-08 — V1 LIVRÉE ET EN PRODUCTION.**
+> Les jalons **M0 à M8 sont terminés** ; l'application est déployée sur https://talentious.app
+> (europe-west9). Ce document est conservé comme **historique de planification** : les cases
+> et statuts détaillés plus bas ne sont pas tous re-cochés. Pour l'état RÉEL du produit, voir
+> `00_BIBLE_PROJET.md` et `01_ARCHITECTURE_TECHNIQUE.md`.
+>
+> **Corrections notables par rapport au plan initial** :
+> - **parser-pdf** n'a PAS été fusionné dans le backend : il est resté un **agent Cloud Run**
+>   privé et est devenu l'**agent d'import** (`/extract-profile`, Gemini). La décision #4 ci-dessous est donc caduque.
+> - **Import ET génération sont asynchrones** (job + polling), l'import async imposé par la coupure à 60 s du CDN.
+> - Modèle IA retenu : **`gemini-2.5-pro`** (ADR-MODEL).
+> - Jalons ajoutés et livrés après M6 : **M7** (durcissement sécurité, vérification email, refresh tokens)
+>   et **M8** (import PDF réel, Sign in with Google, vue admin).
+>
+> **Backlog restant (V1.1)** : ADR-GENAI-SDK (migration `google-genai` avant oct. 2026),
+> système de feedback in-app, logs structurés JSON.
+
 > **Produit le** : 2026-07-09  
-> **Statut** : plan opérationnel — à valider par le fondateur avant exécution  
+> **Statut initial** : plan opérationnel — *aujourd'hui exécuté (voir bandeau ci-dessus)*  
 > **Remplace** : l'ancienne `ROADMAP.md` (contradictions internes, états fictifs, non fiable — voir MAJ-10 du rapport d'audit)  
-> **Sources** : `00_BIBLE_PROJET.md`, `01_ARCHITECTURE_TECHNIQUE.md`, `03_RAPPORT_AUDIT.md`, `contracts/` (source de vérité validée), code réel `/tmp/talentious-onboard`
+> **Sources** : `00_BIBLE_PROJET.md`, `01_ARCHITECTURE_TECHNIQUE.md`, `03_RAPPORT_AUDIT.md`, `contracts/` (source de vérité validée)
 
 ---
 
@@ -28,7 +45,7 @@
 1. **Contrats = source de vérité.** `contracts/openapi.yaml` et `contracts/agents/*.yaml` sont la référence. Les types Pydantic backend et TypeScript frontend sont générés, jamais rédigés à la main.
 2. **Génération asynchrone** (job + polling/SSE). L'ADR-ASYNC tranche l'infrastructure worker (voir §4).
 3. **Stripe Checkout + webhook signé**. Migration Alembic : `stripe_payment_id` → nullable. Seed admin.
-4. **parser-pdf = fonction backend** (`backend/app/services/parser_service.py` avec PyMuPDF). Microservice supprimé. Import PDF réellement branché (fin de la simulation `onboarding/page.tsx:74-80`).
+4. ~~**parser-pdf = fonction backend**. Microservice supprimé.~~ **[CADUC — voir bandeau]** : dans les faits, parser-pdf est **resté un agent Cloud Run** privé, devenu l'agent d'import (`/extract-profile`, extraction PyMuPDF + structuration Gemini). Import PDF réellement branché (fin de la simulation), **en asynchrone**.
 5. **Récupération de `feature/dashboard-and-editor`** : dashboard, `GenerateCVModal`, `Toast`/`ConfirmDialog`, `lib/api.ts` récupérés puis rebasés sur les nouveaux contrats. Correctif `timezone` de cette branche rejeté (remplacé par la correction propre `from datetime import datetime, timezone`). Éditeur WYSIWYG (`/cv/{id}/edit`) à créer.
 6. **Montée en gamme modèle IA**. ADR-MODEL tranche entre `gemini-2.5-pro` (europe-west9 strict) et `gemini-3.5-pro` (endpoint EU multi-région). Évaluation harnais avant/après.
 

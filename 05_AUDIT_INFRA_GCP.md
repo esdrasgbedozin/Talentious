@@ -21,12 +21,16 @@
 
 ## 2. Écarts IaC ↔ réel — constats majeurs
 
-### 2.1 Sécurité (bloquants avant prod)
-1. **Les 5 Cloud Run sont PUBLICS** (`allUsers` invoker), y compris les 3 agents internes (parser, analyseur, rédacteur). N'importe qui sur Internet peut invoquer les endpoints **Vertex AI (coût LLM) sans auth**. Confirme BLK-4 de l'audit initial.
-2. **Identité runtime = SA compute par défaut avec roles/editor** sur les 5 services : un service compromis a Editor sur tout le projet.
-3. **Cloud SQL** : IP publique, `requireSsl=false` (connexions non chiffrées acceptées), `deletion_protection=false`, PITR off.
-4. **2 comptes Owner** : `egbedozin@gmail.com` et `Ozesde04@gmail.com` (+ billing manager les deux). → à confirmer par le fondateur.
-5. Auth CI par **clé JSON longue durée** (`GCP_SA_KEY`) au lieu de Workload Identity Federation.
+### 2.1 Sécurité (bloquants avant prod) — ✅ RÉSOLUS
+
+> **MAJ 2026-08-08** : ces bloquants ont été corrigés avant la mise en production
+> (état actuel dans `01_ARCHITECTURE_TECHNIQUE.md` §4-5). Constats conservés comme historique.
+
+1. ~~Les 5 Cloud Run PUBLICS~~ → **RÉSOLU** : les 3 agents sont **privés** (aucun binding `allUsers`) ; `roles/run.invoker` accordé au seul SA backend, appels par jeton OIDC IAM.
+2. ~~SA compute par défaut avec roles/editor~~ → **RÉSOLU** : **un SA dédié par service**, moindre privilège (backend = cloudsql.client + secretAccessor par secret ; agents = aiplatform.user seul ; frontend = aucun rôle).
+3. ~~Cloud SQL non chiffré / non protégé~~ → **RÉSOLU** : `ssl_mode = ENCRYPTED_ONLY`, `deletion_protection = true`, PITR + backups activés ; accès par le connecteur Cloud SQL (IAM), sans réseau autorisé direct.
+4. **2 comptes Owner** — point de gouvernance, à trancher par le fondateur (hors périmètre technique).
+5. ~~Auth CI par clé JSON longue durée (`GCP_SA_KEY`)~~ → **RÉSOLU** : **Workload Identity Federation** (pool verrouillé sur le dépôt), aucune clé statique. La clé `GCP_SA_KEY` et les workflows staging qui l'utilisaient ont été **supprimés** (2026-08-08).
 
 ### 2.2 Dérive IaC (Terraform ≠ réalité)
 - Terraform ne gère que : APIs, Cloud SQL, DB/user, bucket cvs, Artifact Registry. **Tout Cloud Run + IAM + Secret Manager est hors TF** (créé par CI/scripts).

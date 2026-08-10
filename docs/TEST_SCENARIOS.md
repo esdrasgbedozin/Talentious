@@ -11,12 +11,19 @@ avant de passer à la suite (déploiement, RGPD, etc.).
 | **Admin** | `admin@talentious.fr` / `adminpassword` | Profil « Alexandre Dubois » + pass | Admin / données riches |
 | **Compte neuf** | à créer toi-même | sans pass | Tester inscription + 402 + paiement |
 
+> ℹ️ Ces comptes sont des comptes de test **locaux** (le compte admin par défaut provient de
+> `scripts/seed_admin.py` et n'existe qu'en local). En prod, la promotion admin se fait en base
+> (`UPDATE users SET role='admin'`), jamais via l'interface.
+
 **Pré-requis paiement** : le webhook local est transféré par `stripe listen`.
 S'il n'est plus actif, relance dans un terminal :
 ```
 stripe listen --forward-to localhost:8000/billing/webhook
 ```
 Carte de test : `4242 4242 4242 4242`, date future quelconque, CVC quelconque.
+
+> ℹ️ **En production**, Stripe tourne aussi en **mode test** (bêta gratuite, pas encore de SIRET) :
+> la carte `4242…` fonctionne sur talentious.app sans débit réel.
 
 ---
 
@@ -27,11 +34,21 @@ Carte de test : `4242 4242 4242 4242`, date future quelconque, CVC quelconque.
 - 🐞 Vérifier : mot de passe < 8 caractères refusé ; email déjà utilisé → message clair ; mots de passe non identiques refusés.
 
 **1.2 Connexion / déconnexion** — se connecter, puis menu utilisateur → « Se déconnecter ».
-- ✅ Attendu : après login → onboarding ; après logout → landing, et `/dashboard` renvoie vers `/login`.
+- ✅ Attendu : après login → onboarding/profil ; après logout → landing, et `/cvs` renvoie vers `/login`.
 
-**1.3 Session expirée** — rester inactif > ~90 min (ou vider le cookie) puis naviguer.
-- ✅ Attendu : redirection **propre** vers `/login` (pas de page qui boucle).
+**1.3 Session expirée** — l'access token expire à 15 min ; le refresh token (cookie) dure 30 j.
+- ✅ Attendu : navigation fluide tant que le refresh est valide (renouvellement silencieux) ;
+  une fois le refresh invalide/vidé → redirection **propre** vers `/login` (pas de page qui boucle).
 - 🐞 Historiquement bug de boucle /login→/onboarding→/profile : vérifier que c'est bien réglé.
+
+**1.4 Email non vérifié (403)** — créer un compte, ne pas cliquer le lien, tenter de se connecter.
+- ✅ Attendu : connexion refusée avec proposition de renvoyer l'email de confirmation.
+- 🐞 Après clic sur le lien de vérification → connexion OK.
+
+**1.5 Sign in with Google** — page `/login` → « Continuer avec Google ».
+- ✅ Attendu : connexion directe (compte créé/lié, email déjà vérifié) → onboarding/profil.
+- 🐞 Sur un compte Google-only, la page « Mon compte » affiche une note Google à la place du changement de mot de passe ;
+  tenter le login classique sur cet email → message « utilise Google ».
 
 ## 2. Profil (compte Yanis)
 
@@ -91,7 +108,24 @@ Carte de test : `4242 4242 4242 4242`, date future quelconque, CVC quelconque.
 - ✅ Attendu : dialogue de confirmation ; après confirmation, le CV disparaît, toast succès.
 - 🐞 Annuler la confirmation ne doit rien supprimer.
 
-> ⚠️ **Suppression de compte (RGPD)** : pas encore implémentée (ni backend ni UI). À construire — ne pas tester.
+**6.2 Suppression de compte (RGPD Art. 17)** — « Mon compte » → zone de danger → supprimer.
+- ✅ Attendu : confirmation explicite, puis purge complète (CV + PDF GCS + profil + pass + compte),
+  session invalidée, retour à la landing. Se reconnecter avec ces identifiants doit échouer.
+- 🐞 L'action est irréversible : vérifier le double garde-fou de confirmation.
+
+## 6bis. Import de profil par IA (CV / LinkedIn PDF)
+
+**6bis.1 Import réussi** — `/onboarding` → « Importer un CV (PDF) » ou « Profil LinkedIn » → uploader un PDF → Continuer.
+- ✅ Attendu : « Extraction en cours… » (asynchrone), puis `/profile?imported=1` avec bannière ambre de
+  relecture et le formulaire **pré-rempli** — **rien n'est encore enregistré**.
+- 🐞 « Ignorer l'import » restaure le profil actuel sans écraser quoi que ce soit ; au-delà de 20 compétences,
+  un avertissement de troncature apparaît ; un PDF sans texte (scanné) → message d'échec propre.
+
+## 6ter. Vue admin (compte admin uniquement)
+
+**6ter.1 Accès** — navbar → « Admin » (visible seulement pour un admin) → `/admin/users`.
+- ✅ Attendu : tableau des comptes (email, nom, email vérifié, pass + échéance, nb de CV, inscription).
+- 🐞 Avec un compte non-admin : pas de lien « Admin », et `/admin/users` redirige vers `/cvs` (403 côté serveur).
 
 ## 7. Robustesse / cas limites / responsive
 

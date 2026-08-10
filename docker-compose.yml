@@ -27,6 +27,7 @@ services:
       - redacteur-cv
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://talentious:talentious@db:5432/talentious}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
       # Use an environment variable for SECRET_KEY in production. Default for local dev only.
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production-min-32-chars}
       # Parser-PDF Agent URL (local development)
