@@ -46,8 +46,8 @@
 | Sessions | ✅ Access JWT 15 min + **refresh tokens rotatifs en base** (rotation + family burn), cookie `__session` |
 | Profil maître (JSONB) + CRUD | ✅ Fait et testé |
 | Import PDF du profil (CV / LinkedIn) | ✅ **Livré** : extraction structurée par l'agent `parser-pdf` (`/extract-profile`, Gemini), **asynchrone** (job + polling), brouillon soumis à relecture humaine — rien n'est persisté sans validation |
-| Analyse d'offre (agent IA) | ✅ Agent `analyseur-offre` (Gemini 2.5 Pro) |
-| Génération de CV (agent IA) | ✅ **Asynchrone** (202 + job_id + polling/SSE), agent `redacteur-cv` (Gemini 2.5 Pro) |
+| Analyse d'offre (agent IA) | ✅ Agent `analyseur-offre` (Gemini 3.5 Flash, endpoint UE) |
+| Génération de CV (agent IA) | ✅ **Asynchrone** (202 + job_id + polling/SSE), agent `redacteur-cv` (Gemini 3.5 Flash, endpoint UE) |
 | Dashboard « Mes CV » | ✅ Route `/cvs` |
 | Éditeur | ✅ Édition du CV généré |
 | Template CV + export PDF | ✅ Export PDF (rendu client) |

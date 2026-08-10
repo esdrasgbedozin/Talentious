@@ -10,7 +10,7 @@
 - **Frontend** : Next.js (TypeScript) & Tailwind CSS
 - **Backend** : FastAPI (Python)
 - **Base de données** : PostgreSQL (Cloud SQL)
-- **IA** : Google Vertex AI (`gemini-2.5-pro`), 3 agents privés (import PDF, analyse d'offre, rédaction)
+- **IA** : Google Vertex AI (`gemini-3.5-flash`, SDK google-genai, endpoint UE), 3 agents privés (import PDF, analyse d'offre, rédaction)
 - **Infrastructure** : Google Cloud Platform (5 services Cloud Run, Cloud SQL, Cloud Storage), IaC Terraform
 - **CI/CD** : GitHub Actions (déploiement sur `main` via Workload Identity Federation)
 - **Contrats** : Contract-First (OpenAPI source de vérité, types générés back + front, dérive bloquée en CI)
