@@ -124,10 +124,10 @@ un `ProfileData` canonique unique, plus aucune transformation runtime.
 4. **Dérive de contrat M7** : quelques endpoints (refresh/logout/password) restent à formaliser dans OpenAPI.
 5. **Versioning `/v1`** : billing monté hors du préfixe global (à unifier).
 6. **Duplication agents** : `prompt_loader.py` / service Vertex copiés entre agents (à mutualiser).
-7. **Bucket de state hors IaC (bootstrap)** : `talentious-tf-state-1000` a été créé à la main
-   (le state ne peut pas se gérer par le Terraform qu'il héberge). **Durci et vérifié le 2026-08-10** :
-   `versioning_enabled=True`, `uniform_bucket_level_access=True`, `public_access_prevention=enforced`,
-   soft-delete 7 j. Reste à l'importer dans Terraform (`terraform import`) pour le placer sous IaC.
-   (Champ de vérif : `versioning_enabled` — pas `versioning.enabled`, qui n'existe pas dans `gcloud storage`.)
+7. **Bucket de state** : `talentious-tf-state-1000` a été créé à la main au bootstrap
+   (le state ne peut pas se gérer par le Terraform qu'il héberge). **Durci et importé sous IaC
+   le 2026-08-10** : `google_storage_bucket.tf_state` (versioning, UBLA, public-access-prevention
+   enforced, soft-delete 7 j, `prevent_destroy`) ; `terraform plan` = No changes. Dette résorbée.
+   (Vérif de versioning : champ `versioning_enabled` — pas `versioning.enabled`, inexistant dans `gcloud storage`.)
 8. **IaC non outillée en CI** : `plan`/`apply` manuels au poste, sans `terraform plan` automatique
    en PR ni scan (tfsec/checkov). Prochain palier de maturité.
