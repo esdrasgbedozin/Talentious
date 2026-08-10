@@ -9,22 +9,24 @@ import asyncio
 import logging
 from typing import Dict, Any, Optional
 
-from vertexai.generative_models import GenerativeModel, GenerationConfig
-import vertexai
+from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
-# Configuration
+# Configuration — SDK google-genai, Gemini 3.x sur endpoint UE (ADR-GENAI-SDK).
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "")
-# europe-west9 (Paris) - Souveraineté des données française/EU (RGPD)
-# Gemini 2.5 Flash: 1M token context window (~750K chars), optimized for speed
-GCP_LOCATION = os.getenv("GCP_LOCATION", "europe-west9")
-MODEL_NAME = os.getenv("VERTEX_AI_MODEL", "gemini-2.5-flash")
+# UE multi-région : résidence des données UE (RGPD) pour la famille 3.x.
+GCP_LOCATION = os.getenv("GCP_LOCATION", "eu")
+MODEL_NAME = os.getenv("VERTEX_AI_MODEL", "gemini-3.5-flash")
+# Génération = tâche de raisonnement/rédaction : thinking élevé par défaut
+# (3.5-pro indisponible en UE ; arbitrage final par les evals — ADR-GENAI-SDK).
+THINKING_LEVEL = os.getenv("VERTEX_THINKING_LEVEL", "high")
 
 
 class VertexAIService:
     """
-    Service for interacting with Google Vertex AI for CV generation
+    Service for interacting with Google Vertex AI (google-genai) for CV generation
     """
 
     def __init__(self):
@@ -32,7 +34,7 @@ class VertexAIService:
         self.project_id = GCP_PROJECT_ID
         self.location = GCP_LOCATION
         self.model_name = MODEL_NAME
-        self.model: Optional[GenerativeModel] = None
+        self.client: Optional[genai.Client] = None
 
         if not self.project_id:
             logger.warning(
@@ -42,16 +44,13 @@ class VertexAIService:
             self._initialize_vertex_ai()
 
     def _initialize_vertex_ai(self):
-        """Initialize Vertex AI SDK"""
+        """Initialize the google-genai client (Vertex backend)"""
         try:
-            # Initialize Vertex AI
-            vertexai.init(project=self.project_id, location=self.location)
-
-            # Initialize the model
-            self.model = GenerativeModel(self.model_name)
-
+            self.client = genai.Client(
+                vertexai=True, project=self.project_id, location=self.location
+            )
             logger.info(
-                f"Vertex AI initialized successfully - "
+                f"Vertex AI (google-genai) initialized successfully - "
                 f"Project: {self.project_id}, Location: {self.location}, Model: {self.model_name}"
             )
         except Exception as e:
@@ -84,8 +83,8 @@ class VertexAIService:
         Raises:
             Exception: If generation fails after all retries
         """
-        if not self.model:
-            raise Exception("Vertex AI model not initialized")
+        if not self.client:
+            raise Exception("Vertex AI client not initialized")
 
         try:
             # Build the complete prompt
@@ -102,36 +101,38 @@ class VertexAIService:
             # Retry loop with JSON validation
             for attempt in range(1, max_retries + 1):
                 # Configure generation parameters
-                generation_config = GenerationConfig(
+                generation_config = types.GenerateContentConfig(
                     temperature=temperature,
                     max_output_tokens=max_output_tokens,
                     response_mime_type="application/json",  # Force JSON output
+                    thinking_config=types.ThinkingConfig(thinking_level=THINKING_LEVEL),
                 )
 
                 logger.info(
                     f"Attempt {attempt}/{max_retries}: Calling Vertex AI Gemini..."
                 )
 
-                # Generate content asynchronously (non-blocking)
-                # Use asyncio.to_thread to run the synchronous Vertex AI call in a separate thread
+                # Generate content asynchronously (the SDK call is blocking).
                 response = await asyncio.to_thread(
-                    self.model.generate_content,
-                    full_prompt,
-                    generation_config=generation_config,
+                    self.client.models.generate_content,
+                    model=self.model_name,
+                    contents=full_prompt,
+                    config=generation_config,
                 )
+                response_text = (response.text or "").strip()
 
                 # Parse JSON response
                 try:
-                    cv_data = json.loads(response.text)
+                    cv_data = json.loads(response_text)
                     logger.info(f"CV generated successfully on attempt {attempt}")
-                    logger.debug(f"Response length: {len(response.text)} characters")
+                    logger.debug(f"Response length: {len(response_text)} characters")
                     return cv_data
 
                 except json.JSONDecodeError as e:
                     logger.warning(
                         f"Attempt {attempt}/{max_retries}: JSON parsing failed - {str(e)}"
                     )
-                    logger.debug(f"Malformed JSON response: {response.text[:500]}...")
+                    logger.debug(f"Malformed JSON response: {response_text[:500]}...")
 
                     # If this is not the last attempt, retry
                     if attempt < max_retries:
@@ -144,7 +145,7 @@ class VertexAIService:
                     logger.error(
                         f"All {max_retries} attempts failed. Last error: {str(e)}"
                     )
-                    logger.error(f"Last malformed response: {response.text[:1000]}...")
+                    logger.error(f"Last malformed response: {response_text[:1000]}...")
                     raise Exception(
                         f"Gemini returned invalid JSON after {max_retries} attempts. "
                         f"Last error: {str(e)}"

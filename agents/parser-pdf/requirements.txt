@@ -17,5 +17,5 @@ httpx==0.28.1
 # Environment Variables
 python-dotenv==1.0.1
 
-# Vertex AI (structuration ProfileData — /extract-profile)
-google-cloud-aiplatform==1.73.0
+# Vertex AI via le SDK google-genai (Gemini 3.x, endpoint UE — ADR-GENAI-SDK)
+google-genai==2.17.0

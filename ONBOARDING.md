@@ -7,7 +7,7 @@
 
 ## 1. Ce qu'est le projet (en 5 lignes)
 
-SaaS B2C français de génération de CV optimisés par IA (Vertex AI **Gemini 2.5 Pro**, Paris).
+SaaS B2C français de génération de CV optimisés par IA (Vertex AI **Gemini 3.5 Flash**, endpoint UE ; SDK google-genai).
 Monorepo : frontend Next.js, backend FastAPI, 3 agents IA privés (parser-pdf = import,
 analyseur-offre, rédacteur-cv), PostgreSQL/JSONB, **5 services Cloud Run** en `europe-west9`,
 CI/CD GitHub Actions (Workload Identity Federation). Monétisation par « Pass » Stripe à durée
@@ -36,9 +36,9 @@ Voir `01_ARCHITECTURE_TECHNIQUE.md` pour le détail. L'essentiel :
 
 - **Base runtime** : la base applicative de PROD s'appelle `talentious` (utilisateur SQL
   `talentious-app`) ; en LOCAL docker c'est `talentious_app`. Ne pas confondre.
-- **Modèles IA 2.5** : leur « thinking » (non désactivable avec le SDK actuel) consomme le
-  budget de sortie — d'où `max_output_tokens=32k` sur l'extracteur. Migration `google-genai`
-  planifiée (ADR-GENAI-SDK) avant la fin de vie des 2.5 en octobre 2026.
+- **Modèles IA** : `gemini-3.5-flash` via le SDK `google-genai`, endpoint UE multi-région
+  (résidence UE), `thinking_level` maîtrisé (`low` extraction/analyse, `high` génération) —
+  fin du contournement `max_output_tokens=32k` de la 2.5. Migration ADR-GENAI-SDK (2026-08-10).
 - **DDoS** : pas de WAF/Cloud Armor ; protection par plafond d'instances + rate limiting.
 - Build frontend de prod = `frontend/Dockerfile.prod` (tout build-arg `NEXT_PUBLIC_*`
   doit y être déclaré).

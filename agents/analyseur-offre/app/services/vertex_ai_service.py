@@ -10,22 +10,22 @@ import logging
 import re
 from typing import Dict, Any, Optional
 
-from vertexai.generative_models import GenerativeModel, GenerationConfig
-import vertexai
+from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
-# Configuration
+# Configuration — SDK google-genai, Gemini 3.x sur endpoint UE (ADR-GENAI-SDK).
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "")
-# europe-west9 (Paris) - Souveraineté des données française/EU (RGPD)
-# Gemini 2.5 Flash: 1M token context window (~750K chars), optimized for speed
-GCP_LOCATION = os.getenv("GCP_LOCATION", "europe-west9")
-MODEL_NAME = os.getenv("VERTEX_AI_MODEL", "gemini-2.5-flash")
+# UE multi-région : résidence des données UE (RGPD) pour la famille 3.x.
+GCP_LOCATION = os.getenv("GCP_LOCATION", "eu")
+MODEL_NAME = os.getenv("VERTEX_AI_MODEL", "gemini-3.5-flash")
+THINKING_LEVEL = os.getenv("VERTEX_THINKING_LEVEL", "low")
 
 
 class VertexAIService:
     """
-    Service for interacting with Google Vertex AI
+    Service for interacting with Google Vertex AI via the google-genai SDK
     """
 
     def __init__(self):
@@ -33,7 +33,7 @@ class VertexAIService:
         self.project_id = GCP_PROJECT_ID
         self.location = GCP_LOCATION
         self.model_name = MODEL_NAME
-        self.model: Optional[GenerativeModel] = None
+        self.client: Optional[genai.Client] = None
 
         if not self.project_id:
             logger.warning(
@@ -43,16 +43,13 @@ class VertexAIService:
             self._initialize_vertex_ai()
 
     def _initialize_vertex_ai(self):
-        """Initialize Vertex AI SDK"""
+        """Initialize the google-genai client (Vertex backend)"""
         try:
-            # Initialize Vertex AI
-            vertexai.init(project=self.project_id, location=self.location)
-
-            # Initialize the model
-            self.model = GenerativeModel(self.model_name)
-
+            self.client = genai.Client(
+                vertexai=True, project=self.project_id, location=self.location
+            )
             logger.info(
-                f"Vertex AI initialized: "
+                f"Vertex AI (google-genai) initialized: "
                 f"project={self.project_id}, "
                 f"location={self.location}, "
                 f"model={self.model_name}"
@@ -85,8 +82,8 @@ class VertexAIService:
         Raises:
             ValueError: If model not initialized or all retries fail
         """
-        if not self.model:
-            raise ValueError("Vertex AI model not initialized")
+        if not self.client:
+            raise ValueError("Vertex AI client not initialized")
 
         # Neutralize any attempt to escape the <offre> data fence from within the
         # user-controlled offer text (prompt-injection defense).
@@ -106,23 +103,25 @@ class VertexAIService:
         for attempt in range(1, max_retries + 1):
             try:
                 # Configure generation parameters
-                generation_config = GenerationConfig(
+                generation_config = types.GenerateContentConfig(
                     temperature=temperature,
                     max_output_tokens=max_output_tokens,
                     response_mime_type="application/json",  # Force JSON response
+                    thinking_config=types.ThinkingConfig(thinking_level=THINKING_LEVEL),
                 )
 
                 logger.info(f"Attempt {attempt}/{max_retries}: Calling Vertex AI...")
 
-                # Generate content off the event loop (the Vertex SDK call is blocking).
+                # Generate content off the event loop (the SDK call is blocking).
                 response = await asyncio.to_thread(
-                    self.model.generate_content,
-                    prompt,
-                    generation_config=generation_config,
+                    self.client.models.generate_content,
+                    model=self.model_name,
+                    contents=prompt,
+                    config=generation_config,
                 )
 
                 # Extract and parse the response
-                response_text = response.text.strip()
+                response_text = (response.text or "").strip()
                 logger.debug(
                     f"Raw response from Vertex AI (attempt {attempt}): {response_text[:200]}..."
                 )

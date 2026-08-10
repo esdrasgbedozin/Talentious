@@ -17,7 +17,8 @@
 - **Cible** : chercheurs d'emploi exigeants en Europe, focus France (produit 100 % en français).
 - **Contrainte souveraineté** : toutes les données et tous les traitements IA confinés à
   la région GCP `europe-west9` (Paris) — exigence RGPD explicite et appliquée dans le code
-  (Vertex AI initialisé sur `europe-west9`, modèle `gemini-2.5-pro`).
+  (stockage en `europe-west9`/Paris ; appels Gemini `gemini-3.5-flash` sur l'endpoint
+  UE multi-région — résidence UE, cf. [[ADR-GENAI-SDK]]).
 
 ## 2. Modèle économique
 
@@ -45,8 +46,8 @@
 | Sessions | ✅ Access JWT 15 min + **refresh tokens rotatifs en base** (rotation + family burn), cookie `__session` |
 | Profil maître (JSONB) + CRUD | ✅ Fait et testé |
 | Import PDF du profil (CV / LinkedIn) | ✅ **Livré** : extraction structurée par l'agent `parser-pdf` (`/extract-profile`, Gemini), **asynchrone** (job + polling), brouillon soumis à relecture humaine — rien n'est persisté sans validation |
-| Analyse d'offre (agent IA) | ✅ Agent `analyseur-offre` (Gemini 2.5 Pro) |
-| Génération de CV (agent IA) | ✅ **Asynchrone** (202 + job_id + polling/SSE), agent `redacteur-cv` (Gemini 2.5 Pro) |
+| Analyse d'offre (agent IA) | ✅ Agent `analyseur-offre` (Gemini 3.5 Flash, endpoint UE) |
+| Génération de CV (agent IA) | ✅ **Asynchrone** (202 + job_id + polling/SSE), agent `redacteur-cv` (Gemini 3.5 Flash, endpoint UE) |
 | Dashboard « Mes CV » | ✅ Route `/cvs` |
 | Éditeur | ✅ Édition du CV généré |
 | Template CV + export PDF | ✅ Export PDF (rendu client) |
@@ -92,8 +93,9 @@
 
 ## 9. Chantiers ouverts (backlog V1.1)
 
-- **ADR-GENAI-SDK** : migration vers le SDK `google-genai` (contrôle du « thinking »,
-  accès aux modèles 3.x) — échéance : fin de vie des modèles 2.5 en octobre 2026.
+- **ADR-GENAI-SDK** : ✅ FAIT (2026-08-10) — migration `google-genai` + `gemini-3.5-flash`
+  sur endpoint UE. Motivé par le retrait de l'endpoint in-country `europe-west9` pour la
+  2.5 le 6 août 2027 (hausse de prix dès le 28 jan. 2027).
 - Système de feedback utilisateurs (remplacer les avis de la landing par du réel).
 - Logs structurés JSON (aujourd'hui logging standard).
 - Durcissement facultatif face au DDoS volumétrique (WAF/Cloud Armor) — différé tant

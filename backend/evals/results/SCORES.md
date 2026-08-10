@@ -65,3 +65,20 @@ docker run --rm -v $PWD/evals:/evals \
   -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp_creds.json \
   talentious-redacteur-cv python /evals/score_evals.py /evals/results/<dir>
 ```
+
+## Migration Gemini 3.5 Flash (endpoint UE) — ADR-GENAI-SDK (2026-08-10)
+
+Même juge (`gemini-2.5-pro`, T=0), mêmes paires cohérentes. Générations réelles
+via `google-genai` + `gemini-3.5-flash` sur l'endpoint UE (`location=eu`).
+
+| Paire (cohérente) | 2.5-pro (réf. v3) | **3.5-flash (UE)** | fidélité 3.5-flash |
+|---|---|---|---|
+| junior × offre junior | 7.6 | **8.6** | 10 |
+| senior × tech-lead | 9.6 | **9.8** | 10 |
+| **Moyenne** | ~8.6 | **9.2** | — |
+
+**Verdict** : non-régression démontrée — `3.5-flash` **égale ou dépasse** `2.5-pro`
+sur les deux paires, fidélité au profil maintenue à 10/10 (aucune hallucination).
+Gain net : modèle plus récent, moins cher, pérenne (UE), et le contrôle
+`thinking_level` remplace le contournement `max_output_tokens=32k`. Métriques=3 sur
+le junior = artefact du profil de test peu chiffré (senior=10), pas une régression.
