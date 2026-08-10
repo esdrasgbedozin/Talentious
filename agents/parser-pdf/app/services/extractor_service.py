@@ -1,13 +1,14 @@
 """
 Extractor Service — structuration du texte d'un CV en ProfileData via Vertex AI.
 
-Même patron que l'analyseur d'offres (vertexai + to_thread + JSON forcé +
-retries), avec les défenses propres à une entrée non fiable :
+SDK `google-genai` (ADR-GENAI-SDK), Gemini 3.x sur endpoint UE multi-région
+(résidence des données UE). Défenses propres à une entrée non fiable :
 - le texte du document est neutralisé (clôtures <document> internes retirées)
   puis injecté par .replace (jamais str.format : un CV peut contenir { }) ;
 - la sortie passe TOUJOURS par coerce_profile (liste blanche stricte) — voir
   profile_coercion.py ;
-- température basse (extraction, pas de créativité).
+- température basse + thinking_level bas : l'extraction est une transcription,
+  pas une tâche de raisonnement.
 """
 
 import asyncio
@@ -16,26 +17,29 @@ import logging
 import os
 from typing import Optional
 
-import vertexai
-from vertexai.generative_models import GenerationConfig, GenerativeModel
+from google import genai
+from google.genai import types
 
 from app.services.profile_coercion import coerce_profile, neutralize_fences
 
 logger = logging.getLogger(__name__)
 
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "")
-GCP_LOCATION = os.getenv("GCP_LOCATION", "europe-west9")
-MODEL_NAME = os.getenv("VERTEX_AI_MODEL", "gemini-2.5-flash")
+# UE multi-région : Gemini 3.x avec résidence des données UE (ADR-GENAI-SDK).
+GCP_LOCATION = os.getenv("GCP_LOCATION", "eu")
+MODEL_NAME = os.getenv("VERTEX_AI_MODEL", "gemini-3.5-flash")
+# Extraction = transcription : raisonnement minimal (latence + coût maîtrisés).
+THINKING_LEVEL = os.getenv("VERTEX_THINKING_LEVEL", "low")
 
 
 class ExtractorService:
-    """Appel Vertex AI pour structurer un texte de CV en ProfileData."""
+    """Appel Vertex AI (google-genai) pour structurer un texte de CV en ProfileData."""
 
     def __init__(self):
         self.project_id = GCP_PROJECT_ID
         self.location = GCP_LOCATION
         self.model_name = MODEL_NAME
-        self.model: Optional[GenerativeModel] = None
+        self.client: Optional[genai.Client] = None
 
         if not self.project_id:
             logger.warning("GCP_PROJECT_ID not set - profile extraction will not work")
@@ -43,8 +47,9 @@ class ExtractorService:
             self._initialize()
 
     def _initialize(self):
-        vertexai.init(project=self.project_id, location=self.location)
-        self.model = GenerativeModel(self.model_name)
+        self.client = genai.Client(
+            vertexai=True, project=self.project_id, location=self.location
+        )
         logger.info(
             "Extractor initialized: project=%s, location=%s, model=%s",
             self.project_id,
@@ -57,11 +62,7 @@ class ExtractorService:
         document_text: str,
         prompt_template: str,
         temperature: float = 0.1,
-        # 32k et non 8k : les tokens de « thinking » des modèles 2.5 comptent
-        # dans ce budget (non désactivable avec le SDK actuel — cf. chantier
-        # ADR-GENAI-SDK). À 8k, la réflexion sur un CV riche consommait le
-        # budget et tronquait le JSON en plein milieu (incident du 2026-07-23).
-        max_output_tokens: int = 32768,
+        max_output_tokens: int = 8192,
         max_retries: int = 2,
     ) -> tuple[dict, list]:
         """Structure le texte d'un CV en ProfileData canonique.
@@ -70,31 +71,36 @@ class ExtractorService:
             (profile_data, warnings) — toujours passés par coerce_profile.
 
         Raises:
-            ValueError: modèle non initialisé ou échec après retries.
+            ValueError: client non initialisé ou échec après retries.
         """
-        if not self.model:
-            raise ValueError("Vertex AI model not initialized")
+        if not self.client:
+            raise ValueError("Vertex AI client not initialized")
 
         safe_text = neutralize_fences(document_text)
         prompt = prompt_template.replace("{document_text}", safe_text)
 
         logger.info("Extracting profile (text length: %d chars)", len(document_text))
 
-        generation_config = GenerationConfig(
+        # Gemini 3.x : le « thinking » est cadré par thinking_level (et ne
+        # consomme plus le budget de sortie comme en 2.5) — fin du contournement
+        # max_output_tokens=32k qui masquait la troncature JSON.
+        config = types.GenerateContentConfig(
             temperature=temperature,
             max_output_tokens=max_output_tokens,
             response_mime_type="application/json",
+            thinking_config=types.ThinkingConfig(thinking_level=THINKING_LEVEL),
         )
 
         last_error: Optional[Exception] = None
         for attempt in range(1, max_retries + 1):
             try:
                 response = await asyncio.to_thread(
-                    self.model.generate_content,
-                    prompt,
-                    generation_config=generation_config,
+                    self.client.models.generate_content,
+                    model=self.model_name,
+                    contents=prompt,
+                    config=config,
                 )
-                raw = json.loads(response.text.strip())
+                raw = json.loads((response.text or "").strip())
                 profile, warnings = coerce_profile(raw)
                 logger.info(
                     "Profile extracted on attempt %d (%d experiences, %d skills)",

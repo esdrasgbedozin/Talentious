@@ -1,6 +1,6 @@
 # ADR-GENAI-SDK — Migration vers le SDK `google-genai` + Gemini 3.x (endpoint UE)
 
-- **Statut** : Proposé (2026-08-10) — en attente de validation du fondateur (points § « Décisions à valider »)
+- **Statut** : Accepté (2026-08-10). Wording souveraineté validé : « Données hébergées en France, traitements IA en Europe — conforme RGPD, aucune donnée ne quitte l'UE ». Flash par défaut, bascule Pro du rédacteur si les evals l'exigent.
 - **Décideur** : fondateur
 - **Contexte technique** : agents `parser-pdf`, `analyseur-offre`, `redacteur-cv` ; Vertex AI (Gemini) ; projet `talentious-project`.
 - **Remplace/complète** : [ADR-MODEL](ADR-MODEL.md) (choix `gemini-2.5-pro @ europe-west9`, qui prévoyait ce chantier).
@@ -24,6 +24,19 @@ Le fondateur a demandé (2026-08-10) d'exécuter la migration **maintenant, sans
 - **Il n'existe pas encore d'endpoint mono-région `europe-west*` pour la famille 3.x** : la résidence UE passe par le **multi-région `eu`**, pas par un confinement France-seule.
 - **Les « thought signatures » ne concernent PAS nos appels.** Elles sont obligatoires pour le *function-calling multi-tour* ; « single-turn generation (no tools) works correctly, you don't need to handle thought signatures ». Nos 3 agents font du **mono-tour** (une requête → un JSON, sans outils ni conversation). ⇒ pas de circulation de signatures à implémenter.
 - **Le SDK `google-genai` cible Vertex** via `genai.Client(vertexai=True, project=…, location=…)` puis `client.models.generate_content(model=…, …)`. La 3.x expose un contrôle du raisonnement (`thinking_level`), qui **remplace proprement notre contournement 32k**.
+
+### Résultat du spike de connectivité (2026-08-10, appels réels, ADC)
+
+Testé `genai.Client(vertexai=True, project="talentious-project", location=…)` + `generate_content` (JSON mode) :
+
+| location | model | résultat |
+|---|---|---|
+| **`eu`** | **`gemini-3.5-flash`** | **✅ OK — JSON valide, résidence UE** ← cible retenue |
+| `eu` | `gemini-3.5-pro` | ❌ **404 NOT_FOUND** — le Pro 3.5 n'est PAS servi sur l'endpoint UE |
+| `global` | `gemini-3.5-flash` | ✅ OK (mais **écarté** : pas de garantie de résidence) |
+| `eu` | `gemini-3-flash` | ❌ 404 (mauvais ID ; c'est bien `3.5-flash`) |
+
+**Conséquence majeure** : le repli « rédacteur sur `3.5-pro` » **n'est pas possible en UE aujourd'hui**. Si les evals montrent une régression du rédacteur avec `3.5-flash`, les options deviennent : (a) rester sur `gemini-2.5-pro @ europe-west9` pour le SEUL rédacteur jusqu'à ce que `3.5-pro` arrive en UE (endpoint 2.5 valable jusqu'au 6 août 2027) ; (b) accepter `3.5-flash` s'il égale/dépasse `2.5-pro` (génération plus récente) ; (c) renforcer le prompt / `thinking_level`. Tranché par les evals (étape 2).
 
 ## Décision (proposée)
 
