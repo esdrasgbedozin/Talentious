@@ -144,7 +144,7 @@ resource "google_cloud_run_v2_service" "parser" {
       }
       env {
         name  = "GCP_LOCATION"
-        value = var.region
+        value = var.vertex_ai_location
       }
       env {
         name  = "VERTEX_AI_MODEL"
@@ -192,7 +192,7 @@ resource "google_cloud_run_v2_service" "analyseur" {
       }
       env {
         name  = "GCP_LOCATION"
-        value = var.region
+        value = var.vertex_ai_location
       }
       env {
         name  = "VERTEX_AI_MODEL"
@@ -248,7 +248,7 @@ resource "google_cloud_run_v2_service" "redacteur" {
       }
       env {
         name  = "GCP_LOCATION"
-        value = var.region
+        value = var.vertex_ai_location
       }
       env {
         name  = "VERTEX_AI_MODEL"

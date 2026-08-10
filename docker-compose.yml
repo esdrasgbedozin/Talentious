@@ -58,9 +58,9 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       SERVICE_PORT: 8001
       GCP_PROJECT_ID: ${GCP_PROJECT_ID:-talentious-project}
-      GCP_LOCATION: ${GCP_LOCATION:-europe-west9}
+      GCP_LOCATION: ${GCP_LOCATION:-eu}
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp_creds.json
-      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-2.5-pro}
+      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-3.5-flash}
       USE_SECRET_MANAGER: ${USE_SECRET_MANAGER:-false}
 
   analyseur-offre:
@@ -83,13 +83,13 @@ services:
       GCP_PROJECT_ID: ${GCP_PROJECT_ID:-talentious-project}
       # europe-west9 (Paris) - Souveraineté des données française/EU (RGPD)
       # Gemini 2.5 Flash disponible avec contexte 1M tokens (~750K chars)
-      GCP_LOCATION: ${GCP_LOCATION:-europe-west9}
+      GCP_LOCATION: ${GCP_LOCATION:-eu}
       # GCP Authentication (Application Default Credentials)
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp_creds.json
       # Vertex AI Model — voir docs/adr/ADR-MODEL.md
       # gemini-2.5-pro en europe-west9 (gain qualité, RGPD Paris). Cible pérenne
       # gemini-3.5-flash différée (migration google-genai, ADR-GENAI-SDK).
-      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-2.5-pro}
+      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-3.5-flash}
       # Prompt Management (false = local files, true = Secret Manager)
       USE_SECRET_MANAGER: ${USE_SECRET_MANAGER:-false}
       # Logging
@@ -111,13 +111,13 @@ services:
       GCP_PROJECT_ID: ${GCP_PROJECT_ID:-talentious-project}
       # europe-west9 (Paris) - Souveraineté des données française/EU (RGPD)
       # Gemini 2.5 Flash disponible avec contexte 1M tokens (~750K chars)
-      GCP_LOCATION: ${GCP_LOCATION:-europe-west9}
+      GCP_LOCATION: ${GCP_LOCATION:-eu}
       # GCP Authentication (Application Default Credentials)
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp_creds.json
       # Vertex AI Model — voir docs/adr/ADR-MODEL.md
       # gemini-2.5-pro en europe-west9 (gain qualité, RGPD Paris). Cible pérenne
       # gemini-3.5-flash différée (migration google-genai, ADR-GENAI-SDK).
-      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-2.5-pro}
+      VERTEX_AI_MODEL: ${VERTEX_AI_MODEL:-gemini-3.5-flash}
       # Prompt Management (false = local files, true = Secret Manager)
       USE_SECRET_MANAGER: ${USE_SECRET_MANAGER:-false}
       # Logging

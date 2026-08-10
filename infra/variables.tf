@@ -26,9 +26,20 @@ variable "image_tag" {
 }
 
 variable "vertex_ai_model" {
-  description = "Modèle Vertex AI des agents (ADR-MODEL : gemini-2.5-pro en europe-west9)"
+  description = "Modèle Vertex AI des agents (ADR-GENAI-SDK : gemini-3.5-flash sur endpoint UE)"
   type        = string
-  default     = "gemini-2.5-pro"
+  default     = "gemini-3.5-flash"
+}
+
+# Région des APPELS Gemini — distincte de var.region (qui pilote Cloud Run/SQL/
+# bucket, restés en europe-west9). Multi-région `eu` : Gemini 3.x avec résidence
+# des données UE (ADR-GENAI-SDK ; l'endpoint in-country europe-west9 pour 2.5
+# est retiré le 2027-08-06). Le stockage reste en France ; seul le calcul IA
+# se fait dans l'UE.
+variable "vertex_ai_location" {
+  description = "Région/multi-région des appels Vertex AI Gemini (résidence UE)"
+  type        = string
+  default     = "eu"
 }
 
 variable "frontend_public_url" {
