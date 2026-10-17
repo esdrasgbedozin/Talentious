@@ -22,8 +22,8 @@ export default function ProjectForm({ project, onChange, onRemove }: ProjectForm
         <Input label="Rôle" value={project.role || ''} onChange={(e) => onChange('role', e.target.value)} placeholder="Lead Developer" />
         <Input label="URL" value={project.url || ''} onChange={(e) => onChange('url', e.target.value)} placeholder="https://..." />
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Début" type="month" value={project.start_date || ''} onChange={(e) => onChange('start_date', e.target.value)} />
-          <Input label="Fin" type="month" value={project.end_date || ''} onChange={(e) => onChange('end_date', e.target.value)} />
+          <Input label="Début" type="month" placeholder="AAAA-MM" value={project.start_date || ''} onChange={(e) => onChange('start_date', e.target.value)} />
+          <Input label="Fin" type="month" placeholder="AAAA-MM" value={project.end_date || ''} onChange={(e) => onChange('end_date', e.target.value)} />
         </div>
       </div>
       <div>

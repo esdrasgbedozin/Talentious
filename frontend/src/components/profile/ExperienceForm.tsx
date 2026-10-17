@@ -53,13 +53,13 @@ export default function ExperienceForm({
         <div className="grid grid-cols-2 gap-3">
           <Input
             label="Début *"
-            type="month"
+            type="month" placeholder="AAAA-MM"
             value={experience.start_date}
             onChange={(e) => onChange('start_date', e.target.value)}
           />
           <Input
             label="Fin"
-            type="month"
+            type="month" placeholder="AAAA-MM"
             value={experience.end_date || ''}
             onChange={(e) => onChange('end_date', e.target.value)}
             disabled={experience.is_current}
