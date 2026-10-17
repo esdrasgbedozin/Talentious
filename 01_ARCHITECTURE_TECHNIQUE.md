@@ -117,7 +117,7 @@ un `ProfileData` canonique unique, plus aucune transformation runtime.
 
 ## 8. Écarts / dette résiduelle
 
-1. **Logs non structurés** : `logging` standard, pas de JSON ni de corrélation de requête (à traiter).
+1. ~~Logs non structurés~~ → **RÉSOLU (2026-10-17)** : logs structurés JSON (`app/core/logging_config.py`, champ `severity` Cloud Logging) + corrélation `request_id` par middleware. Backend fait ; agents à aligner si besoin (même module copiable).
 2. **Pas de WAF/Cloud Armor** : protection DDoS surtout par plafond d'instances (coût borné) +
    rate limiting ; pas de limite globale ni de bannissement au bord. Différé (bêta, faible trafic).
 3. **Budget GCP** : alertes posées en console, pas encore dans Terraform.
