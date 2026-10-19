@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Printer, ArrowLeft } from 'lucide-react';
-import CVRenderer from '@/components/cv/CVRenderer';
+import { CVRenderer } from '@talentious/cv-render';
 import Button from '@/components/ui/Button';
 import { getCV, getErrorMessage, type CVDetail } from '@/lib/api';
 

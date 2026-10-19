@@ -84,6 +84,31 @@ couvre les deux : la décision du package partagé et son intégration au build.
   arrive aux tickets suivants : extraction `CVRenderer` sans changement de comportement
   (M0-T08), découplage du thème en tokens CV-scopés (M0-T09/T10), registre de templates
   (M0-T11), i18n (M0-T13), build CSS injectable (M0-T14), polices embarquées (M0-T16).
+- **M0-T08 (fait)** : `CVRenderer` extrait dans le package (export nommé `CVRenderer`),
+  **à comportement constant**. Preuve d'équivalence, du plus fort au plus faible : (a) la
+  source extraite est **identique octet-à-octet** à l'ancien composant, à la seule ligne
+  d'import de type près (`@/types/profile` → `./types`, même alias `ProfileData`) ; (b) des
+  **snapshots HTML** (fixtures complet / minimal / dense) identiques avant/après ; (c) un
+  test dédié du **fit-to-page** (stub `scrollHeight`) figeant l'émission du `transform:
+  scale(<1)` — comportement que jsdom ne couvre pas via les snapshots (`scrollHeight=0`).
+  Les pages `cv/[id]/print` et `cv/[id]/edit` l'importent depuis `@talentious/cv-render`.
+  Le package est rendu **auto-suffisant** : il porte sa propre copie des types générés du
+  contrat (`src/generated/`, cible `make generate-types-cv-render` câblée dans
+  `generate-types`), condition de sa consommation par l'export-service (M2). Le garde-fou
+  contract-first (`contracts-types.yml`) **couvre désormais cette copie** (régénération +
+  `git diff --exit-code` sur `packages/cv-render/src/generated`), pour qu'elle ne puisse
+  pas dériver du contrat sans faire échouer la CI. Le build **dev** du frontend passe en
+  contexte racine (`frontend/Dockerfile`, `context: .`) ; un `frontend/Dockerfile.dockerignore`
+  explicite protège ce contexte élargi contre les secrets (tfstate/.env) — BuildKit
+  remplaçant le `.dockerignore` racine dès qu'un ignore spécifique au Dockerfile existe.
+  Le renderer consomme encore `ProfileData` ; sa migration vers le schéma canonique
+  `GeneratedCVData` est un ticket distinct (**M0-T08b**, changement de comportement) car
+  `cv_data_json` est désormais stocké en `GeneratedCVData` (ADR-CONTENT-SCHEMA).
+- **Dette tracée (revue M0-T08)** : les tests de rendu (`CVRenderer.snapshot.test.tsx` +
+  fixtures) vivent encore **côté frontend** alors que le composant est dans le package ;
+  quand l'export-service (M2) consommera le package, ils ne le suivront pas. À déplacer
+  dans `packages/cv-render` (tests + fixtures en `ProfileData`) — rattaché à M0-T08b ou
+  ticket dédié.
 - L'invariant « aperçu = PDF » devient **testable** une fois l'export-service branché
   (M2) : baseline de non-régression visuelle sur les mêmes fixtures (M0-T01).
 

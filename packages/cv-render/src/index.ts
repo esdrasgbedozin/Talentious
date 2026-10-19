@@ -18,3 +18,8 @@ export const CV_RENDER_PACKAGE = {
 } as const;
 
 export type CvRenderPackage = typeof CV_RENDER_PACKAGE;
+
+// Renderer CV (extraction M0-T08, comportement constant). Consomme ProfileData ;
+// la migration vers le schéma canonique GeneratedCVData est un ticket distinct.
+export { default as CVRenderer } from './CVRenderer';
+export type { ProfileData, GeneratedCVData } from './types';

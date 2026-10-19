@@ -17,7 +17,7 @@ import ExperienceForm from '@/components/profile/ExperienceForm';
 import EducationForm from '@/components/profile/EducationForm';
 import ProjectForm from '@/components/profile/ProjectForm';
 import CertificationForm from '@/components/profile/CertificationForm';
-import CVRenderer from '@/components/cv/CVRenderer';
+import { CVRenderer } from '@talentious/cv-render';
 import { useToast } from '@/components/ui/Toast';
 import {
   UserProfile,

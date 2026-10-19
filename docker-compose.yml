@@ -123,16 +123,20 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      # Contexte RACINE depuis M0-T08 : le frontend importe le package workspace
+      # @talentious/cv-render (hors de frontend/).
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: talentious_frontend
     restart: always
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend:/app
+      - ./frontend:/app/frontend
+      - ./packages:/app/packages
       - /app/node_modules
-      - /app/.next
+      - /app/frontend/node_modules
+      - /app/frontend/.next
     environment:
       # Dev mode with file-system polling: inotify events don't cross the macOS
       # Docker bind mount, so without polling Next never hot-reloads host edits.

@@ -1,4 +1,4 @@
-.PHONY: up down build logs clean restart generate-types generate-types-backend generate-types-frontend
+.PHONY: up down build logs clean restart generate-types generate-types-backend generate-types-frontend generate-types-cv-render
 
 # -----------------------------------------------------------------------------
 # Contract-first: génération des types depuis contracts/openapi.yaml
@@ -6,7 +6,7 @@
 # -----------------------------------------------------------------------------
 BACKEND_PY := backend/.venv-py312/bin/python
 
-generate-types: generate-types-backend generate-types-frontend
+generate-types: generate-types-backend generate-types-frontend generate-types-cv-render
 
 generate-types-backend:
 	backend/.venv-py312/bin/datamodel-codegen \
@@ -26,6 +26,11 @@ generate-types-backend:
 
 generate-types-frontend:
 	cd frontend && npx --yes openapi-typescript ../contracts/openapi.yaml -o src/generated/api.ts
+
+# Package de rendu partagé : auto-suffisant (consommé par le frontend ET
+# l'export-service), il porte sa propre copie générée des types du contrat.
+generate-types-cv-render:
+	npx --yes openapi-typescript contracts/openapi.yaml -o packages/cv-render/src/generated/api.ts
 
 up:
 	docker-compose up -d

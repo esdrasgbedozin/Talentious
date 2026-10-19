@@ -14,7 +14,7 @@
  * Empty sections are skipped so partial CVs still render cleanly.
  */
 import { useLayoutEffect, useRef, useState } from 'react';
-import type { UserProfile } from '@/types/profile';
+import type { ProfileData as UserProfile } from './types';
 
 interface CVRendererProps {
   profile: UserProfile;

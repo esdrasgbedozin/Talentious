@@ -15,12 +15,14 @@ on:
       - 'contracts/**'
       - 'backend/app/generated/**'
       - 'frontend/src/generated/**'
+      - 'packages/cv-render/src/generated/**'
       - '.github/workflows/contracts-types.yml'
   pull_request:
     paths:
       - 'contracts/**'
       - 'backend/app/generated/**'
       - 'frontend/src/generated/**'
+      - 'packages/cv-render/src/generated/**'
       - '.github/workflows/contracts-types.yml'
 
 jobs:
@@ -69,9 +71,13 @@ jobs:
           cd frontend
           npx --yes openapi-typescript ../contracts/openapi.yaml -o src/generated/api.ts
 
+      - name: Regenerate cv-render package TypeScript types
+        run: |
+          npx --yes openapi-typescript contracts/openapi.yaml -o packages/cv-render/src/generated/api.ts
+
       - name: Fail if generated types are out of date
         run: |
-          if ! git diff --exit-code backend/app/generated frontend/src/generated; then
+          if ! git diff --exit-code backend/app/generated frontend/src/generated packages/cv-render/src/generated; then
             echo "::error::Les types générés ne sont pas à jour. Lance 'make generate-types' et committe le résultat."
             exit 1
           fi
