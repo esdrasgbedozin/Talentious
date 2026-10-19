@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
+  // Package de rendu partagé consommé en source (workspace npm) — M0-T06,
+  // ADR-RENDER-PACKAGE. Next le transpile comme le reste de l'app. Non encore
+  // importé par le frontend (l'extraction de CVRenderer est M0-T08).
+  transpilePackages: ["@talentious/cv-render"],
   // Prod image only (Dockerfile.prod sets NEXT_OUTPUT=standalone): minimal
   // self-contained server output. Unset in dev so `next dev`/`next start`
   // keep working unchanged in docker-compose.
