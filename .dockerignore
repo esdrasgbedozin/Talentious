@@ -1,0 +1,39 @@
+# .dockerignore RACINE — s'applique aux builds en `context: .`
+# (frontend/Dockerfile.prod depuis M0-T07, et backend/evals/Dockerfile).
+# Garde le contexte leger ET reproductible : les deps sont (re)installees
+# dans l'image (npm ci / pip), jamais copiees depuis l'hote.
+# N'exclut PAS backend/ ni agents/ : le build des evals (context racine) en a besoin.
+
+**/node_modules
+**/.next
+**/.venv
+**/.venv-*
+**/__pycache__
+**/*.pyc
+
+# Artefacts Terraform : secrets de prod EN CLAIR (tfstate = mot de passe Cloud
+# SQL, etc.). Docker N'HONORE PAS .gitignore ; sans ces regles, un build en
+# `context: .` enverrait l'etat Terraform au demon. Defense en profondeur
+# (revue securite M0-T07, A1).
+infra/
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfplan
+**/tf.plan
+**/.terraform
+
+.git
+.github
+.vscode
+.idea
+
+**/.env
+**/.env.*
+!**/.env.example
+
+**/*.log
+**/.DS_Store
+**/coverage
+**/.pytest_cache
+**/.mypy_cache
+**/tsconfig.tsbuildinfo

@@ -1,20 +1,28 @@
 # syntax=docker/dockerfile:1
 # =============================================================================
 # Image de PRODUCTION du frontend (Cloud Run).
-# Le Dockerfile de dev (./Dockerfile) reste réservé à docker-compose.
+# Construite en CONTEXTE RACINE du monorepo (workspaces npm) depuis M0-T07 :
+# le build doit voir le package partagé `packages/cv-render` et le lockfile
+# unique racine. Le Dockerfile de dev (./Dockerfile) reste réservé à
+# docker-compose (contexte ./frontend, source montée en volume).
 # Multi-stage + sortie Next `standalone` (image runtime minimale), non-root.
 # NEXT_PUBLIC_* sont FIGÉS AU BUILD : la CI passe l'URL API de prod en build-arg.
 # =============================================================================
 
-FROM node:20-slim AS deps
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
-
 FROM node:20-slim AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+
+# 1) Manifestes des workspaces + lockfile unique racine : couche `npm ci` mise en
+#    cache tant qu'aucun manifeste ne change. Seuls les workspaces réellement
+#    présents dans l'image sont résolus (frontend + packages/cv-render).
+COPY package.json package-lock.json ./
+COPY frontend/package.json ./frontend/
+COPY packages/cv-render/package.json ./packages/cv-render/
+RUN npm ci
+
+# 2) Sources des workspaces concernés par le build frontend.
+COPY frontend ./frontend
+COPY packages ./packages
 
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_ENVIRONMENT=production
@@ -25,7 +33,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_OUTPUT=standalone \
     NEXT_TELEMETRY_DISABLED=1
 
-RUN npm run build
+RUN npm run build --workspace frontend
 
 FROM node:20-slim AS runner
 WORKDIR /app
@@ -35,10 +43,12 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0
 
 # L'utilisateur `node` (uid 1000) est fourni par l'image de base.
-COPY --from=builder --chown=node:node /app/.next/standalone ./
-COPY --from=builder --chown=node:node /app/.next/static ./.next/static
-COPY --from=builder --chown=node:node /app/public ./public
+# Sortie `standalone` en monorepo (outputFileTracingRoot = racine) : l'arbre
+# contient `frontend/server.js` + un `node_modules` hoisté à la racine.
+COPY --from=builder --chown=node:node /app/frontend/.next/standalone ./
+COPY --from=builder --chown=node:node /app/frontend/.next/static ./frontend/.next/static
+COPY --from=builder --chown=node:node /app/frontend/public ./frontend/public
 
 USER node
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["node", "frontend/server.js"]

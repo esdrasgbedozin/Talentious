@@ -1,7 +1,7 @@
 # ADR-RENDER-PACKAGE — Package de rendu CV partagé et workspaces npm
 
 - **Statut** : Accepté (2026-10-19)
-- **Décideur** : fondateur (point d'arrêt humain — V2, roadmap M0-T06)
+- **Décideur** : fondateur (point d'arrêt humain — V2, roadmap M0-T06 puis M0-T07)
 - **Contexte technique** : nouveau `packages/cv-render` (`@talentious/cv-render`),
   `package.json` racine (workspaces npm), `frontend/next.config.ts`
   (`transpilePackages`), `frontend/src/components/cv/CVRenderer.tsx` (à extraire en
@@ -22,9 +22,10 @@ projet npm autonome, buildé en prod via `context: frontend`. Pour partager un s
 de rendu entre l'aperçu Next et l'export-service, il faut un **package partagé** et un
 mécanisme de partage de code côté npm.
 
-Ce ticket (M0-T06) est l'**échafaudage seul** : structure, outillage, point d'entrée. Il
-ne déplace pas encore `CVRenderer` (M0-T08) et ne modifie pas le build Docker/CI de prod
-(M0-T07, risque R5).
+M0-T06 pose l'**échafaudage seul** : structure, outillage, point d'entrée ; il ne déplace
+pas encore `CVRenderer` (M0-T08). **M0-T07** (décrit dans les Conséquences, désormais fait)
+bascule ensuite le build Docker/CI de prod vers le contexte racine (risque R5). Cet ADR
+couvre les deux : la décision du package partagé et son intégration au build.
 
 ## Décisions
 
@@ -62,6 +63,23 @@ ne déplace pas encore `CVRenderer` (M0-T08) et ne modifie pas le build Docker/C
   nécessaire à « aperçu = PDF ».
 - Entre T06 et T07, **deux `package-lock.json` coexistent** (racine + frontend). C'est
   volontaire et temporaire : ne pas déployer la prod sur le nouveau contexte avant T07.
+- **M0-T07 (fait)** : couture résorbée. Le build prod du frontend passe en **contexte
+  racine** (`context: .` dans `deploy-prod.yml`, `frontend/Dockerfile.prod` réécrit pour
+  les workspaces : `npm ci` sur les manifestes + lockfile racine, `npm run build
+  --workspace frontend`), avec `outputFileTracingRoot` fixé à la racine (sortie
+  `standalone` → `frontend/server.js`) et un `.dockerignore` racine. `frontend/package-lock.json`
+  est **supprimé** (lockfile unique racine). Le filtre `paths` du déploiement inclut
+  désormais `packages/**` et les manifestes racine.
+- **Nuance plateforme du lockfile** (binaires natifs lightningcss/swc/oxide de Tailwind v4
+  + Next) : npm 11 n'inscrit les nœuds natifs **résolus** que pour la plateforme
+  d'installation. Le `package-lock.json` racine est donc **généré sur linux/amd64** (parité
+  CI + Cloud Run), ce qui garantit un `npm ci` reproductible dans l'image Docker. En
+  local macOS, utiliser **`npm install`** (qui re-résout pour la plateforme courante), pas
+  `npm ci` ; le dev conteneurisé (docker-compose) est de toute façon sous linux. Un
+  `docker build` local sur Mac Apple Silicon résout en linux/**arm64** et peut échouer
+  faute de binaires natifs correspondants : builder avec **`--platform linux/amd64`**
+  (parité CI/prod). À reconsidérer si un lockfile multi-plateforme complet devient
+  nécessaire.
 - Le point d'entrée du package est un **placeholder typé** en T06 ; la surface réelle
   arrive aux tickets suivants : extraction `CVRenderer` sans changement de comportement
   (M0-T08), découplage du thème en tokens CV-scopés (M0-T09/T10), registre de templates
