@@ -3,10 +3,19 @@
 
 from __future__ import annotations
 
+from datetime import date as date_aliased
 from enum import StrEnum
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, EmailStr, Field, RootModel
+from pydantic import (
+    AnyUrl,
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    RootModel,
+)
 
 
 class Problem(BaseModel):
@@ -350,25 +359,6 @@ class ProfileUpdate(BaseModel):
     profile_data: ProfileData
 
 
-class GenerateCVRequest(BaseModel):
-    cv_name: str = Field(
-        ...,
-        description="Nom donné par l'utilisateur à ce CV",
-        examples=['CV - Ingénieur Backend Acme'],
-        max_length=255,
-        min_length=1,
-    )
-    offer_text: str = Field(
-        ...,
-        description="Texte brut de l'offre d'emploi. La borne haute (200 000 caractères)\nest alignée sur la limite de l'agent analyseur.\n",
-        examples=[
-            'Nous recherchons un ingénieur backend senior maîtrisant Python et FastAPI...'
-        ],
-        max_length=200000,
-        min_length=50,
-    )
-
-
 class Status(StrEnum):
     queued = 'queued'
 
@@ -378,9 +368,7 @@ class GenerateCVJobAccepted(BaseModel):
     status: Status = Field(..., examples=['queued'])
     message: str | None = Field(
         None,
-        examples=[
-            'CV generation job accepted. Poll GET /v1/cv/jobs/{job_id} for status.'
-        ],
+        examples=['CV generation job accepted. Poll GET /v1/jobs/{job_id} for status.'],
     )
 
 
@@ -402,6 +390,7 @@ class Status1(StrEnum):
 class CVJobStatus(BaseModel):
     """
     Etat d'un job de génération de CV. Transitions : queued -> running -> succeeded | failed.
+    Schéma de l'alias déprécié `GET /cv/jobs/{job_id}` ; préférer `JobStatus`.
 
     """
 
@@ -515,14 +504,6 @@ class ImportJobStatus(BaseModel):
     )
 
 
-class CVListItem(BaseModel):
-    id: UUID
-    cv_name: str
-    template_id: str = Field(..., examples=['modern_v1'])
-    created_at: AwareDatetime
-    updated_at: AwareDatetime
-
-
 class SelectedExperience(BaseModel):
     id: str
     title: str
@@ -610,6 +591,666 @@ class SelectedCertification(BaseModel):
         pattern='^\\d{4}-\\d{2}$',
     )
     url: str | None = None
+
+
+class DocumentLanguage(StrEnum):
+    """
+    Langue du document (CV ou lettre), distincte de la langue de l'interface (qui
+    reste française). Uniquement `fr` et `en`. `en` est une capacité premium.
+
+    """
+
+    fr = 'fr'
+    en = 'en'
+
+
+class TemplateSector(StrEnum):
+    """
+    Secteur / persona auquel un Template est destiné (Bible V2, §2 et §3.1) :
+    - `modern` : moderne / simple (jeunes diplômés, reconversion) ; inclut
+      « Moderne sobre », Template gratuit neutre.
+    - `corporate` : corporate / sobre (reconversion, cadres).
+    - `tech` : tech (reconversion, freelances).
+    - `academic` : académique (cadres, profils expérimentés).
+    - `creative` : créatif (freelances).
+
+    """
+
+    modern = 'modern'
+    corporate = 'corporate'
+    tech = 'tech'
+    academic = 'academic'
+    creative = 'creative'
+
+
+class CVTemplate(BaseModel):
+    """
+    Template : mise en page prédéfinie d'un CV ou d'une lettre (structure,
+    hiérarchie, éléments graphiques disponibles). Ne définit ni les couleurs ni les
+    polices choisies par l'utilisateur (voir `CVTheme`). S'applique à un CV et à sa
+    lettre assortie.
+
+    """
+
+    id: str = Field(
+        ...,
+        description='Identifiant stable du Template, valeur de `template_id` dans les documents',
+        examples=['modern_sobre'],
+    )
+    name: str = Field(..., examples=['Moderne sobre'])
+    sector: TemplateSector
+    is_free: bool = Field(
+        ...,
+        description='true si le Template est utilisable sans Pass actif. Un seul Template gratuit\nest prévu (« Moderne sobre »).\n',
+        examples=[True],
+    )
+    description: str = Field(
+        ..., examples=['Mise en page sobre et neutre, adaptée à tous les secteurs.']
+    )
+    preview_url: AnyUrl = Field(
+        ...,
+        description="URL de l'aperçu statique du Template",
+        examples=['https://app.talentious.fr/templates/modern_sobre.png'],
+    )
+    default_theme_id: str | None = Field(
+        None,
+        description="Identifiant du preset de Thème CV (`CVTheme.id`) appliqué par défaut si\naucun thème n'est fourni. Null si aucun thème par défaut n'est référencé.\n",
+        examples=['anthracite'],
+    )
+
+
+class CVFontFamily(StrEnum):
+    """
+    Liste BLANCHE des polices autorisées dans un Thème CV (jeu curaté, embarqué côté
+    service d'export : déterminisme du rendu, résidence UE, défense anti-injection
+    CSS). Aucune autre valeur n'est acceptée. La liste exacte doit rester alignée sur
+    le manifeste de polices embarquées du package de rendu (à confirmer avant
+    implémentation).
+
+    """
+
+    Inter = 'Inter'
+    Source_Sans_3 = 'Source Sans 3'
+    IBM_Plex_Sans = 'IBM Plex Sans'
+    Work_Sans = 'Work Sans'
+    Source_Serif_4 = 'Source Serif 4'
+    Lora = 'Lora'
+    Merriweather = 'Merriweather'
+    IBM_Plex_Serif = 'IBM Plex Serif'
+
+
+class CVThemeTokens(BaseModel):
+    """
+    Jetons de style CV-scopés (injectés en propriétés CSS propres au CV, jamais les
+    couleurs de l'interface de l'application). Validation STRICTE : couleurs en
+    `#RRGGBB`, polices dans la liste blanche `CVFontFamily`, aucune propriété
+    supplémentaire acceptée. Le serveur vérifie en plus un contraste de lisibilité
+    suffisant (texte / fond) avant enregistrement ; un thème illisible répond `422`
+    (seuil exact fixé côté serveur).
+
+    """
+
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    color_accent: str = Field(
+        ...,
+        description='Couleur au format hexadécimal strict `#RRGGBB` (défense anti-injection CSS).',
+        examples=['#2D3748'],
+        pattern='^#[0-9A-Fa-f]{6}$',
+    )
+    color_text: str = Field(
+        ...,
+        description='Couleur au format hexadécimal strict `#RRGGBB` (défense anti-injection CSS).',
+        examples=['#2D3748'],
+        pattern='^#[0-9A-Fa-f]{6}$',
+    )
+    color_muted: str = Field(
+        ...,
+        description='Couleur au format hexadécimal strict `#RRGGBB` (défense anti-injection CSS).',
+        examples=['#2D3748'],
+        pattern='^#[0-9A-Fa-f]{6}$',
+    )
+    color_background: str = Field(
+        ...,
+        description='Couleur au format hexadécimal strict `#RRGGBB` (défense anti-injection CSS).',
+        examples=['#2D3748'],
+        pattern='^#[0-9A-Fa-f]{6}$',
+    )
+    font_heading: CVFontFamily
+    font_body: CVFontFamily
+
+
+class CVTheme(BaseModel):
+    """
+    Thème CV : choix de style (couleurs, polices) appliqué PAR-DESSUS un Template.
+    Les données du thème sont envoyées INLINE à la génération ou à l'édition et
+    SNAPSHOTÉES dans le document (aucune clé étrangère vers un preset mutable : un
+    document existant n'est jamais altéré par l'évolution d'un preset).
+
+    Les `tokens` font foi. `id` n'est qu'informatif (provenance d'un preset). Un
+    thème dont les `tokens` diffèrent du preset désigné par `id` est un thème
+    personnalisé (premium).
+
+    """
+
+    id: str | None = Field(
+        None,
+        description="Identifiant du preset d'origine (`GET /cv/themes`). Null pour un thème personnalisé.",
+        examples=['anthracite'],
+        max_length=64,
+    )
+    name: str = Field(..., examples=['Anthracite'], max_length=60, min_length=1)
+    tokens: CVThemeTokens
+    is_free: bool | None = Field(
+        None,
+        description='Renseigné par le serveur sur les presets : true si le preset est utilisable\nsans Pass actif. Ignoré en entrée.\n',
+    )
+
+
+class JobType(StrEnum):
+    """
+    Nature du traitement asynchrone :
+    - `cv_generation` : génération d'un CV (`POST /cv/generate`).
+    - `letter_generation` : génération d'une lettre (`POST /letters/generate`).
+    - `export` : production d'un fichier PDF ou docx (`POST .../export`).
+    - `review` : Relecture IA (`POST /cv/{cv_id}/review`).
+    Unicité : un seul job actif par couple (utilisateur, `job_type`).
+
+    """
+
+    cv_generation = 'cv_generation'
+    letter_generation = 'letter_generation'
+    export = 'export'
+    review = 'review'
+
+
+class JobResultKind(StrEnum):
+    """
+    Nature de la ressource produite par un job `succeeded`. Correspondance :
+    `cv_generation` -> `cv`, `letter_generation` -> `letter`, `export` -> `export`,
+    `review` -> `review`.
+
+    """
+
+    cv = 'cv'
+    letter = 'letter'
+    export = 'export'
+    review = 'review'
+
+
+class Status4(StrEnum):
+    """
+    - `queued` : en attente d'un worker.
+    - `running` : traitement en cours.
+    - `succeeded` : traitement terminé, `result` renseigné.
+    - `failed` : traitement échoué, `error_message` renseigné ; relancer l'opération.
+
+    """
+
+    queued = 'queued'
+    running = 'running'
+    succeeded = 'succeeded'
+    failed = 'failed'
+
+
+class Category1(StrEnum):
+    """
+    - `hard_skill` : compétence technique, outil, langage.
+    - `soft_skill` : compétence comportementale.
+    - `requirement` : exigence non-compétence (diplôme, certification, séniorité, langue).
+
+    """
+
+    hard_skill = 'hard_skill'
+    soft_skill = 'soft_skill'
+    requirement = 'requirement'
+
+
+class Importance1(StrEnum):
+    Critical = 'Critical'
+    Important = 'Important'
+    Nice_to_have = 'Nice to have'
+
+
+class Alias(RootModel[str]):
+    root: str = Field(..., max_length=100)
+
+
+class ATSKeyword(BaseModel):
+    """
+    Mot-clé issu de l'Analyse d'offre (forme identique à la sortie `keywords` de
+    l'agent analyseur-offre), utilisé pour le matching ATS déterministe.
+
+    """
+
+    name: str = Field(..., examples=['Python'], max_length=100)
+    category: Category1 = Field(
+        ...,
+        description='- `hard_skill` : compétence technique, outil, langage.\n- `soft_skill` : compétence comportementale.\n- `requirement` : exigence non-compétence (diplôme, certification, séniorité, langue).\n',
+    )
+    importance: Importance1 | None = None
+    aliases: list[Alias] | None = Field(
+        [],
+        description='Variantes et synonymes reconnus lors du matching (ex. « JS » pour « JavaScript »)',
+        max_length=5,
+        validate_default=True,
+    )
+
+
+class ATSScoreRequest(BaseModel):
+    """
+    Offre face à laquelle le CV est évalué. Fournir EXACTEMENT UN des deux champs
+    `offer_text` ou `job_offer_id` ; fournir les deux ou aucun répond `422`.
+
+    """
+
+    offer_text: str | None = Field(
+        None,
+        description="Texte brut de l'offre d'emploi (même bornes que `GenerateCVRequest.offer_text`)",
+        examples=[
+            'Nous recherchons un ingénieur backend senior maîtrisant Python et FastAPI...'
+        ],
+        max_length=200000,
+        min_length=50,
+    )
+    job_offer_id: UUID | None = Field(
+        None,
+        description="Identifiant d'une Offre déjà enregistrée (retourné par un score ou une génération précédente)",
+    )
+
+
+class ATSScoreResult(BaseModel):
+    """
+    Résultat du Score ATS. Indicateur d'aide, non une garantie de passage dans un
+    outil de recrutement réel (formulation exacte de l'avertissement : décision D10
+    ouverte).
+
+    """
+
+    cv_id: UUID
+    job_offer_id: UUID = Field(
+        ..., description='Offre évaluée (réutilisable dans les requêtes suivantes)'
+    )
+    score: int = Field(
+        ...,
+        description="Score d'adéquation (0-100). Déterministe et reproductible. Toujours renseigné, y compris sans Pass.",
+        examples=[54],
+        ge=0,
+        le=100,
+    )
+    matched_keywords: list[ATSKeyword] = Field(
+        ...,
+        description="Mots-clés de l'offre présents dans le CV. Partiel ou vide si `detail_truncated` = true.",
+    )
+    missing_keywords: list[ATSKeyword] = Field(
+        ...,
+        description='Mots-clés manquants. Partiel ou vide si `detail_truncated` = true.',
+    )
+    missing_keywords_count: int = Field(
+        ...,
+        description='Nombre total de mots-clés manquants, même si la liste est tronquée (teaser gratuit)',
+        examples=[7],
+        ge=0,
+    )
+    detail_truncated: bool = Field(
+        ...,
+        description="true si le serveur a tronqué le détail pour le palier gratuit (pas de Pass\nactif). Le plafond exact de ce que le palier gratuit voit est une décision\nproduit ouverte (D3) : il n'est pas figé par ce contrat.\n",
+    )
+
+
+class ExportFormat(StrEnum):
+    """
+    Format du fichier exporté. `pdf` : rendu serveur fidèle et déterministe.
+    `docx` : fichier Word éditable produit depuis le contenu structuré, mise en forme
+    simplifiée (fidélité exacte au PDF : décision D8 ouverte). `docx` est premium à
+    la première production (voir `POST /cv/{cv_id}/export`).
+
+    """
+
+    pdf = 'pdf'
+    docx = 'docx'
+
+
+class ExportRequest(BaseModel):
+    format: ExportFormat
+
+
+class JobType1(StrEnum):
+    export = 'export'
+
+
+class Status5(StrEnum):
+    queued = 'queued'
+
+
+class ExportJobAccepted(BaseModel):
+    job_id: UUID = Field(..., description="Identifiant du job d'export")
+    job_type: JobType1 = Field(..., examples=['export'])
+    status: Status5 = Field(..., examples=['queued'])
+    format: ExportFormat
+    message: str | None = Field(
+        None, examples=['Export job accepted. Poll GET /v1/jobs/{job_id} for status.']
+    )
+
+
+class ReviewSeverity(StrEnum):
+    """
+    Gravité d'une suggestion :
+    - `info` : amélioration optionnelle.
+    - `warning` : amélioration recommandée.
+    - `critical` : défaut qui nuit nettement au CV (incohérence, faute marquée).
+
+    """
+
+    info = 'info'
+    warning = 'warning'
+    critical = 'critical'
+
+
+class ReviewSection(StrEnum):
+    """
+    Section du contenu (`GeneratedCVData`) visée par la suggestion ; `global` pour
+    une remarque transversale. La portée de la relecture (contenu seul ou aussi la
+    forme) est la décision produit D9, OUVERTE : en l'état, seules des sections de
+    contenu sont couvertes.
+
+    """
+
+    personal_info = 'personal_info'
+    summary = 'summary'
+    experiences = 'experiences'
+    skills = 'skills'
+    educations = 'educations'
+    projects = 'projects'
+    certifications = 'certifications'
+    global_ = 'global'
+
+
+class ReviewSuggestion(BaseModel):
+    id: str = Field(
+        ...,
+        description="Identifiant de la suggestion, unique au sein d'une relecture (suivi accepter / refuser côté client)",
+        examples=['s1'],
+        max_length=64,
+    )
+    section: ReviewSection
+    target_id: str | None = Field(
+        None,
+        description="Identifiant de l'élément visé dans la section (ex. `id` d'une\n`SelectedExperience`). Null pour une suggestion portant sur toute la section.\n",
+    )
+    severity: ReviewSeverity
+    message: str = Field(
+        ...,
+        description="Constat expliqué à l'utilisateur",
+        examples=["Le résumé ne mentionne pas vos 5 ans d'expérience en backend."],
+        max_length=1000,
+    )
+    suggestion: str | None = Field(
+        None,
+        description="Texte de remplacement proposé. Null si le constat n'appelle pas de réécriture. Jamais appliqué sans validation.",
+        max_length=5000,
+    )
+
+
+class ReviewResult(BaseModel):
+    """
+    Résultat d'une Relecture IA. Les suggestions ne modifient jamais le CV : le
+    client les propose à l'utilisateur, qui accepte ou refuse chacune, puis
+    enregistre le CV via `PUT /cv/{cv_id}`.
+
+    """
+
+    review_id: UUID
+    cv_id: UUID
+    suggestions: list[ReviewSuggestion]
+
+
+class JobType2(StrEnum):
+    review = 'review'
+
+
+class ReviewJobAccepted(BaseModel):
+    job_id: UUID = Field(..., description='Identifiant du job de relecture')
+    job_type: JobType2 = Field(..., examples=['review'])
+    status: Status5 = Field(..., examples=['queued'])
+    message: str | None = Field(
+        None, examples=['Review job accepted. Poll GET /v1/jobs/{job_id} for status.']
+    )
+
+
+class LetterTone(StrEnum):
+    """
+    Ton souhaité pour la lettre : `formal` (solennel), `balanced` (équilibré, valeur
+    par défaut côté serveur), `dynamic` (enthousiaste, direct). Liste provisoire,
+    extensible sans rupture.
+
+    """
+
+    formal = 'formal'
+    balanced = 'balanced'
+    dynamic = 'dynamic'
+
+
+class CoverLetterRecipient(BaseModel):
+    """
+    Destinataire de la lettre. Tous les champs sont optionnels (une offre n'en précise pas toujours).
+    """
+
+    name: str | None = Field(
+        None,
+        description='Nom du destinataire (ex. responsable du recrutement)',
+        max_length=200,
+    )
+    title: str | None = Field(None, max_length=200)
+    company: str | None = Field(None, examples=['Acme Corp'], max_length=200)
+    address: str | None = Field(None, max_length=500)
+
+
+class CoverLetterSignature(BaseModel):
+    name: str = Field(..., examples=['Alice Dupont'], max_length=200)
+    title: str | None = Field(
+        None,
+        description='Fonction ou intitulé affiché sous le nom, si pertinent',
+        max_length=200,
+    )
+
+
+class BodyItem(RootModel[str]):
+    root: str = Field(..., max_length=2000)
+
+
+class CoverLetterContent(BaseModel):
+    """
+    SCHÉMA DE CONTENU CANONIQUE UNIQUE de la lettre (équivalent de `GeneratedCVData`) :
+    sortie de l'agent rédacteur-cv (opération de génération de lettre), charge utile
+    stockée en JSONB, entrée du rendu (PDF/docx) et modèle d'édition. Aucune
+    transformation entre ces usages (hors coercition de sécurité en liste blanche).
+
+    Contenu PUR : texte brut uniquement, aucun HTML ni information de forme.
+    `template_id`, `theme` et `language` vivent dans l'enveloppe
+    (`LetterDetailResponse`). `place` et `date` sont laissés à null par l'agent ; le
+    serveur renseigne `date` à la création (jamais le LLM) et l'utilisateur peut les
+    modifier. Null : la ligne est omise au rendu (rendu déterministe).
+
+    """
+
+    personal_info: PersonalInfo
+    recipient: CoverLetterRecipient
+    place: str | None = Field(
+        None,
+        description="Lieu d'émission (ligne « Fait à … »)",
+        examples=['Paris'],
+        max_length=100,
+    )
+    date: date_aliased | None = Field(
+        None, description='Date de la lettre', examples=['2026-10-19']
+    )
+    subject: str | None = Field(
+        None,
+        description='Objet de la lettre',
+        examples=["Candidature au poste d'ingénieur backend senior"],
+        max_length=300,
+    )
+    salutation: str = Field(
+        ...,
+        description="Formule d'appel",
+        examples=['Madame, Monsieur,'],
+        max_length=200,
+    )
+    body: list[BodyItem] = Field(
+        ...,
+        description='Corps de la lettre, un élément par paragraphe (texte brut)',
+        max_length=8,
+        min_length=1,
+    )
+    closing: str = Field(
+        ...,
+        description='Formule de politesse finale',
+        examples=[
+            "Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées."
+        ],
+        max_length=500,
+    )
+    signature: CoverLetterSignature
+
+
+class GenerateLetterRequest(BaseModel):
+    """
+    Fournir EXACTEMENT UN des deux champs `offer_text` ou `job_offer_id` ; fournir
+    les deux ou aucun répond `422`. Si `cv_id` est fourni, `template_id` et `theme`
+    omis sont hérités du CV (Pack de candidature assorti) ; une valeur explicite les
+    remplace.
+
+    """
+
+    letter_name: str = Field(
+        ...,
+        description="Nom donné par l'utilisateur à cette lettre",
+        examples=['Lettre - Ingénieur Backend Acme'],
+        max_length=255,
+        min_length=1,
+    )
+    offer_text: str | None = Field(
+        None,
+        description="Texte brut de l'offre d'emploi (même bornes que `GenerateCVRequest.offer_text`)",
+        max_length=200000,
+        min_length=50,
+    )
+    job_offer_id: UUID | None = Field(
+        None, description="Identifiant d'une Offre déjà enregistrée"
+    )
+    cv_id: UUID | None = Field(
+        None,
+        description="CV (Variante) avec lequel la lettre forme un Pack. Optionnel : sans lui, la\nlettre est rédigée à partir du profil et de l'offre seuls.\n",
+    )
+    template_id: str | None = Field(
+        None,
+        description='Template de la lettre. Défaut : celui du CV si `cv_id` est fourni, sinon\n`modern_sobre`. Premium sans Pass actif : `402` (la lettre exige déjà un Pass).\n',
+        examples=['modern_sobre'],
+        max_length=64,
+        min_length=1,
+    )
+    theme: CVTheme | None = Field(
+        None,
+        description='Thème CV INLINE, snapshoté dans la lettre. Défaut : celui du CV si `cv_id`\nest fourni, sinon le thème par défaut du Template.\n',
+    )
+    target_language: DocumentLanguage | None = Field(
+        'fr',
+        description="Langue de la lettre. Le contenu est RÉÉCRIT dans cette langue en visant\nl'offre (pas de traduction littérale ; décision D7 ouverte).\n",
+    )
+    tone: LetterTone | None = Field(
+        None, description='Ton souhaité. Optionnel ; défaut serveur `balanced`.'
+    )
+
+
+class JobType3(StrEnum):
+    letter_generation = 'letter_generation'
+
+
+class LetterJobAccepted(BaseModel):
+    job_id: UUID = Field(..., description='Identifiant du job de génération de lettre')
+    job_type: JobType3 = Field(..., examples=['letter_generation'])
+    status: Status5 = Field(..., examples=['queued'])
+    message: str | None = Field(
+        None,
+        examples=[
+            'Letter generation job accepted. Poll GET /v1/jobs/{job_id} for status.'
+        ],
+    )
+
+
+class LetterListItem(BaseModel):
+    id: UUID
+    letter_name: str
+    cv_id: UUID | None = Field(
+        None,
+        description='CV assorti (Pack de candidature). Null si aucun, ou si le CV a été supprimé.',
+    )
+    job_offer_id: UUID | None = None
+    template_id: str = Field(..., examples=['modern_sobre'])
+    theme: CVTheme = Field(
+        ..., description='Snapshot du Thème CV appliqué à cette lettre.'
+    )
+    language: DocumentLanguage
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
+
+
+class LetterDetailResponse(BaseModel):
+    """
+    Lettre complète : ENVELOPPE (`template_id`, `theme`, `language`) + CONTENU
+    canonique (`letter_data_json`, schéma `CoverLetterContent`).
+
+    """
+
+    id: UUID
+    letter_name: str
+    cv_id: UUID | None = Field(
+        None,
+        description='CV assorti (Pack de candidature). Null si aucun, ou si le CV a été supprimé.',
+    )
+    job_offer_id: UUID | None = None
+    job_offer_context: str | None = Field(
+        None, description="Texte de l'offre d'emploi utilisée pour la génération"
+    )
+    template_id: str = Field(..., examples=['modern_sobre'])
+    theme: CVTheme = Field(
+        ...,
+        description='Snapshot du Thème CV appliqué (objet stocké, pas une référence mutable).',
+    )
+    language: DocumentLanguage
+    letter_data_json: CoverLetterContent
+    is_editable: bool | None = Field(
+        None,
+        description='Calculé à la lecture (jamais persisté) : true si le Pass est actif.\nfalse = lecture et téléchargement seuls (décision D1) ; une édition\nrépondrait `402`.\n',
+    )
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
+
+
+class UpdateLetterRequest(BaseModel):
+    """
+    Tous les champs sont optionnels ; au moins un doit être fourni. Le contenu et
+    l'enveloppe sont indépendants : modifier l'un ne modifie jamais l'autre.
+
+    """
+
+    letter_name: str | None = Field(None, max_length=255, min_length=1)
+    letter_data_json: CoverLetterContent | None = None
+    template_id: str | None = Field(
+        None,
+        description='Nouveau Template (identifiant inconnu : `422`)',
+        max_length=64,
+        min_length=1,
+    )
+    theme: CVTheme | None = Field(
+        None, description='Nouveau Thème CV (inline, snapshoté)'
+    )
+    language: DocumentLanguage | None = Field(
+        None,
+        description='Nouvelle langue de RENDU (titres, dates). Ne traduit pas le contenu.',
+    )
 
 
 class PassType(StrEnum):
@@ -705,10 +1346,72 @@ class UserResponse(BaseModel):
     )
 
 
+class GenerateCVRequest(BaseModel):
+    cv_name: str = Field(
+        ...,
+        description="Nom donné par l'utilisateur à ce CV",
+        examples=['CV - Ingénieur Backend Acme'],
+        max_length=255,
+        min_length=1,
+    )
+    offer_text: str = Field(
+        ...,
+        description="Texte brut de l'offre d'emploi. La borne haute (200 000 caractères)\nest alignée sur la limite de l'agent analyseur.\n",
+        examples=[
+            'Nous recherchons un ingénieur backend senior maîtrisant Python et FastAPI...'
+        ],
+        max_length=200000,
+        min_length=50,
+    )
+    template_id: str | None = Field(
+        'modern_sobre',
+        description='Identifiant du Template (voir `GET /cv/templates`). Défaut : le Template\ngratuit `modern_sobre`. Un Template premium sans Pass actif répond `402`\n(`premium-template-required`) ; un identifiant inconnu répond `422`.\nEnveloppe du document : jamais intégré au contenu.\n',
+        examples=['modern_sobre'],
+        max_length=64,
+        min_length=1,
+    )
+    theme: CVTheme | None = Field(
+        None,
+        description="Thème CV INLINE (preset de `GET /cv/themes`, éventuellement modifié).\nOptionnel : omis, le Thème CV par défaut du Template s'applique. Le thème\nest SNAPSHOTÉ dans le CV généré. Un thème personnalisé sans Pass actif\nrépond `402` (`premium-theme-required`).\n",
+    )
+    target_language: DocumentLanguage | None = Field(
+        'fr',
+        description="Langue du document. Le contenu est RÉÉCRIT dans cette langue en visant\nl'offre (pas de traduction littérale ; décision D7 ouverte sur le périmètre\nexact). `en` sans Pass actif répond `402` (`premium-language-required`).\nEnregistrée dans l'enveloppe du CV (`language`).\n",
+    )
+
+
+class CVListItem(BaseModel):
+    id: UUID
+    cv_name: str
+    template_id: str = Field(
+        ...,
+        description='Identifiant du Template (voir `CVTemplate.id`). Enveloppe du document.',
+        examples=['modern_sobre'],
+    )
+    theme: CVTheme = Field(
+        ...,
+        description='Snapshot du Thème CV appliqué à ce CV (enveloppe du document).',
+    )
+    language: DocumentLanguage
+    job_offer_id: UUID | None = Field(
+        None, description='Offre à laquelle cette Variante est liée. Null si non liée.'
+    )
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
+
+
 class GeneratedCVData(BaseModel):
     """
-    CV optimisé produit par l'agent rédacteur-cv. Stocké en JSONB dans
-    `generated_cvs.cv_data_json`.
+    SCHÉMA DE CONTENU CANONIQUE UNIQUE du CV (ADR-CONTENT-SCHEMA). Ce schéma est à
+    la fois : la sortie de l'agent rédacteur-cv, la charge utile stockée en JSONB
+    (`generated_cvs.cv_data_json`), l'entrée du package de rendu partagé
+    (`@talentious/cv-render`, côté export-service et aperçu) et le modèle d'édition
+    (`PUT /cv/{cv_id}`). Aucune transformation runtime entre ces usages (seule la
+    coercition de sécurité en liste blanche s'applique avant stockage).
+
+    Contenu PUR : aucune information de forme. `template_id`, `theme` et `language`
+    vivent dans l'enveloppe du document (`CVDetailResponse`), jamais ici : le contenu
+    est portable d'un Template à l'autre.
 
     Contrainte : aucun champ date n'est requis dans les sous-schémas de sortie
     (`SelectedEducation`, `SelectedCertification`) pour éviter les 422 aléatoires
@@ -739,10 +1442,86 @@ class GeneratedCVData(BaseModel):
     )
 
 
+class JobResult(BaseModel):
+    """
+    Ressource produite par un job `succeeded`. `result_id` désigne : le `cv_id`
+    (`cv`), le `letter_id` (`letter`), l'identifiant du fichier produit (`export`),
+    l'identifiant de la relecture (`review`).
+
+    """
+
+    result_kind: JobResultKind
+    result_id: UUID
+    download_url: AnyUrl | None = Field(
+        None,
+        description='URL signée (GCS) à durée limitée pour télécharger le fichier. Renseignée\nuniquement si `result_kind` = `export`.\n',
+    )
+    expires_at: AwareDatetime | None = Field(
+        None,
+        description="Expiration de `download_url`. Une URL expirée se renouvelle en relançant\nl'export (le fichier à jour est resservi sans nouveau rendu). Renseignée\nuniquement si `result_kind` = `export`.\n",
+    )
+    review: ReviewResult | None = Field(
+        None,
+        description='Résultat de la relecture. Présent uniquement si `result_kind` = `review` (omis sinon).',
+    )
+
+
+class JobStatus(BaseModel):
+    """
+    État d'un job asynchrone, tous types confondus. Transitions :
+    queued -> running -> succeeded | failed. Généralise `CVJobStatus`.
+
+    """
+
+    job_id: UUID
+    job_type: JobType
+    status: Status4 = Field(
+        ...,
+        description="- `queued` : en attente d'un worker.\n- `running` : traitement en cours.\n- `succeeded` : traitement terminé, `result` renseigné.\n- `failed` : traitement échoué, `error_message` renseigné ; relancer l'opération.\n",
+    )
+    progress_pct: int | None = Field(
+        None,
+        description='Avancement (0-100). Renseigné uniquement pour le statut `running`.',
+        examples=[55],
+        ge=0,
+        le=100,
+    )
+    result: JobResult | None = Field(
+        None,
+        description='Ressource produite. Présent uniquement si statut = `succeeded` (omis sinon).',
+    )
+    error_message: str | None = Field(
+        None,
+        description="Message d'erreur générique (sans internals). Renseigné uniquement si statut = `failed`.\n",
+        examples=['Job failed. Please try again.'],
+    )
+    created_at: AwareDatetime
+    updated_at: AwareDatetime | None = None
+
+
 class CVDetailResponse(BaseModel):
+    """
+    Variante de CV complète : ENVELOPPE (`template_id`, `theme`, `language`) +
+    CONTENU canonique (`cv_data_json`, schéma `GeneratedCVData`). Le contenu ne
+    porte aucune information de forme.
+
+    """
+
     id: UUID
     cv_name: str
-    template_id: str = Field(..., examples=['modern_v1'])
+    template_id: str = Field(
+        ...,
+        description='Identifiant du Template (voir `CVTemplate.id`). Enveloppe du document.',
+        examples=['modern_sobre'],
+    )
+    theme: CVTheme = Field(
+        ...,
+        description="Snapshot du Thème CV appliqué (objet stocké avec le document, pas une\nréférence mutable : modifier un preset n'altère jamais un document existant).\n",
+    )
+    language: DocumentLanguage
+    job_offer_id: UUID | None = Field(
+        None, description='Offre à laquelle cette Variante est liée. Null si non liée.'
+    )
     job_offer_context: str | None = Field(
         None, description="Texte de l'offre d'emploi utilisée pour la génération"
     )
@@ -750,14 +1529,36 @@ class CVDetailResponse(BaseModel):
     gcs_pdf_url: str | None = Field(
         None, description='URL GCS du PDF exporté. Null si pas encore généré.'
     )
+    is_editable: bool | None = Field(
+        None,
+        description='Calculé à la lecture (jamais persisté) : true si le Pass est actif ou si le\ndocument est entièrement gratuit. false = lecture et téléchargement seuls\n(décision D1) ; une édition premium répondrait `402`.\n',
+    )
     created_at: AwareDatetime
     updated_at: AwareDatetime
 
 
 class UpdateCVRequest(BaseModel):
     """
-    Tous les champs sont optionnels ; au moins un doit être fourni.
+    Tous les champs sont optionnels ; au moins un doit être fourni. Le contenu
+    (`cv_data_json`) et l'enveloppe (`template_id`, `theme`, `language`) sont
+    indépendants : modifier l'un ne modifie jamais l'autre.
+
     """
 
     cv_name: str | None = Field(None, max_length=255, min_length=1)
     cv_data_json: GeneratedCVData | None = None
+    template_id: str | None = Field(
+        None,
+        description='Nouveau Template. Premium sans Pass actif : `402`\n(`premium-template-required`) ; identifiant inconnu : `422`.\n',
+        examples=['modern_sobre'],
+        max_length=64,
+        min_length=1,
+    )
+    theme: CVTheme | None = Field(
+        None,
+        description='Nouveau Thème CV (inline, snapshoté). Personnalisé sans Pass actif : `402`\n(`premium-theme-required`).\n',
+    )
+    language: DocumentLanguage | None = Field(
+        None,
+        description='Nouvelle langue de RENDU (titres de section, mois). Ne traduit pas le contenu.\n`en` sans Pass actif : `402` (`premium-language-required`).\n',
+    )

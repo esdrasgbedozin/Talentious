@@ -1,11 +1,16 @@
 openapi: 3.0.3
 info:
   title: Agent Rédacteur-CV
-  version: "1.0.0"
+  version: "1.1.0"
   description: |
-    Microservice privé de génération de CV optimisé. Encapsule un appel Vertex AI
-    (Gemini 2.5 Flash, région europe-west9) pour produire un CV structuré adapté
-    à une offre d'emploi, à partir du profil canonique de l'utilisateur.
+    Microservice privé de génération de contenu de candidature. Encapsule des appels
+    Vertex AI (Gemini 2.5 Flash, région europe-west9) pour produire, à partir du profil
+    canonique de l'utilisateur :
+    - un CV structuré adapté à une offre d'emploi (`POST /generate`) ;
+    - une lettre de motivation pour une offre (`POST /generate-letter`) ;
+    - des suggestions de relecture d'un CV existant (`POST /review`).
+
+    Un seul agent porte ces trois capacités (pas de nouvel agent par capacité).
 
     ## Accès
     Ce service est privé (Cloud Run --no-allow-unauthenticated). Seul le compte
@@ -21,6 +26,18 @@ info:
     Structure skills reçue : {hard: string[], soft: string[]} — aucune conversion
     vers [{name, level, category}] n'est opérée. L'agent infère les niveaux à partir
     du contexte global du profil et de l'offre.
+
+    ## Sortie — contenu canonique, sans forme
+    Les sorties `GeneratedCVData` (CV) et `CoverLetterContent` (lettre) sont les
+    schémas de contenu canoniques de contracts/openapi.yaml : ils sont stockés tels
+    quels et rendus tels quels, sans transformation. L'agent n'a JAMAIS connaissance
+    des Templates ni des Thèmes CV (la forme vit dans l'enveloppe du document, côté
+    backend) ; il ne reçoit que la langue cible (`target_language` / `language`).
+
+    ## Entrées non fiables
+    Le profil, le texte d'offre analysé, le contenu d'un CV soumis à relecture sont des
+    entrées non fiables injectées dans le prompt : le backend les délimite (fence) et la
+    sortie est validée puis coercée en liste blanche avant stockage ou rendu.
 
     ## Erreurs
     Toutes les erreurs suivent le standard RFC 7807 (application/problem+json).
@@ -39,7 +56,9 @@ security:
 
 tags:
   - name: Generation
-    description: Génération de CV optimisé
+    description: Génération de CV optimisé et de lettre de motivation
+  - name: Review
+    description: Relecture IA d'un CV existant
   - name: Health
     description: Vérification de santé du service
 
@@ -57,6 +76,11 @@ paths:
         - Expériences sélectionnées et reformulées avec verbes d'action et métriques
         - Compétences priorisées et catégorisées
         - Formations et certifications pertinentes sélectionnées
+
+        Le contenu est RÉDIGÉ dans la langue `target_language` (défaut `fr`) en visant
+        l'offre : réécriture, pas traduction littérale. Les valeurs d'énumération
+        techniques de la sortie (`category`, `importance`) restent identiques quelle que
+        soit la langue.
 
         L'appel Vertex AI inclut une logique de retry (3 tentatives max).
         La sortie est validée contre le schéma GeneratedCVData.
@@ -106,6 +130,140 @@ paths:
                 status: 502
                 detail: "The AI generation service is temporarily unavailable. Please retry."
                 instance: "/generate"
+
+  /generate-letter:
+    post:
+      tags: [Generation]
+      operationId: generateLetter
+      summary: Générer une lettre de motivation pour une offre d'emploi
+      description: |
+        Reçoit le profil canonique de l'utilisateur et l'analyse de l'offre, et produit
+        une lettre de motivation structurée (CoverLetterContent) pour CETTE offre :
+        destinataire, objet, formule d'appel, corps en paragraphes, formule de
+        politesse, signature.
+
+        `cv_data` (optionnel) est le CV (Variante) avec lequel la lettre forme un Pack
+        de candidature : l'agent s'y aligne pour la cohérence des faits et des
+        arguments, sans copier le CV. Sans lui, la lettre est rédigée à partir du profil
+        et de l'offre.
+
+        La lettre est RÉDIGÉE dans la langue `target_language` (défaut `fr`) en visant
+        l'offre : réécriture, pas traduction littérale. Le ton suit `tone`.
+
+        Contenu pur : texte brut, aucun HTML ni mise en forme. `place` et `date` sont
+        retournés à null (le serveur renseigne la date ; le LLM ne l'invente pas).
+
+        L'appel Vertex AI inclut une logique de retry (3 tentatives max).
+        La sortie est validée contre le schéma CoverLetterContent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateLetterRequest'
+      responses:
+        '200':
+          description: Lettre générée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateLetterResponse'
+        '400':
+          description: Données d'entrée invalides
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Token IAM absent ou invalide
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Erreur de validation du corps
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: Erreur Vertex AI (toutes les tentatives épuisées)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "https://talentious.fr/errors/ai-service-error"
+                title: "AI Service Error"
+                status: 502
+                detail: "The AI generation service is temporarily unavailable. Please retry."
+                instance: "/generate-letter"
+
+  /review:
+    post:
+      tags: [Review]
+      operationId: reviewCV
+      summary: Relire un CV existant et proposer des suggestions d'amélioration
+      description: |
+        Reçoit le contenu d'un CV (GeneratedCVData) et, si disponible, l'analyse de
+        l'offre visée, et retourne des suggestions d'amélioration (ReviewSuggestion).
+        La relecture est orientée offre quand `offer_analysis` est fourni.
+
+        L'agent ne modifie JAMAIS le CV : il ne renvoie que des suggestions, que
+        l'utilisateur accepte ou refuse une à une côté application. Les suggestions sont
+        rédigées dans la langue `language` du document.
+
+        Portée : contenu uniquement en l'état (sections de `ReviewSection`). Le périmètre
+        définitif (contenu seul ou aussi la forme, volume par document) relève de la
+        décision produit D9, OUVERTE, et n'est pas figé ici.
+
+        Sécurité : le contenu du CV est une entrée non fiable (injection de prompt) ;
+        `optimization_notes` ne doit pas être transmis à l'agent.
+
+        L'appel Vertex AI inclut une logique de retry (3 tentatives max).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+      responses:
+        '200':
+          description: Relecture terminée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewResponse'
+        '400':
+          description: Données d'entrée invalides
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Token IAM absent ou invalide
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Erreur de validation du corps
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: Erreur Vertex AI (toutes les tentatives épuisées)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "https://talentious.fr/errors/ai-service-error"
+                title: "AI Service Error"
+                status: 502
+                detail: "The AI review service is temporarily unavailable. Please retry."
+                instance: "/review"
 
   /health:
     get:
@@ -159,6 +317,13 @@ components:
         instance:
           type: string
           description: URI de la ressource concernée
+
+    DocumentLanguage:
+      type: string
+      enum: [fr, en]
+      description: |
+        Langue du document. Identique à openapi.yaml#/components/schemas/DocumentLanguage.
+        Uniquement `fr` et `en`.
 
     # =========================================================================
     # Entrée : ProfileData canonique
@@ -439,11 +604,37 @@ components:
           nullable: true
           enum: [Critical, Important, "Nice to have"]
 
+    ATSKeyword:
+      type: object
+      description: |
+        Mot-clé de l'offre pour le matching ATS déterministe. Identique à
+        agents/analyseur-offre.openapi.yaml#/components/schemas/ATSKeyword.
+      required:
+        - name
+        - category
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+          enum: [hard_skill, soft_skill, requirement]
+        importance:
+          type: string
+          nullable: true
+          enum: [Critical, Important, "Nice to have"]
+        aliases:
+          type: array
+          items:
+            type: string
+          default: []
+
     OfferAnalysis:
       type: object
       description: |
         Résultat de l'agent analyseur-offre. Identique à
         agents/analyseur-offre.openapi.yaml#/components/schemas/AnalysisResult.
+        `keywords` est optionnel côté rédacteur (non utilisé pour la rédaction ; tolère
+        les analyses mises en cache avant son introduction).
       required:
         - hard_skills
         - soft_skills
@@ -468,6 +659,11 @@ components:
             type: string
         tone:
           type: string
+        keywords:
+          type: array
+          items:
+            $ref: '#/components/schemas/ATSKeyword'
+          default: []
 
     GenerateRequest:
       type: object
@@ -482,6 +678,15 @@ components:
           $ref: '#/components/schemas/ProfileData'
         offer_analysis:
           $ref: '#/components/schemas/OfferAnalysis'
+        target_language:
+          allOf:
+            - $ref: '#/components/schemas/DocumentLanguage'
+          default: fr
+          description: |
+            Langue de rédaction du CV. Le contenu est réécrit dans cette langue en visant
+            l'offre (pas de traduction littérale ; décision produit D7 ouverte sur le
+            périmètre exact). Seul paramètre de forme/langue reçu par l'agent : Templates
+            et Thèmes CV lui sont inconnus.
 
     # =========================================================================
     # Sortie : GeneratedCVData
@@ -619,7 +824,11 @@ components:
     GeneratedCVData:
       type: object
       description: |
-        CV optimisé pour l'offre cible. Stocké en JSONB dans generated_cvs.cv_data_json.
+        Schéma de contenu canonique unique du CV (miroir de
+        contracts/openapi.yaml#/components/schemas/GeneratedCVData) : sortie de l'agent,
+        stockée en JSONB dans generated_cvs.cv_data_json, entrée du rendu, modèle
+        d'édition. Contenu pur, aucune information de forme (template, thème, langue :
+        enveloppe du document, hors contenu).
 
         Contrainte de sécurité : optimization_notes NE DOIT PAS être affiché à
         l'utilisateur ni loggé en production (risque d'exfiltration BLK-5).
@@ -674,6 +883,236 @@ components:
           type: string
           default: "CV generated successfully"
 
+    # =========================================================================
+    # Lettre de motivation
+    # =========================================================================
+
+    LetterTone:
+      type: string
+      enum: [formal, balanced, dynamic]
+      description: |
+        Ton souhaité pour la lettre. Identique à openapi.yaml#/components/schemas/LetterTone.
+
+    CoverLetterRecipient:
+      type: object
+      description: Destinataire de la lettre. Tous les champs sont optionnels.
+      properties:
+        name:
+          type: string
+          nullable: true
+          maxLength: 200
+        title:
+          type: string
+          nullable: true
+          maxLength: 200
+        company:
+          type: string
+          nullable: true
+          maxLength: 200
+        address:
+          type: string
+          nullable: true
+          maxLength: 500
+
+    CoverLetterSignature:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        title:
+          type: string
+          nullable: true
+          maxLength: 200
+
+    CoverLetterContent:
+      type: object
+      description: |
+        Schéma de contenu canonique unique de la lettre (miroir de
+        contracts/openapi.yaml#/components/schemas/CoverLetterContent) : sortie de
+        l'agent, stockée en JSONB, entrée du rendu, modèle d'édition. Contenu pur : texte
+        brut, aucun HTML, aucune information de forme. `place` et `date` : null en sortie
+        d'agent (renseignés par le serveur).
+      required:
+        - personal_info
+        - recipient
+        - salutation
+        - body
+        - closing
+        - signature
+      properties:
+        personal_info:
+          $ref: '#/components/schemas/PersonalInfo'
+        recipient:
+          $ref: '#/components/schemas/CoverLetterRecipient'
+        place:
+          type: string
+          nullable: true
+          maxLength: 100
+        date:
+          type: string
+          nullable: true
+          format: date
+        subject:
+          type: string
+          nullable: true
+          maxLength: 300
+          description: Objet de la lettre
+        salutation:
+          type: string
+          maxLength: 200
+          description: Formule d'appel
+        body:
+          type: array
+          minItems: 1
+          maxItems: 8
+          items:
+            type: string
+            maxLength: 2000
+          description: Corps de la lettre, un élément par paragraphe (texte brut)
+        closing:
+          type: string
+          maxLength: 500
+          description: Formule de politesse finale
+        signature:
+          $ref: '#/components/schemas/CoverLetterSignature'
+
+    GenerateLetterRequest:
+      type: object
+      description: |
+        Requête de génération de lettre. Combine le profil canonique, l'analyse de
+        l'offre et, optionnellement, le CV assorti (Pack de candidature).
+      required:
+        - user_profile
+        - offer_analysis
+      properties:
+        user_profile:
+          $ref: '#/components/schemas/ProfileData'
+        offer_analysis:
+          $ref: '#/components/schemas/OfferAnalysis'
+        cv_data:
+          allOf:
+            - $ref: '#/components/schemas/GeneratedCVData'
+          description: |
+            Contenu du CV assorti (optionnel). Sert à aligner les faits et arguments de la
+            lettre sur le CV. `optimization_notes` ne doit pas être transmis.
+        target_language:
+          allOf:
+            - $ref: '#/components/schemas/DocumentLanguage'
+          default: fr
+          description: |
+            Langue de rédaction de la lettre. Réécriture en visant l'offre, pas traduction
+            littérale (décision produit D7 ouverte).
+        tone:
+          allOf:
+            - $ref: '#/components/schemas/LetterTone'
+          description: Ton souhaité. Optionnel ; défaut `balanced`.
+
+    GenerateLetterResponse:
+      type: object
+      required:
+        - letter_data
+        - message
+      properties:
+        letter_data:
+          $ref: '#/components/schemas/CoverLetterContent'
+        message:
+          type: string
+          default: "Letter generated successfully"
+
+    # =========================================================================
+    # Relecture
+    # =========================================================================
+
+    ReviewSeverity:
+      type: string
+      enum: [info, warning, critical]
+      description: Gravité d'une suggestion. Identique à openapi.yaml#/components/schemas/ReviewSeverity.
+
+    ReviewSection:
+      type: string
+      enum:
+        - personal_info
+        - summary
+        - experiences
+        - skills
+        - educations
+        - projects
+        - certifications
+        - global
+      description: |
+        Section du contenu visée par la suggestion ; `global` pour une remarque
+        transversale. Identique à openapi.yaml#/components/schemas/ReviewSection.
+        Portée (contenu seul ou aussi la forme) : décision produit D9 ouverte.
+
+    ReviewSuggestion:
+      type: object
+      description: |
+        Suggestion d'amélioration. Identique à
+        openapi.yaml#/components/schemas/ReviewSuggestion. L'`id` est unique au sein de la
+        réponse ; le backend le normalise lors de la coercition en liste blanche.
+      required:
+        - id
+        - section
+        - severity
+        - message
+      properties:
+        id:
+          type: string
+          maxLength: 64
+        section:
+          $ref: '#/components/schemas/ReviewSection'
+        target_id:
+          type: string
+          nullable: true
+          description: Identifiant de l'élément visé dans la section (ex. `id` d'une SelectedExperience)
+        severity:
+          $ref: '#/components/schemas/ReviewSeverity'
+        message:
+          type: string
+          maxLength: 1000
+        suggestion:
+          type: string
+          nullable: true
+          maxLength: 5000
+          description: Texte de remplacement proposé, ou null. Jamais appliqué sans validation.
+
+    ReviewRequest:
+      type: object
+      description: |
+        Requête de relecture. `cv_data` est le contenu canonique du CV à relire (entrée
+        non fiable ; sans `optimization_notes`).
+      required:
+        - cv_data
+      properties:
+        cv_data:
+          $ref: '#/components/schemas/GeneratedCVData'
+        offer_analysis:
+          allOf:
+            - $ref: '#/components/schemas/OfferAnalysis'
+          description: "Analyse de l'offre visée. Optionnelle : si fournie, la relecture est orientée offre."
+        language:
+          allOf:
+            - $ref: '#/components/schemas/DocumentLanguage'
+          default: fr
+          description: Langue du document relu. Les suggestions sont rédigées dans cette langue.
+
+    ReviewResponse:
+      type: object
+      required:
+        - suggestions
+        - message
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewSuggestion'
+        message:
+          type: string
+          default: "Review completed successfully"
+
     HealthResponse:
       type: object
       required:
@@ -690,4 +1129,4 @@ components:
           example: "redacteur-cv"
         version:
           type: string
-          example: "1.0.0"
+          example: "1.1.0"

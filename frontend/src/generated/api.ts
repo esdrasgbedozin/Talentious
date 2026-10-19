@@ -431,15 +431,28 @@ export interface paths {
         put?: never;
         /**
          * Lancer la génération asynchrone d'un CV
-         * @description Soumet une demande de génération de CV et retourne immédiatement un `job_id`.
-         *     La génération réelle (2-5 min) se fait en arrière-plan.
+         * @description Soumet une demande de génération de CV et retourne immédiatement un `job_id`
+         *     (`job_type` = `cv_generation`). La génération réelle (2-5 min) se fait en
+         *     arrière-plan ; l'état se consulte via `GET /jobs/{job_id}`.
          *
-         *     Prérequis : l'utilisateur doit avoir un CareerPass actif, ou le rôle `admin`.
-         *     L'utilisateur doit avoir un profil avec au moins une expérience renseignée.
+         *     Le CV produit est une Variante de CV : contenu canonique (`GeneratedCVData`)
+         *     + enveloppe (`template_id`, `theme`, `language`). `template_id` (défaut
+         *     `modern_sobre`), `theme` (défaut : Thème CV du Template) et `target_language`
+         *     (défaut `fr`) sont optionnels : une requête V1 (`cv_name` + `offer_text`)
+         *     reste valide. `target_language` pilote la RÉÉCRITURE du contenu dans la langue
+         *     cible en visant l'offre (pas une traduction littérale).
          *
-         *     Idempotency : une seule génération active par utilisateur à la fois.
-         *     Si un job est déjà en état `queued` ou `running` pour l'utilisateur courant,
-         *     la réponse est `409`.
+         *     Gating (Pass) : sans Pass actif, la génération reste possible avec les
+         *     capacités gratuites (Template gratuit, thème du Template, langue `fr`,
+         *     première Variante). Toute capacité premium demandée sans Pass actif répond
+         *     `402` (Template premium, Thème personnalisé, langue `en`, Variante au-delà de
+         *     la première) ; le champ `type` du Problem précise le motif. Le rôle `admin`
+         *     bypasse ces contrôles. L'utilisateur doit avoir un profil avec au moins une
+         *     expérience renseignée.
+         *
+         *     Idempotency : une seule génération de CV active par utilisateur à la fois.
+         *     Si un job `cv_generation` est déjà en état `queued` ou `running` pour
+         *     l'utilisateur courant, la réponse est `409`.
          */
         post: operations["generateCV"];
         delete?: never;
@@ -456,8 +469,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Consulter l'état d'un job de génération
-         * @description Retourne l'état courant du job : `queued`, `running`, `succeeded` ou `failed`.
+         * Consulter l'état d'un job de génération de CV (déprécié)
+         * @deprecated
+         * @description **Déprécié** : utiliser `GET /jobs/{job_id}`. Conservé pour la
+         *     rétro-compatibilité V1 ; ne couvre que les jobs `cv_generation` (un
+         *     `job_id` d'un autre type répond `404`). Les transitions et le schéma de
+         *     réponse (`CVJobStatus`) sont inchangés.
+         *
+         *     Retourne l'état courant du job : `queued`, `running`, `succeeded` ou `failed`.
          *
          *     - `queued` : en attente d'un worker.
          *     - `running` : traitement en cours ; le champ `progress_pct` indique l'avancement (0-100).
@@ -486,8 +505,10 @@ export interface paths {
          *     de génération. Le client reçoit des événements `progress` (avec `progress_pct`)
          *     et un événement `done` (avec `cv_id` en cas de succès, ou `error` en cas d'échec).
          *
-         *     Ce canal est optionnel : le polling sur `GET /cv/jobs/{job_id}` est
-         *     l'alternative recommandée si SSE n'est pas supporté côté client.
+         *     Ce canal est optionnel : le polling sur `GET /jobs/{job_id}` est
+         *     l'alternative recommandée si SSE n'est pas supporté côté client. Le canal
+         *     SSE ne couvre que les jobs `cv_generation` ; les autres types de jobs
+         *     (lettre, export, relecture) se suivent par polling uniquement.
          *
          *     Formats SSE émis :
          *
@@ -515,9 +536,65 @@ export interface paths {
         };
         /**
          * Lister tous les CV de l'utilisateur courant
-         * @description Retourne la liste paginée des CV générés, sans le contenu JSON complet.
+         * @description Retourne la liste paginée des CV générés (Bibliothèque de CV : toutes les
+         *     Variantes de l'utilisateur), sans le contenu JSON complet. Chaque entrée
+         *     porte l'enveloppe (`template_id`, `theme`, `language`) pour l'affichage.
          */
         get: operations["listCVs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cv/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lister les Templates disponibles
+         * @description Retourne le registre des Templates (mises en page prédéfinies, un par secteur).
+         *     Tous les Templates sont listés, gratuits comme premium, afin de permettre
+         *     l'aperçu : `is_free` indique si le Template est utilisable sans Pass.
+         *     Utiliser un Template premium sans Pass actif répond `402` à la génération
+         *     ou à l'édition (`premium-template-required`).
+         *
+         *     Le registre est piloté par les données (table de référence), pas codé en dur.
+         *     Chemin littéral : prioritaire sur `/cv/{cv_id}`.
+         */
+        get: operations["listCVTemplates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cv/themes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lister les presets de Thème CV
+         * @description Retourne les presets de Thème CV curatés (lecture seule, système). Un preset
+         *     est un point de départ : le client envoie le thème choisi (preset tel quel ou
+         *     modifié) INLINE à la génération ou à l'édition, et le serveur le SNAPSHOTE
+         *     dans le document. Aucune référence mutable vers un preset n'est stockée.
+         *
+         *     Le preset gratuit est le thème quasi-monochrome anthracite du Template
+         *     « Moderne sobre » (`is_free` = true). Chemin littéral : prioritaire sur
+         *     `/cv/{cv_id}`.
+         */
+        get: operations["listCVThemes"];
         put?: never;
         post?: never;
         delete?: never;
@@ -533,21 +610,310 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Obtenir le détail complet d'un CV */
+        /**
+         * Obtenir le détail complet d'un CV
+         * @description Lecture d'un Document existant : gating par ownership uniquement, jamais par
+         *     le Pass (le CV reste consultable après expiration du Pass).
+         */
         get: operations["getCV"];
         /**
-         * Mettre à jour le nom ou les données d'un CV
-         * @description Met à jour le nom du CV (`cv_name`) et/ou son contenu JSON (`cv_data_json`).
+         * Mettre à jour le nom, le contenu ou l'enveloppe d'un CV
+         * @description Met à jour le nom du CV (`cv_name`), son contenu JSON (`cv_data_json`) et/ou
+         *     son enveloppe (`template_id`, `theme`, `language`). Mise à jour PARTIELLE :
+         *     seuls les champs fournis sont modifiés (sémantique historique V1 conservée
+         *     sur `PUT`).
          *     Utilisé notamment par l'éditeur WYSIWYG pour sauvegarder les modifications manuelles.
+         *
+         *     ÉCART ASSUMÉ (acté fondateur 2026-10-19) : cet endpoint garde `PUT` à sémantique
+         *     partielle pour ne pas casser le frontend V1, alors que les lettres introduites en
+         *     V2 utilisent `PATCH` (sémantique REST correcte). Harmonisation de `/cv/{cv_id}`
+         *     vers `PATCH` planifiée en roadmap, non bloquante.
+         *
+         *     Changer `template_id` ou `theme` ne modifie jamais `cv_data_json` (le contenu
+         *     est portable). Changer `language` met à jour la langue de RENDU (titres de
+         *     sections, mois) ; il ne traduit pas le contenu (pas d'endpoint de traduction).
+         *
+         *     Gating (Pass) : l'édition premium exige un Pass actif ou un document
+         *     entièrement gratuit (Template gratuit, thème du Template, langue `fr`). Sinon
+         *     `402`. Renommer ou éditer le contenu d'un CV entièrement gratuit reste possible
+         *     sans Pass.
          */
         put: operations["updateCV"];
         post?: never;
         /**
          * Supprimer un CV
          * @description Supprime le CV et, si un PDF GCS existe (`gcs_pdf_url`), le fichier associé
-         *     est également supprimé du bucket.
+         *     est également supprimé du bucket. Les fichiers exportés (PDF, docx) sont
+         *     supprimés avec lui. Les Lettres liées (`cv_id`) ne sont pas supprimées : leur
+         *     `cv_id` passe à `null`.
          */
         delete: operations["deleteCV"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cv/{cv_id}/ats-score": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Calculer le Score ATS d'un CV face à une offre
+         * @description Calcule SYNCHRONEMENT le Score ATS (0-100) d'un CV face à une offre : recouvrement
+         *     entre les mots-clés de l'Analyse d'offre et le contenu du CV. Le calcul du score
+         *     est déterministe et reproductible (aucun appel LLM) : mêmes entrées, même score.
+         *     La réponse est immédiate (`200`), sans job.
+         *
+         *     L'offre est fournie soit en texte (`offer_text`), soit par référence
+         *     (`job_offer_id`, identifiant d'une Offre déjà enregistrée, retourné dans
+         *     `ATSScoreResult.job_offer_id`) — exactement l'un des deux. L'Analyse d'offre est
+         *     mise en cache par empreinte du texte : seule la première analyse d'une offre
+         *     inconnue peut dépasser la latence habituelle (appel de l'agent analyseur-offre),
+         *     d'où le `502` possible.
+         *
+         *     Le score seul est gratuit. Pour un utilisateur sans Pass actif, le serveur
+         *     TRONQUE le détail (`detail_truncated` = true : `matched_keywords` et
+         *     `missing_keywords` partiels ou vides, `missing_keywords_count` toujours
+         *     renseigné). Le détail complet est premium. Le mécanisme est documenté ici ; le
+         *     volume gratuit éventuel (plafond par offre ou par jour, décision produit D3 OUVERTE)
+         *     n'est PAS figé par ce contrat — il se traduirait par un `429`.
+         *
+         *     Le score est un indicateur d'aide, non une garantie de passage dans un outil de
+         *     recrutement réel (formulation exacte : décision D10 ouverte). Les suggestions de
+         *     correction rédigées par l'IA relèvent de la Relecture IA
+         *     (`POST /cv/{cv_id}/review`), pas de cet endpoint.
+         */
+        post: operations["computeATSScore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cv/{cv_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lancer l'export asynchrone d'un CV (PDF ou docx)
+         * @description Lance la production d'un fichier téléchargeable du CV (`job_type` = `export`).
+         *     Réponse `202` + `job_id` ; le client interroge `GET /jobs/{job_id}` jusqu'à
+         *     `succeeded`, puis lit `result.download_url` (URL signée à durée limitée,
+         *     `result.expires_at`). Le PDF est rendu côté serveur (fidèle et déterministe) ;
+         *     le docx est produit depuis le contenu structuré, avec une mise en forme
+         *     simplifiée (fidélité exacte au PDF : décision D8 ouverte).
+         *
+         *     Gating = ownership (décision D1) : exporter ou re-télécharger un document DÉJÀ
+         *     POSSÉDÉ est autorisé sans Pass actif. Ce n'est pas une action premium. Si un
+         *     fichier à jour existe déjà pour ce contenu, ce thème et ce format, il est
+         *     resservi sans nouveau rendu. Seule la première production de docx pour un
+         *     utilisateur sans Pass actif sur un document sans docx existant est premium
+         *     (`402`).
+         *
+         *     Idempotency : un seul export actif par utilisateur à la fois (`409`).
+         */
+        post: operations["exportCV"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cv/{cv_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lancer la Relecture IA d'un CV (premium)
+         * @description Lance une Relecture IA du CV (`job_type` = `review`) : l'IA analyse le contenu
+         *     existant et propose des suggestions d'amélioration. Réponse `202` + `job_id` ;
+         *     une fois le job `succeeded`, `GET /jobs/{job_id}` retourne le `ReviewResult` dans
+         *     `result.review`. La relecture ne modifie JAMAIS le CV : l'utilisateur accepte ou
+         *     refuse chaque suggestion, puis enregistre via `PUT /cv/{cv_id}`.
+         *
+         *     Si le CV est lié à une Offre (`job_offer_id`), la relecture est orientée offre ;
+         *     aucun corps de requête n'est attendu.
+         *
+         *     Capacité premium : Pass actif requis (`402`). La portée exacte (une relecture par
+         *     document ou illimitée tant que le Pass est actif ; contenu seul ou aussi la forme,
+         *     décision D9 OUVERTE) n'est PAS figée par ce contrat. Un plafond éventuel se
+         *     traduirait par un `429`.
+         *
+         *     Idempotency : une seule relecture active par utilisateur à la fois (`409`).
+         */
+        post: operations["reviewCV"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/letters/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lancer la génération asynchrone d'une lettre de motivation (premium)
+         * @description Soumet une demande de génération de lettre pour UNE offre et retourne
+         *     immédiatement un `job_id` (`job_type` = `letter_generation`). Une fois le job
+         *     `succeeded`, la lettre est accessible via `GET /letters/{letter_id}`
+         *     (`result.result_id`).
+         *
+         *     L'offre est fournie soit en texte (`offer_text`), soit par référence
+         *     (`job_offer_id`) — exactement l'un des deux. `cv_id` est optionnel : s'il est
+         *     fourni, la lettre forme avec ce CV un Pack de candidature (la lettre est rédigée
+         *     de façon cohérente avec la Variante) et, sauf valeur explicite, hérite de son
+         *     `template_id` et de son `theme` (snapshotés dans la lettre). Il n'existe pas
+         *     d'entité « Pack » : le Pack est le couple CV + Lettre partageant `job_offer_id`.
+         *
+         *     `target_language` (défaut `fr`) pilote la RÉÉCRITURE dans la langue cible en
+         *     visant l'offre. Le rattachement de la langue de la lettre à celle du CV (décision
+         *     D7) reste OUVERT.
+         *
+         *     Capacité premium : Pass actif requis (`402`). Une seule génération de lettre
+         *     active par utilisateur à la fois (`409`, indépendante des générations de CV :
+         *     un Pack peut être généré en parallèle).
+         */
+        post: operations["generateLetter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/letters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lister les lettres de l'utilisateur courant
+         * @description Retourne la liste paginée des lettres, sans le contenu complet. Le filtre
+         *     `cv_id` retrouve la lettre assortie à un CV (Pack de candidature).
+         */
+        get: operations["listLetters"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/letters/{letter_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtenir le détail complet d'une lettre
+         * @description Lecture d'un Document existant : gating par ownership uniquement, jamais par
+         *     le Pass (la lettre reste consultable après expiration du Pass).
+         */
+        get: operations["getLetter"];
+        put?: never;
+        post?: never;
+        /**
+         * Supprimer une lettre
+         * @description Supprime la lettre et les fichiers exportés associés (PDF, docx) du bucket GCS.
+         *     Suppression possible sans Pass actif (l'utilisateur maîtrise toujours ses données).
+         */
+        delete: operations["deleteLetter"];
+        options?: never;
+        head?: never;
+        /**
+         * Mettre à jour le nom, le contenu ou l'enveloppe d'une lettre
+         * @description Mise à jour PARTIELLE : seuls les champs fournis sont modifiés. Met à jour le
+         *     nom (`letter_name`), le contenu (`letter_data_json`) et/ou l'enveloppe
+         *     (`template_id`, `theme`, `language`). Changer l'enveloppe ne modifie jamais le
+         *     contenu ; changer `language` ne traduit pas le contenu.
+         *
+         *     Gating (Pass) : la lettre est une capacité premium ; son édition exige un Pass
+         *     actif, sinon `402`. La lettre reste consultable et exportable sans Pass (D1).
+         */
+        patch: operations["updateLetter"];
+        trace?: never;
+    };
+    "/letters/{letter_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lancer l'export asynchrone d'une lettre (PDF ou docx)
+         * @description Lance la production d'un fichier téléchargeable de la lettre (`job_type` =
+         *     `export`). Même mécanique que `POST /cv/{cv_id}/export` : `202` + `job_id`,
+         *     polling via `GET /jobs/{job_id}`, puis `result.download_url` (URL signée,
+         *     `result.expires_at`).
+         *
+         *     Gating = ownership (décision D1) : exporter ou re-télécharger une lettre DÉJÀ
+         *     POSSÉDÉE est autorisé sans Pass actif. Un seul export actif par utilisateur à
+         *     la fois (`409`).
+         */
+        post: operations["exportLetter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consulter l'état d'un job asynchrone (tous types)
+         * @description Retourne l'état courant d'un job, quel que soit son `job_type`
+         *     (`cv_generation`, `letter_generation`, `export`, `review`) : `queued`,
+         *     `running`, `succeeded` ou `failed`. Transitions : queued -> running ->
+         *     succeeded | failed.
+         *
+         *     - `queued` : en attente d'un worker.
+         *     - `running` : traitement en cours ; `progress_pct` indique l'avancement (0-100).
+         *     - `succeeded` : traitement terminé ; `result` désigne la ressource produite
+         *       (`result_kind` + `result_id`). Pour un export, `result.download_url` et
+         *       `result.expires_at` sont renseignés ; pour une relecture, `result.review`.
+         *     - `failed` : le traitement a échoué ; `error_message` contient un message
+         *       générique.
+         *
+         *     Un job inconnu répond `404` ; un job appartenant à un autre utilisateur `403`.
+         *     Remplace `GET /cv/jobs/{job_id}` (déprécié).
+         */
+        get: operations["getJobStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -665,11 +1031,16 @@ export interface paths {
          * Supprimer définitivement le compte (RGPD Art. 17)
          * @description Purge complète et irréversible de toutes les données personnelles :
          *
-         *     1. Suppression de tous les CV générés (table `generated_cvs`).
-         *     2. Suppression des PDF associés dans le bucket GCS.
+         *     1. Suppression de tous les CV générés (table `generated_cvs`) et de toutes les
+         *        lettres de motivation (table `cover_letters`).
+         *     2. Suppression des fichiers associés (PDF, docx) dans le bucket GCS.
          *     3. Suppression du profil (table `user_profiles`).
          *     4. Suppression des CareerPasses (table `career_passes`).
          *     5. Suppression du compte utilisateur (table `users`).
+         *
+         *     Exception : les factures (pièces comptables, conservation légale de 10 ans) ne
+         *     sont pas détruites ; elles sont détachées du compte (référence utilisateur mise
+         *     à `NULL`, jamais supprimées).
          *
          *     Cette opération est irréversible. Le JWT de l'utilisateur est invalidé
          *     immédiatement après. Conforme au droit à l'effacement RGPD Article 17.
@@ -1076,6 +1447,30 @@ export interface components {
              * @example Nous recherchons un ingénieur backend senior maîtrisant Python et FastAPI...
              */
             offer_text: string;
+            /**
+             * @description Identifiant du Template (voir `GET /cv/templates`). Défaut : le Template
+             *     gratuit `modern_sobre`. Un Template premium sans Pass actif répond `402`
+             *     (`premium-template-required`) ; un identifiant inconnu répond `422`.
+             *     Enveloppe du document : jamais intégré au contenu.
+             * @default modern_sobre
+             * @example modern_sobre
+             */
+            template_id: string;
+            /**
+             * @description Thème CV INLINE (preset de `GET /cv/themes`, éventuellement modifié).
+             *     Optionnel : omis, le Thème CV par défaut du Template s'applique. Le thème
+             *     est SNAPSHOTÉ dans le CV généré. Un thème personnalisé sans Pass actif
+             *     répond `402` (`premium-theme-required`).
+             */
+            theme?: components["schemas"]["CVTheme"];
+            /**
+             * @description Langue du document. Le contenu est RÉÉCRIT dans cette langue en visant
+             *     l'offre (pas de traduction littérale ; décision D7 ouverte sur le périmètre
+             *     exact). `en` sans Pass actif répond `402` (`premium-language-required`).
+             *     Enregistrée dans l'enveloppe du CV (`language`).
+             * @default fr
+             */
+            target_language: components["schemas"]["DocumentLanguage"];
         };
         GenerateCVJobAccepted: {
             /**
@@ -1088,10 +1483,13 @@ export interface components {
              * @enum {string}
              */
             status: "queued";
-            /** @example CV generation job accepted. Poll GET /v1/cv/jobs/{job_id} for status. */
+            /** @example CV generation job accepted. Poll GET /v1/jobs/{job_id} for status. */
             message?: string;
         };
-        /** @description Etat d'un job de génération de CV. Transitions : queued -> running -> succeeded | failed. */
+        /**
+         * @description Etat d'un job de génération de CV. Transitions : queued -> running -> succeeded | failed.
+         *     Schéma de l'alias déprécié `GET /cv/jobs/{job_id}` ; préférer `JobStatus`.
+         */
         CVJobStatus: {
             /** Format: uuid */
             job_id: string;
@@ -1197,37 +1595,101 @@ export interface components {
             /** Format: uuid */
             id: string;
             cv_name: string;
-            /** @example modern_v1 */
+            /**
+             * @description Identifiant du Template (voir `CVTemplate.id`). Enveloppe du document.
+             * @example modern_sobre
+             */
             template_id: string;
+            /** @description Snapshot du Thème CV appliqué à ce CV (enveloppe du document). */
+            theme: components["schemas"]["CVTheme"];
+            language: components["schemas"]["DocumentLanguage"];
+            /**
+             * Format: uuid
+             * @description Offre à laquelle cette Variante est liée. Null si non liée.
+             */
+            job_offer_id?: string | null;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Variante de CV complète : ENVELOPPE (`template_id`, `theme`, `language`) +
+         *     CONTENU canonique (`cv_data_json`, schéma `GeneratedCVData`). Le contenu ne
+         *     porte aucune information de forme.
+         */
         CVDetailResponse: {
             /** Format: uuid */
             id: string;
             cv_name: string;
-            /** @example modern_v1 */
+            /**
+             * @description Identifiant du Template (voir `CVTemplate.id`). Enveloppe du document.
+             * @example modern_sobre
+             */
             template_id: string;
+            /**
+             * @description Snapshot du Thème CV appliqué (objet stocké avec le document, pas une
+             *     référence mutable : modifier un preset n'altère jamais un document existant).
+             */
+            theme: components["schemas"]["CVTheme"];
+            language: components["schemas"]["DocumentLanguage"];
+            /**
+             * Format: uuid
+             * @description Offre à laquelle cette Variante est liée. Null si non liée.
+             */
+            job_offer_id?: string | null;
             /** @description Texte de l'offre d'emploi utilisée pour la génération */
             job_offer_context?: string | null;
             cv_data_json: components["schemas"]["GeneratedCVData"];
             /** @description URL GCS du PDF exporté. Null si pas encore généré. */
             gcs_pdf_url?: string | null;
+            /**
+             * @description Calculé à la lecture (jamais persisté) : true si le Pass est actif ou si le
+             *     document est entièrement gratuit. false = lecture et téléchargement seuls
+             *     (décision D1) ; une édition premium répondrait `402`.
+             */
+            is_editable?: boolean;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
             updated_at: string;
         };
-        /** @description Tous les champs sont optionnels ; au moins un doit être fourni. */
+        /**
+         * @description Tous les champs sont optionnels ; au moins un doit être fourni. Le contenu
+         *     (`cv_data_json`) et l'enveloppe (`template_id`, `theme`, `language`) sont
+         *     indépendants : modifier l'un ne modifie jamais l'autre.
+         */
         UpdateCVRequest: {
             cv_name?: string | null;
             cv_data_json?: components["schemas"]["GeneratedCVData"];
+            /**
+             * @description Nouveau Template. Premium sans Pass actif : `402`
+             *     (`premium-template-required`) ; identifiant inconnu : `422`.
+             * @example modern_sobre
+             */
+            template_id?: string;
+            /**
+             * @description Nouveau Thème CV (inline, snapshoté). Personnalisé sans Pass actif : `402`
+             *     (`premium-theme-required`).
+             */
+            theme?: components["schemas"]["CVTheme"];
+            /**
+             * @description Nouvelle langue de RENDU (titres de section, mois). Ne traduit pas le contenu.
+             *     `en` sans Pass actif : `402` (`premium-language-required`).
+             */
+            language?: components["schemas"]["DocumentLanguage"];
         };
         /**
-         * @description CV optimisé produit par l'agent rédacteur-cv. Stocké en JSONB dans
-         *     `generated_cvs.cv_data_json`.
+         * @description SCHÉMA DE CONTENU CANONIQUE UNIQUE du CV (ADR-CONTENT-SCHEMA). Ce schéma est à
+         *     la fois : la sortie de l'agent rédacteur-cv, la charge utile stockée en JSONB
+         *     (`generated_cvs.cv_data_json`), l'entrée du package de rendu partagé
+         *     (`@talentious/cv-render`, côté export-service et aperçu) et le modèle d'édition
+         *     (`PUT /cv/{cv_id}`). Aucune transformation runtime entre ces usages (seule la
+         *     coercition de sécurité en liste blanche s'applique avant stockage).
+         *
+         *     Contenu PUR : aucune information de forme. `template_id`, `theme` et `language`
+         *     vivent dans l'enveloppe du document (`CVDetailResponse`), jamais ici : le contenu
+         *     est portable d'un Template à l'autre.
          *
          *     Contrainte : aucun champ date n'est requis dans les sous-schémas de sortie
          *     (`SelectedEducation`, `SelectedCertification`) pour éviter les 422 aléatoires
@@ -1314,6 +1776,560 @@ export interface components {
              */
             issue_date?: string | null;
             url?: string | null;
+        };
+        /**
+         * @description Langue du document (CV ou lettre), distincte de la langue de l'interface (qui
+         *     reste française). Uniquement `fr` et `en`. `en` est une capacité premium.
+         * @enum {string}
+         */
+        DocumentLanguage: "fr" | "en";
+        /**
+         * @description Secteur / persona auquel un Template est destiné (Bible V2, §2 et §3.1) :
+         *     - `modern` : moderne / simple (jeunes diplômés, reconversion) ; inclut
+         *       « Moderne sobre », Template gratuit neutre.
+         *     - `corporate` : corporate / sobre (reconversion, cadres).
+         *     - `tech` : tech (reconversion, freelances).
+         *     - `academic` : académique (cadres, profils expérimentés).
+         *     - `creative` : créatif (freelances).
+         * @enum {string}
+         */
+        TemplateSector: "modern" | "corporate" | "tech" | "academic" | "creative";
+        /**
+         * @description Template : mise en page prédéfinie d'un CV ou d'une lettre (structure,
+         *     hiérarchie, éléments graphiques disponibles). Ne définit ni les couleurs ni les
+         *     polices choisies par l'utilisateur (voir `CVTheme`). S'applique à un CV et à sa
+         *     lettre assortie.
+         */
+        CVTemplate: {
+            /**
+             * @description Identifiant stable du Template, valeur de `template_id` dans les documents
+             * @example modern_sobre
+             */
+            id: string;
+            /** @example Moderne sobre */
+            name: string;
+            sector: components["schemas"]["TemplateSector"];
+            /**
+             * @description true si le Template est utilisable sans Pass actif. Un seul Template gratuit
+             *     est prévu (« Moderne sobre »).
+             * @example true
+             */
+            is_free: boolean;
+            /** @example Mise en page sobre et neutre, adaptée à tous les secteurs. */
+            description: string;
+            /**
+             * Format: uri
+             * @description URL de l'aperçu statique du Template
+             * @example https://app.talentious.fr/templates/modern_sobre.png
+             */
+            preview_url: string;
+            /**
+             * @description Identifiant du preset de Thème CV (`CVTheme.id`) appliqué par défaut si
+             *     aucun thème n'est fourni. Null si aucun thème par défaut n'est référencé.
+             * @example anthracite
+             */
+            default_theme_id?: string | null;
+        };
+        /**
+         * @description Liste BLANCHE des polices autorisées dans un Thème CV (jeu curaté, embarqué côté
+         *     service d'export : déterminisme du rendu, résidence UE, défense anti-injection
+         *     CSS). Aucune autre valeur n'est acceptée. La liste exacte doit rester alignée sur
+         *     le manifeste de polices embarquées du package de rendu (à confirmer avant
+         *     implémentation).
+         * @enum {string}
+         */
+        CVFontFamily: "Inter" | "Source Sans 3" | "IBM Plex Sans" | "Work Sans" | "Source Serif 4" | "Lora" | "Merriweather" | "IBM Plex Serif";
+        /**
+         * @description Couleur au format hexadécimal strict `#RRGGBB` (défense anti-injection CSS).
+         * @example #2D3748
+         */
+        HexColor: string;
+        /**
+         * @description Jetons de style CV-scopés (injectés en propriétés CSS propres au CV, jamais les
+         *     couleurs de l'interface de l'application). Validation STRICTE : couleurs en
+         *     `#RRGGBB`, polices dans la liste blanche `CVFontFamily`, aucune propriété
+         *     supplémentaire acceptée. Le serveur vérifie en plus un contraste de lisibilité
+         *     suffisant (texte / fond) avant enregistrement ; un thème illisible répond `422`
+         *     (seuil exact fixé côté serveur).
+         */
+        CVThemeTokens: {
+            color_accent: components["schemas"]["HexColor"];
+            color_text: components["schemas"]["HexColor"];
+            color_muted: components["schemas"]["HexColor"];
+            color_background: components["schemas"]["HexColor"];
+            font_heading: components["schemas"]["CVFontFamily"];
+            font_body: components["schemas"]["CVFontFamily"];
+        };
+        /**
+         * @description Thème CV : choix de style (couleurs, polices) appliqué PAR-DESSUS un Template.
+         *     Les données du thème sont envoyées INLINE à la génération ou à l'édition et
+         *     SNAPSHOTÉES dans le document (aucune clé étrangère vers un preset mutable : un
+         *     document existant n'est jamais altéré par l'évolution d'un preset).
+         *
+         *     Les `tokens` font foi. `id` n'est qu'informatif (provenance d'un preset). Un
+         *     thème dont les `tokens` diffèrent du preset désigné par `id` est un thème
+         *     personnalisé (premium).
+         */
+        CVTheme: {
+            /**
+             * @description Identifiant du preset d'origine (`GET /cv/themes`). Null pour un thème personnalisé.
+             * @example anthracite
+             */
+            id?: string | null;
+            /** @example Anthracite */
+            name: string;
+            tokens: components["schemas"]["CVThemeTokens"];
+            /**
+             * @description Renseigné par le serveur sur les presets : true si le preset est utilisable
+             *     sans Pass actif. Ignoré en entrée.
+             */
+            readonly is_free?: boolean;
+        };
+        /**
+         * @description Nature du traitement asynchrone :
+         *     - `cv_generation` : génération d'un CV (`POST /cv/generate`).
+         *     - `letter_generation` : génération d'une lettre (`POST /letters/generate`).
+         *     - `export` : production d'un fichier PDF ou docx (`POST .../export`).
+         *     - `review` : Relecture IA (`POST /cv/{cv_id}/review`).
+         *     Unicité : un seul job actif par couple (utilisateur, `job_type`).
+         * @enum {string}
+         */
+        JobType: "cv_generation" | "letter_generation" | "export" | "review";
+        /**
+         * @description Nature de la ressource produite par un job `succeeded`. Correspondance :
+         *     `cv_generation` -> `cv`, `letter_generation` -> `letter`, `export` -> `export`,
+         *     `review` -> `review`.
+         * @enum {string}
+         */
+        JobResultKind: "cv" | "letter" | "export" | "review";
+        /**
+         * @description Ressource produite par un job `succeeded`. `result_id` désigne : le `cv_id`
+         *     (`cv`), le `letter_id` (`letter`), l'identifiant du fichier produit (`export`),
+         *     l'identifiant de la relecture (`review`).
+         */
+        JobResult: {
+            result_kind: components["schemas"]["JobResultKind"];
+            /** Format: uuid */
+            result_id: string;
+            /**
+             * Format: uri
+             * @description URL signée (GCS) à durée limitée pour télécharger le fichier. Renseignée
+             *     uniquement si `result_kind` = `export`.
+             */
+            download_url?: string | null;
+            /**
+             * Format: date-time
+             * @description Expiration de `download_url`. Une URL expirée se renouvelle en relançant
+             *     l'export (le fichier à jour est resservi sans nouveau rendu). Renseignée
+             *     uniquement si `result_kind` = `export`.
+             */
+            expires_at?: string | null;
+            /** @description Résultat de la relecture. Présent uniquement si `result_kind` = `review` (omis sinon). */
+            review?: components["schemas"]["ReviewResult"];
+        };
+        /**
+         * @description État d'un job asynchrone, tous types confondus. Transitions :
+         *     queued -> running -> succeeded | failed. Généralise `CVJobStatus`.
+         */
+        JobStatus: {
+            /** Format: uuid */
+            job_id: string;
+            job_type: components["schemas"]["JobType"];
+            /**
+             * @description - `queued` : en attente d'un worker.
+             *     - `running` : traitement en cours.
+             *     - `succeeded` : traitement terminé, `result` renseigné.
+             *     - `failed` : traitement échoué, `error_message` renseigné ; relancer l'opération.
+             * @enum {string}
+             */
+            status: "queued" | "running" | "succeeded" | "failed";
+            /**
+             * @description Avancement (0-100). Renseigné uniquement pour le statut `running`.
+             * @example 55
+             */
+            progress_pct?: number | null;
+            /** @description Ressource produite. Présent uniquement si statut = `succeeded` (omis sinon). */
+            result?: components["schemas"]["JobResult"];
+            /**
+             * @description Message d'erreur générique (sans internals). Renseigné uniquement si statut = `failed`.
+             * @example Job failed. Please try again.
+             */
+            error_message?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at?: string | null;
+        };
+        /**
+         * @description Mot-clé issu de l'Analyse d'offre (forme identique à la sortie `keywords` de
+         *     l'agent analyseur-offre), utilisé pour le matching ATS déterministe.
+         */
+        ATSKeyword: {
+            /** @example Python */
+            name: string;
+            /**
+             * @description - `hard_skill` : compétence technique, outil, langage.
+             *     - `soft_skill` : compétence comportementale.
+             *     - `requirement` : exigence non-compétence (diplôme, certification, séniorité, langue).
+             * @enum {string}
+             */
+            category: "hard_skill" | "soft_skill" | "requirement";
+            /** @enum {string|null} */
+            importance?: "Critical" | "Important" | "Nice to have" | null;
+            /**
+             * @description Variantes et synonymes reconnus lors du matching (ex. « JS » pour « JavaScript »)
+             * @default []
+             */
+            aliases: string[];
+        };
+        /**
+         * @description Offre face à laquelle le CV est évalué. Fournir EXACTEMENT UN des deux champs
+         *     `offer_text` ou `job_offer_id` ; fournir les deux ou aucun répond `422`.
+         */
+        ATSScoreRequest: {
+            /**
+             * @description Texte brut de l'offre d'emploi (même bornes que `GenerateCVRequest.offer_text`)
+             * @example Nous recherchons un ingénieur backend senior maîtrisant Python et FastAPI...
+             */
+            offer_text?: string;
+            /**
+             * Format: uuid
+             * @description Identifiant d'une Offre déjà enregistrée (retourné par un score ou une génération précédente)
+             */
+            job_offer_id?: string;
+        };
+        /**
+         * @description Résultat du Score ATS. Indicateur d'aide, non une garantie de passage dans un
+         *     outil de recrutement réel (formulation exacte de l'avertissement : décision D10
+         *     ouverte).
+         */
+        ATSScoreResult: {
+            /** Format: uuid */
+            cv_id: string;
+            /**
+             * Format: uuid
+             * @description Offre évaluée (réutilisable dans les requêtes suivantes)
+             */
+            job_offer_id: string;
+            /**
+             * @description Score d'adéquation (0-100). Déterministe et reproductible. Toujours renseigné, y compris sans Pass.
+             * @example 54
+             */
+            score: number;
+            /** @description Mots-clés de l'offre présents dans le CV. Partiel ou vide si `detail_truncated` = true. */
+            matched_keywords: components["schemas"]["ATSKeyword"][];
+            /** @description Mots-clés manquants. Partiel ou vide si `detail_truncated` = true. */
+            missing_keywords: components["schemas"]["ATSKeyword"][];
+            /**
+             * @description Nombre total de mots-clés manquants, même si la liste est tronquée (teaser gratuit)
+             * @example 7
+             */
+            missing_keywords_count: number;
+            /**
+             * @description true si le serveur a tronqué le détail pour le palier gratuit (pas de Pass
+             *     actif). Le plafond exact de ce que le palier gratuit voit est une décision
+             *     produit ouverte (D3) : il n'est pas figé par ce contrat.
+             */
+            detail_truncated: boolean;
+        };
+        /**
+         * @description Format du fichier exporté. `pdf` : rendu serveur fidèle et déterministe.
+         *     `docx` : fichier Word éditable produit depuis le contenu structuré, mise en forme
+         *     simplifiée (fidélité exacte au PDF : décision D8 ouverte). `docx` est premium à
+         *     la première production (voir `POST /cv/{cv_id}/export`).
+         * @enum {string}
+         */
+        ExportFormat: "pdf" | "docx";
+        ExportRequest: {
+            format: components["schemas"]["ExportFormat"];
+        };
+        ExportJobAccepted: {
+            /**
+             * Format: uuid
+             * @description Identifiant du job d'export
+             */
+            job_id: string;
+            /**
+             * @example export
+             * @enum {string}
+             */
+            job_type: "export";
+            /**
+             * @example queued
+             * @enum {string}
+             */
+            status: "queued";
+            format: components["schemas"]["ExportFormat"];
+            /** @example Export job accepted. Poll GET /v1/jobs/{job_id} for status. */
+            message?: string;
+        };
+        /**
+         * @description Gravité d'une suggestion :
+         *     - `info` : amélioration optionnelle.
+         *     - `warning` : amélioration recommandée.
+         *     - `critical` : défaut qui nuit nettement au CV (incohérence, faute marquée).
+         * @enum {string}
+         */
+        ReviewSeverity: "info" | "warning" | "critical";
+        /**
+         * @description Section du contenu (`GeneratedCVData`) visée par la suggestion ; `global` pour
+         *     une remarque transversale. La portée de la relecture (contenu seul ou aussi la
+         *     forme) est la décision produit D9, OUVERTE : en l'état, seules des sections de
+         *     contenu sont couvertes.
+         * @enum {string}
+         */
+        ReviewSection: "personal_info" | "summary" | "experiences" | "skills" | "educations" | "projects" | "certifications" | "global";
+        ReviewSuggestion: {
+            /**
+             * @description Identifiant de la suggestion, unique au sein d'une relecture (suivi accepter / refuser côté client)
+             * @example s1
+             */
+            id: string;
+            section: components["schemas"]["ReviewSection"];
+            /**
+             * @description Identifiant de l'élément visé dans la section (ex. `id` d'une
+             *     `SelectedExperience`). Null pour une suggestion portant sur toute la section.
+             */
+            target_id?: string | null;
+            severity: components["schemas"]["ReviewSeverity"];
+            /**
+             * @description Constat expliqué à l'utilisateur
+             * @example Le résumé ne mentionne pas vos 5 ans d'expérience en backend.
+             */
+            message: string;
+            /** @description Texte de remplacement proposé. Null si le constat n'appelle pas de réécriture. Jamais appliqué sans validation. */
+            suggestion?: string | null;
+        };
+        /**
+         * @description Résultat d'une Relecture IA. Les suggestions ne modifient jamais le CV : le
+         *     client les propose à l'utilisateur, qui accepte ou refuse chacune, puis
+         *     enregistre le CV via `PUT /cv/{cv_id}`.
+         */
+        ReviewResult: {
+            /** Format: uuid */
+            review_id: string;
+            /** Format: uuid */
+            cv_id: string;
+            suggestions: components["schemas"]["ReviewSuggestion"][];
+        };
+        ReviewJobAccepted: {
+            /**
+             * Format: uuid
+             * @description Identifiant du job de relecture
+             */
+            job_id: string;
+            /**
+             * @example review
+             * @enum {string}
+             */
+            job_type: "review";
+            /**
+             * @example queued
+             * @enum {string}
+             */
+            status: "queued";
+            /** @example Review job accepted. Poll GET /v1/jobs/{job_id} for status. */
+            message?: string;
+        };
+        /**
+         * @description Ton souhaité pour la lettre : `formal` (solennel), `balanced` (équilibré, valeur
+         *     par défaut côté serveur), `dynamic` (enthousiaste, direct). Liste provisoire,
+         *     extensible sans rupture.
+         * @enum {string}
+         */
+        LetterTone: "formal" | "balanced" | "dynamic";
+        /** @description Destinataire de la lettre. Tous les champs sont optionnels (une offre n'en précise pas toujours). */
+        CoverLetterRecipient: {
+            /** @description Nom du destinataire (ex. responsable du recrutement) */
+            name?: string | null;
+            title?: string | null;
+            /** @example Acme Corp */
+            company?: string | null;
+            address?: string | null;
+        };
+        CoverLetterSignature: {
+            /** @example Alice Dupont */
+            name: string;
+            /** @description Fonction ou intitulé affiché sous le nom, si pertinent */
+            title?: string | null;
+        };
+        /**
+         * @description SCHÉMA DE CONTENU CANONIQUE UNIQUE de la lettre (équivalent de `GeneratedCVData`) :
+         *     sortie de l'agent rédacteur-cv (opération de génération de lettre), charge utile
+         *     stockée en JSONB, entrée du rendu (PDF/docx) et modèle d'édition. Aucune
+         *     transformation entre ces usages (hors coercition de sécurité en liste blanche).
+         *
+         *     Contenu PUR : texte brut uniquement, aucun HTML ni information de forme.
+         *     `template_id`, `theme` et `language` vivent dans l'enveloppe
+         *     (`LetterDetailResponse`). `place` et `date` sont laissés à null par l'agent ; le
+         *     serveur renseigne `date` à la création (jamais le LLM) et l'utilisateur peut les
+         *     modifier. Null : la ligne est omise au rendu (rendu déterministe).
+         */
+        CoverLetterContent: {
+            personal_info: components["schemas"]["PersonalInfo"];
+            recipient: components["schemas"]["CoverLetterRecipient"];
+            /**
+             * @description Lieu d'émission (ligne « Fait à … »)
+             * @example Paris
+             */
+            place?: string | null;
+            /**
+             * Format: date
+             * @description Date de la lettre
+             * @example 2026-10-19
+             */
+            date?: string | null;
+            /**
+             * @description Objet de la lettre
+             * @example Candidature au poste d'ingénieur backend senior
+             */
+            subject?: string | null;
+            /**
+             * @description Formule d'appel
+             * @example Madame, Monsieur,
+             */
+            salutation: string;
+            /** @description Corps de la lettre, un élément par paragraphe (texte brut) */
+            body: string[];
+            /**
+             * @description Formule de politesse finale
+             * @example Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.
+             */
+            closing: string;
+            signature: components["schemas"]["CoverLetterSignature"];
+        };
+        /**
+         * @description Fournir EXACTEMENT UN des deux champs `offer_text` ou `job_offer_id` ; fournir
+         *     les deux ou aucun répond `422`. Si `cv_id` est fourni, `template_id` et `theme`
+         *     omis sont hérités du CV (Pack de candidature assorti) ; une valeur explicite les
+         *     remplace.
+         */
+        GenerateLetterRequest: {
+            /**
+             * @description Nom donné par l'utilisateur à cette lettre
+             * @example Lettre - Ingénieur Backend Acme
+             */
+            letter_name: string;
+            /** @description Texte brut de l'offre d'emploi (même bornes que `GenerateCVRequest.offer_text`) */
+            offer_text?: string;
+            /**
+             * Format: uuid
+             * @description Identifiant d'une Offre déjà enregistrée
+             */
+            job_offer_id?: string;
+            /**
+             * Format: uuid
+             * @description CV (Variante) avec lequel la lettre forme un Pack. Optionnel : sans lui, la
+             *     lettre est rédigée à partir du profil et de l'offre seuls.
+             */
+            cv_id?: string;
+            /**
+             * @description Template de la lettre. Défaut : celui du CV si `cv_id` est fourni, sinon
+             *     `modern_sobre`. Premium sans Pass actif : `402` (la lettre exige déjà un Pass).
+             * @example modern_sobre
+             */
+            template_id?: string;
+            /**
+             * @description Thème CV INLINE, snapshoté dans la lettre. Défaut : celui du CV si `cv_id`
+             *     est fourni, sinon le thème par défaut du Template.
+             */
+            theme?: components["schemas"]["CVTheme"];
+            /**
+             * @description Langue de la lettre. Le contenu est RÉÉCRIT dans cette langue en visant
+             *     l'offre (pas de traduction littérale ; décision D7 ouverte).
+             * @default fr
+             */
+            target_language: components["schemas"]["DocumentLanguage"];
+            /** @description Ton souhaité. Optionnel ; défaut serveur `balanced`. */
+            tone?: components["schemas"]["LetterTone"];
+        };
+        LetterJobAccepted: {
+            /**
+             * Format: uuid
+             * @description Identifiant du job de génération de lettre
+             */
+            job_id: string;
+            /**
+             * @example letter_generation
+             * @enum {string}
+             */
+            job_type: "letter_generation";
+            /**
+             * @example queued
+             * @enum {string}
+             */
+            status: "queued";
+            /** @example Letter generation job accepted. Poll GET /v1/jobs/{job_id} for status. */
+            message?: string;
+        };
+        LetterListItem: {
+            /** Format: uuid */
+            id: string;
+            letter_name: string;
+            /**
+             * Format: uuid
+             * @description CV assorti (Pack de candidature). Null si aucun, ou si le CV a été supprimé.
+             */
+            cv_id?: string | null;
+            /** Format: uuid */
+            job_offer_id?: string | null;
+            /** @example modern_sobre */
+            template_id: string;
+            /** @description Snapshot du Thème CV appliqué à cette lettre. */
+            theme: components["schemas"]["CVTheme"];
+            language: components["schemas"]["DocumentLanguage"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /**
+         * @description Lettre complète : ENVELOPPE (`template_id`, `theme`, `language`) + CONTENU
+         *     canonique (`letter_data_json`, schéma `CoverLetterContent`).
+         */
+        LetterDetailResponse: {
+            /** Format: uuid */
+            id: string;
+            letter_name: string;
+            /**
+             * Format: uuid
+             * @description CV assorti (Pack de candidature). Null si aucun, ou si le CV a été supprimé.
+             */
+            cv_id?: string | null;
+            /** Format: uuid */
+            job_offer_id?: string | null;
+            /** @description Texte de l'offre d'emploi utilisée pour la génération */
+            job_offer_context?: string | null;
+            /** @example modern_sobre */
+            template_id: string;
+            /** @description Snapshot du Thème CV appliqué (objet stocké, pas une référence mutable). */
+            theme: components["schemas"]["CVTheme"];
+            language: components["schemas"]["DocumentLanguage"];
+            letter_data_json: components["schemas"]["CoverLetterContent"];
+            /**
+             * @description Calculé à la lecture (jamais persisté) : true si le Pass est actif.
+             *     false = lecture et téléchargement seuls (décision D1) ; une édition
+             *     répondrait `402`.
+             */
+            is_editable?: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /**
+         * @description Tous les champs sont optionnels ; au moins un doit être fourni. Le contenu et
+         *     l'enveloppe sont indépendants : modifier l'un ne modifie jamais l'autre.
+         */
+        UpdateLetterRequest: {
+            letter_name?: string | null;
+            letter_data_json?: components["schemas"]["CoverLetterContent"];
+            /** @description Nouveau Template (identifiant inconnu : `422`) */
+            template_id?: string;
+            /** @description Nouveau Thème CV (inline, snapshoté) */
+            theme?: components["schemas"]["CVTheme"];
+            /** @description Nouvelle langue de RENDU (titres, dates). Ne traduit pas le contenu. */
+            language?: components["schemas"]["DocumentLanguage"];
         };
         /**
          * @description Type de CareerPass acheté.
@@ -1455,10 +2471,67 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /**
+         * @description Pass actif requis : la capacité demandée est premium et l'utilisateur n'a pas de
+         *     CareerPass actif (le rôle `admin` n'est jamais concerné). Concerne la GÉNÉRATION
+         *     et l'ÉDITION premium, jamais la lecture ni le re-téléchargement d'un document
+         *     existant. Le champ `type` du Problem précise le motif :
+         *
+         *     - `https://talentious.fr/errors/career-pass-required` : capacité premium sans
+         *       autre précision (lettre, relecture, détail ATS, export docx, édition d'un
+         *       document premium).
+         *     - `https://talentious.fr/errors/premium-template-required` : Template non gratuit.
+         *     - `https://talentious.fr/errors/premium-theme-required` : Thème CV personnalisé.
+         *     - `https://talentious.fr/errors/premium-language-required` : langue `en`.
+         *     - `https://talentious.fr/errors/variant-limit-reached` : une Variante de CV
+         *       existe déjà (la gratuité en autorise une seule).
+         */
+        PassRequired: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "type": "https://talentious.fr/errors/career-pass-required",
+                 *       "title": "Career Pass Required",
+                 *       "status": 402,
+                 *       "detail": "An active Career Pass is required for this feature. Please purchase a pass.",
+                 *       "instance": "/v1/letters/generate"
+                 *     }
+                 */
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /**
+         * @description Un job du même `job_type` est déjà actif (`queued` ou `running`) pour
+         *     l'utilisateur courant. L'unicité s'applique par couple (utilisateur, `job_type`).
+         */
+        JobConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "type": "https://talentious.fr/errors/job-in-progress",
+                 *       "title": "Job Already In Progress",
+                 *       "status": 409,
+                 *       "detail": "A job of this type is already running for your account. Please wait for it to complete.",
+                 *       "instance": "/v1/cv/00000000-0000-0000-0000-000000000000/export"
+                 *     }
+                 */
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
     };
     parameters: {
         /** @description Identifiant unique du CV */
         cvIdPath: string;
+        /** @description Identifiant unique de la lettre de motivation */
+        letterIdPath: string;
+        /** @description Identifiant du job asynchrone */
+        jobIdPath: string;
     };
     requestBodies: never;
     headers: never;
@@ -2102,7 +3175,7 @@ export interface operations {
             /** @description Job de génération accepté */
             202: {
                 headers: {
-                    /** @description URL de suivi du job (`/v1/cv/jobs/{job_id}`) */
+                    /** @description URL de suivi du job (`/v1/jobs/{job_id}`) */
                     Location?: string;
                     [name: string]: unknown;
                 };
@@ -2111,24 +3184,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description CareerPass actif requis */
-            402: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "https://talentious.fr/errors/career-pass-required",
-                     *       "title": "Career Pass Required",
-                     *       "status": 402,
-                     *       "detail": "An active Career Pass is required to generate CVs. Please purchase a pass.",
-                     *       "instance": "/v1/cv/generate"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            402: components["responses"]["PassRequired"];
             /** @description Profil utilisateur introuvable */
             404: {
                 headers: {
@@ -2156,7 +3212,28 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["ValidationError"];
+            /**
+             * @description Erreur de validation du corps de la requête : champ invalide, `template_id`
+             *     inconnu, ou Thème CV refusé (couleur hors format hex, police hors liste
+             *     blanche, contraste insuffisant).
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "https://talentious.fr/errors/validation-error",
+                     *       "title": "Validation Error",
+                     *       "status": 422,
+                     *       "detail": "Request body validation failed.",
+                     *       "instance": "/v1/cv/generate"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getCVJobStatus: {
@@ -2233,6 +3310,48 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
+    listCVTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Liste des Templates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CVTemplate"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listCVThemes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Liste des presets de Thème CV */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CVTheme"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
     getCV: {
         parameters: {
             query?: never;
@@ -2285,6 +3404,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PassRequired"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
@@ -2308,6 +3428,351 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    computeATSScore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant unique du CV */
+                cv_id: components["parameters"]["cvIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ATSScoreRequest"];
+            };
+        };
+        responses: {
+            /** @description Score ATS calculé */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ATSScoreResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description CV ou offre (`job_offer_id`) introuvable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /**
+             * @description Volume de scores atteint. Réservé à la politique de limitation du palier
+             *     gratuit (décision produit D3 OUVERTE : plafond non défini par ce contrat).
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Analyse d'offre indisponible (agent analyseur-offre en erreur) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    exportCV: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant unique du CV */
+                cv_id: components["parameters"]["cvIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Job d'export accepté */
+            202: {
+                headers: {
+                    /** @description URL de suivi du job (`/v1/jobs/{job_id}`) */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportJobAccepted"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PassRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["JobConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    reviewCV: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant unique du CV */
+                cv_id: components["parameters"]["cvIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job de relecture accepté */
+            202: {
+                headers: {
+                    /** @description URL de suivi du job (`/v1/jobs/{job_id}`) */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewJobAccepted"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PassRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["JobConflict"];
+            /**
+             * @description Plafond de relectures atteint. Réservé à la politique de limitation
+             *     (décision produit D9 OUVERTE : plafond non défini par ce contrat).
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    generateLetter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateLetterRequest"];
+            };
+        };
+        responses: {
+            /** @description Job de génération de lettre accepté */
+            202: {
+                headers: {
+                    /** @description URL de suivi du job (`/v1/jobs/{job_id}`) */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LetterJobAccepted"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PassRequired"];
+            /** @description Profil, CV (`cv_id`) ou offre (`job_offer_id`) introuvable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            409: components["responses"]["JobConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLetters: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                /** @description Ne retourne que les lettres liées à ce CV */
+                cv_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Liste des lettres */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LetterListItem"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    getLetter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant unique de la lettre de motivation */
+                letter_id: components["parameters"]["letterIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lettre complète */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LetterDetailResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteLetter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant unique de la lettre de motivation */
+                letter_id: components["parameters"]["letterIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lettre supprimée avec succès (aucun corps) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateLetter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant unique de la lettre de motivation */
+                letter_id: components["parameters"]["letterIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLetterRequest"];
+            };
+        };
+        responses: {
+            /** @description Lettre mise à jour */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LetterDetailResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PassRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    exportLetter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant unique de la lettre de motivation */
+                letter_id: components["parameters"]["letterIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Job d'export accepté */
+            202: {
+                headers: {
+                    /** @description URL de suivi du job (`/v1/jobs/{job_id}`) */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportJobAccepted"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PassRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["JobConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getJobStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du job asynchrone */
+                job_id: components["parameters"]["jobIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description État du job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStatus"];
+                };
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
