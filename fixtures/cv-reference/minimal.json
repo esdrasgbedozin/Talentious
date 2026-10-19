@@ -1,0 +1,31 @@
+{
+  "personal_info": {
+    "first_name": "Sam",
+    "last_name": "Leroy",
+    "email": "sam.leroy@example.com"
+  },
+  "summary": "Développeur junior en reconversion, motivé par le web et l'accessibilité.",
+  "selected_experiences": [
+    {
+      "id": "exp-1",
+      "title": "Stagiaire développeur web",
+      "company": "Studio Tangram",
+      "start_date": "2024-02",
+      "description": "Intégration de maquettes et correction de bugs front.",
+      "highlighted_skills": ["HTML", "CSS", "JavaScript"]
+    }
+  ],
+  "highlighted_skills": [
+    {"name": "JavaScript", "category": "hard_skill", "importance": "Important"},
+    {"name": "Rigueur", "category": "soft_skill", "importance": "Nice to have"}
+  ],
+  "selected_educations": [
+    {
+      "id": "edu-1",
+      "degree": "Titre professionnel Développeur web",
+      "institution": "AFPA"
+    }
+  ],
+  "selected_projects": [],
+  "selected_certifications": []
+}

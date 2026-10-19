@@ -1,0 +1,137 @@
+{
+  "personal_info": {
+    "first_name": "Amina",
+    "last_name": "Benkacem",
+    "email": "amina.benkacem@example.com",
+    "phone": "+33 7 98 76 54 32",
+    "linkedin": "https://www.linkedin.com/in/amina-benkacem",
+    "address": "48 avenue Jean Jaurès",
+    "city": "Toulouse",
+    "postal_code": "31000",
+    "country": "France"
+  },
+  "summary": "Directrice technique avec quinze ans d'expérience à la croisée du produit, de l'ingénierie et du management. J'ai bâti et fait grandir des équipes de plus de trente personnes, défini des stratégies techniques pluriannuelles et livré des produits SaaS de l'amorçage à la série C, en gardant la qualité et la fiabilité au centre des décisions.",
+  "selected_experiences": [
+    {
+      "id": "exp-1",
+      "title": "Directrice technique",
+      "company": "Heliosoft",
+      "start_date": "2020-09",
+      "end_date": null,
+      "location": "Toulouse",
+      "description": "Définition de la stratégie technique et management de cinq équipes (32 personnes). Migration vers une architecture multi-tenant, division par trois du coût d'infrastructure par client et mise en place d'une culture de fiabilité (SLO, post-mortems sans blâme).",
+      "highlighted_skills": ["Leadership", "Architecture cloud", "SRE", "Stratégie produit"]
+    },
+    {
+      "id": "exp-2",
+      "title": "Lead ingénierie plateforme",
+      "company": "Dataforge",
+      "start_date": "2017-04",
+      "end_date": "2020-08",
+      "location": "Paris",
+      "description": "Création de l'équipe plateforme et de son socle (CI/CD, observabilité, self-service). Réduction du délai de mise en production de deux semaines à une heure.",
+      "highlighted_skills": ["Kubernetes", "Terraform", "CI/CD", "Observabilité"]
+    },
+    {
+      "id": "exp-3",
+      "title": "Ingénieure logicielle senior",
+      "company": "Novatek",
+      "start_date": "2014-06",
+      "end_date": "2017-03",
+      "location": "Nantes",
+      "description": "Conception de services backend critiques et mentorat des profils juniors.",
+      "highlighted_skills": ["Go", "PostgreSQL", "Systèmes distribués"]
+    },
+    {
+      "id": "exp-4",
+      "title": "Ingénieure logicielle",
+      "company": "Studio Comète",
+      "start_date": "2011-09",
+      "end_date": "2014-05",
+      "location": "Bordeaux",
+      "description": "Développement full-stack d'applications métier pour des clients grands comptes.",
+      "highlighted_skills": ["Java", "Spring", "SQL"]
+    },
+    {
+      "id": "exp-5",
+      "title": "Développeuse junior",
+      "company": "Webfabrik",
+      "start_date": "2009-10",
+      "end_date": "2011-08",
+      "location": "Bordeaux",
+      "description": "Intégration et maintenance de sites e-commerce.",
+      "highlighted_skills": ["PHP", "MySQL", "JavaScript"]
+    }
+  ],
+  "highlighted_skills": [
+    {"name": "Leadership technique", "level": "Expert", "category": "soft_skill", "importance": "Critical"},
+    {"name": "Architecture cloud", "level": "Expert", "category": "hard_skill", "importance": "Critical"},
+    {"name": "Kubernetes", "level": "Avancé", "category": "hard_skill", "importance": "Critical"},
+    {"name": "Terraform", "level": "Avancé", "category": "hard_skill", "importance": "Important"},
+    {"name": "Go", "level": "Avancé", "category": "hard_skill", "importance": "Important"},
+    {"name": "PostgreSQL", "level": "Avancé", "category": "hard_skill", "importance": "Important"},
+    {"name": "SRE", "level": "Avancé", "category": "hard_skill", "importance": "Important"},
+    {"name": "Stratégie produit", "level": "Intermédiaire", "category": "soft_skill", "importance": "Important"},
+    {"name": "Mentorat", "level": null, "category": "soft_skill", "importance": "Nice to have"},
+    {"name": "Communication", "level": null, "category": "soft_skill", "importance": "Nice to have"},
+    {"name": "Gestion budgétaire", "level": null, "category": "soft_skill", "importance": "Nice to have"},
+    {"name": "Recrutement", "level": null, "category": "soft_skill", "importance": "Nice to have"}
+  ],
+  "selected_educations": [
+    {
+      "id": "edu-1",
+      "degree": "Master informatique, spécialité systèmes distribués",
+      "institution": "Université de Bordeaux",
+      "end_date": "2009-07",
+      "description": "Mémoire sur la tolérance aux pannes dans les systèmes pair-à-pair."
+    },
+    {
+      "id": "edu-2",
+      "degree": "Licence informatique",
+      "institution": "Université de Bordeaux",
+      "end_date": "2007-07",
+      "description": null
+    },
+    {
+      "id": "edu-3",
+      "degree": "Executive program - Leadership",
+      "institution": "HEC Paris",
+      "end_date": "2021-11",
+      "description": "Programme court de management pour dirigeants techniques."
+    }
+  ],
+  "selected_projects": [
+    {
+      "id": "proj-1",
+      "name": "Référentiel open source d'ingénierie de fiabilité",
+      "description": "Guide communautaire et outils d'audit de fiabilité adoptés par plusieurs entreprises françaises.",
+      "url": "https://github.com/example/reliability-kit",
+      "completion_date": "2022-01",
+      "relevant_skills": ["SRE", "Documentation", "Open source"]
+    },
+    {
+      "id": "proj-2",
+      "name": "Conférence TechFiable",
+      "description": "Co-organisation d'une conférence annuelle sur la fiabilité logicielle (400 participants).",
+      "url": null,
+      "completion_date": "2023-10",
+      "relevant_skills": ["Organisation", "Communauté"]
+    }
+  ],
+  "selected_certifications": [
+    {
+      "id": "cert-1",
+      "name": "Certified Kubernetes Administrator",
+      "issuer": "CNCF",
+      "issue_date": "2019-05",
+      "url": "https://www.credential.net/example-cka"
+    },
+    {
+      "id": "cert-2",
+      "name": "Professional Cloud Architect",
+      "issuer": "Google Cloud",
+      "issue_date": "2021-02",
+      "url": null
+    }
+  ]
+}

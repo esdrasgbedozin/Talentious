@@ -238,7 +238,30 @@ class TestWorker:
 
         async def fake_generate_cv(*, user_profile, offer_analysis):
             captured["user_profile"] = user_profile
-            return {"cv_data": {"summary": "optimized"}}
+            # Sortie réaliste et valide au schéma canonique (requise depuis M0-T04 :
+            # le worker coerce PUIS valide le contenu avant stockage).
+            return {
+                "cv_data": {
+                    "personal_info": {
+                        "first_name": "Alice",
+                        "last_name": "Martin",
+                        "email": "alice.martin@example.com",
+                    },
+                    "summary": "optimized",
+                    "selected_experiences": [
+                        {
+                            "id": "exp-1",
+                            "title": "Ingénieure",
+                            "company": "Acme",
+                            "start_date": "2020-01",
+                            "description": "Backend",
+                            "highlighted_skills": ["Python"],
+                        }
+                    ],
+                    "highlighted_skills": [],
+                    "selected_educations": [],
+                }
+            }
 
         monkeypatch.setattr(
             cv_worker.analyzer_client,
@@ -265,7 +288,14 @@ class TestWorker:
             assert refreshed.cv_id is not None
             cv = await check.get(GeneratedCV, refreshed.cv_id)
             assert cv is not None
-            assert cv.cv_data_json == {"summary": "optimized"}
+            # Le contenu stocké est le GeneratedCVData coercé (enveloppe canonique).
+            assert cv.cv_data_json["summary"] == "optimized"
+            # C6 : l'identité vient du PROFIL vérifié, pas de la sortie du LLM
+            # (le writer renvoyait « Alice » / alice.martin@…, ils sont écrasés).
+            assert cv.cv_data_json["personal_info"]["first_name"] == "Test"
+            assert cv.cv_data_json["personal_info"]["email"] == "testuser@example.com"
+            assert cv.cv_data_json["selected_projects"] == []
+            assert "optimization_notes" not in cv.cv_data_json
 
     async def test_worker_failure_marks_job_failed(
         self, session_factory, test_db, test_user, monkeypatch
@@ -324,3 +354,231 @@ class TestWorker:
             refreshed = await check.get(CVJob, job.id)
             assert refreshed.status == JobStatus.FAILED
             assert "Profil utilisateur introuvable" in refreshed.error_message
+
+
+class TestWorkerContentCoercion:
+    """M0-T04 — la sortie du rédacteur est coercée + validée avant stockage
+    (corrige la faille latente cv_worker.py:100 : plus de JSONB brut)."""
+
+    @staticmethod
+    def _mock_pipeline(monkeypatch, cv_worker, writer_output):
+        monkeypatch.setattr(
+            cv_worker.analyzer_client,
+            "analyze_text",
+            AsyncMock(return_value=_fake_analysis()),
+        )
+
+        async def fake_generate_cv(*, user_profile, offer_analysis):
+            return writer_output
+
+        monkeypatch.setattr(cv_worker.writer_client, "generate_cv", fake_generate_cv)
+
+    @staticmethod
+    async def _queue_job(test_db, user_id):
+        job = CVJob(user_id=user_id, cv_name="CV", status=JobStatus.QUEUED)
+        test_db.add(job)
+        await test_db.commit()
+        await test_db.refresh(job)
+        return job
+
+    async def test_hostile_writer_output_sanitized_before_storage(
+        self, session_factory, test_db, test_user, monkeypatch
+    ):
+        from app.services import cv_worker
+
+        hostile = {
+            "cv_data": {
+                "personal_info": {
+                    "first_name": "Alice",
+                    "last_name": "Martin",
+                    "email": "alice@example.com",
+                    "linkedin": "javascript:alert(1)",  # schéma d'URL interdit
+                    "onclick": "steal()",  # clé hors schéma
+                },
+                "summary": "Résumé.",
+                "selected_experiences": [
+                    {
+                        "id": "exp-1",
+                        "title": "Dev",
+                        "company": "Acme",
+                        "start_date": "2020-01",
+                        "description": "ok",
+                        "highlighted_skills": [],
+                        "injected": "<script>x</script>",  # clé hors schéma
+                    }
+                ],
+                "highlighted_skills": [],
+                "selected_educations": [],
+                "optimization_notes": "SECRET INTERNE — ne jamais afficher",
+            }
+        }
+        self._mock_pipeline(monkeypatch, cv_worker, hostile)
+        job = await self._queue_job(test_db, test_user.id)
+
+        await cv_worker.run_cv_generation(
+            session_factory, job.id, test_user.id, "CV", VALID_OFFER
+        )
+
+        async with session_factory() as check:
+            refreshed = await check.get(CVJob, job.id)
+            assert refreshed.status == JobStatus.SUCCEEDED
+            cv = await check.get(GeneratedCV, refreshed.cv_id)
+            stored = cv.cv_data_json
+            # Champ interne jamais stocké (risque d'exfiltration BLK-5).
+            assert "optimization_notes" not in stored
+            # Clés hors schéma supprimées.
+            assert "onclick" not in stored["personal_info"]
+            assert "injected" not in stored["selected_experiences"][0]
+            # URL javascript: neutralisée.
+            assert stored["personal_info"]["linkedin"] is None
+            # C6 : l'identité injectée par le LLM (alice@example.com) est remplacée
+            # par celle du profil vérifié — une injection ne change pas les coordonnées.
+            assert stored["personal_info"]["email"] == "testuser@example.com"
+
+    async def test_non_dict_writer_output_fails_job_safely(
+        self, session_factory, test_db, test_user, monkeypatch
+    ):
+        from app.services import cv_worker
+
+        self._mock_pipeline(
+            monkeypatch, cv_worker, {"cv_data": "je ne suis pas un objet"}
+        )
+        job = await self._queue_job(test_db, test_user.id)
+
+        await cv_worker.run_cv_generation(
+            session_factory, job.id, test_user.id, "CV", VALID_OFFER
+        )
+
+        async with session_factory() as check:
+            refreshed = await check.get(CVJob, job.id)
+            assert refreshed.status == JobStatus.FAILED
+            assert refreshed.cv_id is None
+            # Message sûr, exactement le message client générique (aucun internals).
+            assert refreshed.error_message == cv_worker._SAFE_CONTENT_INVALID
+
+    async def test_coerced_content_failing_schema_marks_job_failed_safely(
+        self, session_factory, test_db, monkeypatch
+    ):
+        """Filet de validation (défense en profondeur) : si, même après coercition ET
+        ancrage d'identité, le contenu reste invalide au schéma — ici un profil
+        corrompu sans email utilisable + une sortie LLM sans email —, le job échoue
+        proprement (message sûr, aucun CV stocké) au lieu de persister un contenu
+        inexploitable. Avec un profil normal, l'ancrage C6 fournit l'email et ce mode
+        d'échec ne se déclenche pas (ce n'est pas une vraie erreur utilisateur)."""
+        from app.models.user import User, UserRole
+        from app.models.user_profile import UserProfile
+        from app.services import cv_worker
+        from app.services.auth import hash_password
+
+        user = User(
+            email="broken@example.com",
+            hashed_password=hash_password("Pw123456!"),
+            role=UserRole.USER,
+        )
+        test_db.add(user)
+        await test_db.flush()
+        # Profil corrompu : personal_info sans email (EmailStr requis au schéma).
+        profile = UserProfile(
+            user_id=user.id,
+            profile_data={"personal_info": {"first_name": "X", "last_name": "Y"}},
+        )
+        test_db.add(profile)
+        await test_db.flush()
+        uid = user.id
+
+        invalid = {
+            "cv_data": {
+                "personal_info": {"first_name": "A", "last_name": "B"},
+                "summary": "x",
+                "selected_experiences": [],
+                "highlighted_skills": [],
+                "selected_educations": [],
+            }
+        }
+        self._mock_pipeline(monkeypatch, cv_worker, invalid)
+        job = await self._queue_job(test_db, uid)
+
+        await cv_worker.run_cv_generation(
+            session_factory, job.id, uid, "CV", VALID_OFFER
+        )
+
+        async with session_factory() as check:
+            refreshed = await check.get(CVJob, job.id)
+            assert refreshed.status == JobStatus.FAILED
+            assert refreshed.cv_id is None
+            assert refreshed.error_message == cv_worker._SAFE_CONTENT_INVALID
+
+
+class TestUpdateCVCoercion:
+    """B1 — PUT /cv/{id} applique la même ceinture de sécurité que la génération :
+    le contenu édité est coercé + validé avant stockage (il alimentera aussi le rendu
+    HTML serveur V2). Pas d'ancrage d'identité ici : c'est le propriétaire authentifié
+    qui édite ses propres données, pas le LLM."""
+
+    async def _owned_cv(self, test_db, owner_id):
+        cv = GeneratedCV(
+            user_id=owner_id,
+            cv_name="à éditer",
+            template_id="modern_v1",
+            job_offer_context="ctx",
+            cv_data_json={"summary": "initial"},
+        )
+        test_db.add(cv)
+        await test_db.commit()
+        await test_db.refresh(cv)
+        return cv
+
+    async def test_put_sanitizes_hostile_cv_data(
+        self, client, auth_headers, test_user, test_db
+    ):
+        cv = await self._owned_cv(test_db, test_user.id)
+        hostile = {
+            "personal_info": {
+                "first_name": "Jean",
+                "last_name": "Martin",
+                "email": "jean@example.com",
+                "linkedin": "javascript:alert(1)",  # schéma d'URL interdit
+                "onclick": "steal()",  # clé hors schéma
+            },
+            "summary": "Résumé.",
+            "selected_experiences": [],
+            "highlighted_skills": [],
+            "selected_educations": [],
+            "optimization_notes": "SECRET INTERNE — ne jamais afficher",
+        }
+        resp = await client.put(
+            f"/cv/{cv.id}", headers=auth_headers, json={"cv_data_json": hostile}
+        )
+        assert resp.status_code == 200
+        stored = resp.json()["cv_data_json"]
+        assert "optimization_notes" not in stored
+        assert "onclick" not in stored["personal_info"]
+        assert stored["personal_info"]["linkedin"] is None
+        # Édition : l'identité saisie par le propriétaire est conservée (pas d'ancrage).
+        assert stored["personal_info"]["email"] == "jean@example.com"
+
+    async def test_put_rejects_schema_invalid_cv_data_422(
+        self, client, auth_headers, test_user, test_db
+    ):
+        cv = await self._owned_cv(test_db, test_user.id)
+        invalid = {
+            "personal_info": {"first_name": "A", "last_name": "B"},  # email manquant
+            "summary": "x",
+            "selected_experiences": [],
+            "highlighted_skills": [],
+            "selected_educations": [],
+        }
+        resp = await client.put(
+            f"/cv/{cv.id}", headers=auth_headers, json={"cv_data_json": invalid}
+        )
+        assert resp.status_code == 422
+
+    async def test_put_name_only_leaves_content_untouched(
+        self, client, auth_headers, test_user, test_db
+    ):
+        cv = await self._owned_cv(test_db, test_user.id)
+        resp = await client.put(
+            f"/cv/{cv.id}", headers=auth_headers, json={"cv_name": "renommé"}
+        )
+        assert resp.status_code == 200
+        assert resp.json()["cv_name"] == "renommé"

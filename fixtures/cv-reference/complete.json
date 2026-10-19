@@ -1,0 +1,71 @@
+{
+  "personal_info": {
+    "first_name": "Camille",
+    "last_name": "Fontaine",
+    "email": "camille.fontaine@example.com",
+    "phone": "+33 6 12 34 56 78",
+    "linkedin": "https://www.linkedin.com/in/camille-fontaine",
+    "address": "12 rue de la République",
+    "city": "Lyon",
+    "postal_code": "69002",
+    "country": "France"
+  },
+  "summary": "Ingénieure logicielle avec huit ans d'expérience sur des plateformes distribuées à fort trafic. Spécialiste Python et des architectures orientées événements, je pilote des équipes produit de bout en bout, de la conception à l'exploitation.",
+  "selected_experiences": [
+    {
+      "id": "exp-1",
+      "title": "Ingénieure logicielle senior",
+      "company": "Novacité",
+      "start_date": "2021-03",
+      "end_date": null,
+      "location": "Lyon",
+      "description": "Conception et exploitation d'une plateforme de paiement traitant 3 millions de transactions par jour. Réduction de 40 % de la latence p99 par refonte du pipeline asynchrone.",
+      "highlighted_skills": ["Python", "FastAPI", "PostgreSQL", "Observabilité"]
+    },
+    {
+      "id": "exp-2",
+      "title": "Ingénieure backend",
+      "company": "Atelier Data",
+      "start_date": "2018-01",
+      "end_date": "2021-02",
+      "location": "Grenoble",
+      "description": "Développement d'API internes et de pipelines de données. Mise en place de la CI/CD et des tests de non-régression.",
+      "highlighted_skills": ["Python", "Docker", "CI/CD"]
+    }
+  ],
+  "highlighted_skills": [
+    {"name": "Python", "level": "Expert", "category": "hard_skill", "importance": "Critical"},
+    {"name": "FastAPI", "level": "Avancé", "category": "hard_skill", "importance": "Critical"},
+    {"name": "PostgreSQL", "level": "Avancé", "category": "hard_skill", "importance": "Important"},
+    {"name": "Architecture distribuée", "level": null, "category": "hard_skill", "importance": "Important"},
+    {"name": "Communication", "level": null, "category": "soft_skill", "importance": "Nice to have"}
+  ],
+  "selected_educations": [
+    {
+      "id": "edu-1",
+      "degree": "Diplôme d'ingénieur en informatique",
+      "institution": "INSA Lyon",
+      "end_date": "2017-09",
+      "description": "Spécialisation systèmes et réseaux."
+    }
+  ],
+  "selected_projects": [
+    {
+      "id": "proj-1",
+      "name": "Observatoire open data des mobilités",
+      "description": "Plateforme bénévole d'agrégation de données de transport en temps réel.",
+      "url": "https://github.com/example/mobilites",
+      "completion_date": "2022-06",
+      "relevant_skills": ["Python", "GTFS", "Cartographie"]
+    }
+  ],
+  "selected_certifications": [
+    {
+      "id": "cert-1",
+      "name": "Professional Cloud Architect",
+      "issuer": "Google Cloud",
+      "issue_date": "2023-04",
+      "url": "https://www.credential.net/example"
+    }
+  ]
+}
