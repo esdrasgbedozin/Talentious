@@ -1,12 +1,15 @@
 /**
- * CV data normalization.
+ * CV data normalization (read side) + conversion to the canonical schema (write side).
  *
- * The redacteur-cv agent emits the tailored CV content under enriched keys
- * (`selected_experiences`, `selected_educations`, `highlighted_skills`,
- * `selected_projects`, `selected_certifications`) that diverge from the canonical
- * ProfileData shape the renderer and editor consume. This adapter maps either shape
- * to canonical ProfileData so nothing is lost. When the canonical arrays are already
- * populated (e.g. a CV re-saved from the editor) they win — the adapter is idempotent.
+ * READ — `normalizeCVData` : maps a stored `cv_data_json` (canonical GeneratedCVData,
+ * or legacy V1 ProfileData) to the ProfileData shape the editor and renderer still
+ * consume. The ProfileData branch only serves LEGACY V1 CVs: since M0-T08a the editor
+ * saves canonical GeneratedCVData, so fresh writes always take the canonical branch.
+ *
+ * WRITE — `profileToGeneratedCV` : inverse mapping, applied at save time (updateCV)
+ * so the `PUT /cv` contract (GeneratedCVData) is honored and the backend coercion
+ * does not wipe the CV body (M0-T08a). `validateProfileForCVSave` blocks the saves
+ * that would silently lose entries (backend coercion drops them).
  */
 import {
   createEmptyProfile,
@@ -17,6 +20,15 @@ import {
   type Certification,
   type Language,
 } from '@/types/profile';
+import type { components } from '@/generated/api';
+
+type GeneratedCVData = components['schemas']['GeneratedCVData'];
+type SelectedExperience = components['schemas']['SelectedExperience'];
+type HighlightedSkill = components['schemas']['HighlightedSkill'];
+type SelectedEducation = components['schemas']['SelectedEducation'];
+type SelectedProject = components['schemas']['SelectedProject'];
+type SelectedCertification = components['schemas']['SelectedCertification'];
+type PersonalInfo = components['schemas']['PersonalInfo'];
 
 type Raw = Record<string, unknown>;
 
@@ -84,7 +96,9 @@ function mapCertification(c: Raw): Certification {
     issue_date: str(c.issue_date),
     expiration_date: str(c.expiration_date),
     credential_id: str(c.credential_id),
-    credential_url: str(c.credential_url),
+    // La forme canonique (SelectedCertification) porte `url` ; ProfileData porte
+    // `credential_url`. Lire les deux évite de perdre l'URL au cycle lecture→save.
+    credential_url: str(c.credential_url) || str(c.url),
   };
 }
 
@@ -155,4 +169,191 @@ export function normalizeCVData(raw: unknown): UserProfile {
     projects,
     certifications,
   };
+}
+
+// ===========================================================================
+// ProfileData -> GeneratedCVData (sens INVERSE de normalizeCVData).
+//
+// L'éditeur manipule du ProfileData ; le contrat `PUT /cv` et le stockage
+// attendent le schéma canonique `GeneratedCVData`. Sans cette conversion au
+// save, la coercition backend (qui ne lit que les clés `selected_*`) vide le
+// corps du CV (M0-T08a). On préserve ici tout ce que le canonique sait porter ;
+// le contenu visible non modélisé (`achievements`) est plié dans `description`.
+// La fidélité fine des champs non canoniques (`languages`, formation
+// `field/grade/location/start_date`, projet `role/start_date`, certification
+// `expiration_date/credential_id`) est traitée par la migration canonique de
+// bout en bout (M0-T08b).
+// ===========================================================================
+
+function optStr(v: unknown): string | null {
+  const s = typeof v === 'string' ? v.trim() : '';
+  return s || null;
+}
+
+/** URL optionnelle : préfixe https:// quand le schéma manque (le backend rejette
+ * en silence toute URL non http(s) — ex. `linkedin.com/in/x` saisi sans schéma). */
+function optUrl(v: unknown): string | null {
+  const s = optStr(v);
+  if (!s) return null;
+  return /^https?:\/\//i.test(s) ? s : `https://${s}`;
+}
+
+function isNonEmptyStr(v: unknown): v is string {
+  return typeof v === 'string' && v.trim() !== '';
+}
+
+/** Replie une liste d'accomplissements en puces à la fin de la description. */
+function foldAchievements(description: string, achievements: unknown): string {
+  const items = Array.isArray(achievements) ? achievements.filter(isNonEmptyStr) : [];
+  if (items.length === 0) return description;
+  const bullets = items.map((a) => `• ${a}`).join('\n');
+  return description ? `${description}\n${bullets}` : bullets;
+}
+
+export function profileToGeneratedCV(profile: UserProfile): GeneratedCVData {
+  const p = (profile ?? {}) as Partial<UserProfile>;
+
+  // Liste blanche explicite (pas de spread) : aucune clé parasite ne transite,
+  // et le linkedin sans schéma est réparé avant la re-validation backend.
+  const pi = (p.personal_info ?? {}) as Partial<PersonalInfo>;
+  const personal_info: PersonalInfo = {
+    first_name: str(pi.first_name),
+    last_name: str(pi.last_name),
+    email: str(pi.email),
+    phone: optStr(pi.phone),
+    linkedin: optUrl(pi.linkedin),
+    address: optStr(pi.address),
+    city: optStr(pi.city),
+    postal_code: optStr(pi.postal_code),
+    country: optStr(pi.country),
+  };
+
+  const experiences = (p.experiences ?? []) as Experience[];
+  const selected_experiences: SelectedExperience[] = experiences.map((e, i) => ({
+    id: str(e.id) || `exp-${i + 1}`,
+    title: str(e.title),
+    company: str(e.company),
+    location: optStr(e.location),
+    start_date: str(e.start_date),
+    // Le canonique n'a pas `is_current` : un poste en cours = `end_date` null.
+    end_date: e.is_current ? null : optStr(e.end_date),
+    description: foldAchievements(str(e.description), e.achievements),
+    // ProfileData ne porte pas de compétences par expérience.
+    highlighted_skills: [],
+  }));
+
+  const toHighlighted = (
+    names: string[] | undefined,
+    category: 'hard_skill' | 'soft_skill',
+  ): HighlightedSkill[] =>
+    (names ?? []).filter(isNonEmptyStr).map((name) => ({
+      name,
+      level: null,
+      category,
+      importance: 'Important' as const,
+    }));
+
+  const skills = (p.skills ?? { hard: [], soft: [] }) as { hard?: string[]; soft?: string[] };
+  const highlighted_skills: HighlightedSkill[] = [
+    ...toHighlighted(skills.hard, 'hard_skill'),
+    ...toHighlighted(skills.soft, 'soft_skill'),
+  ];
+
+  const educations = (p.educations ?? []) as Education[];
+  const selected_educations: SelectedEducation[] = educations.map((e, i) => ({
+    id: str(e.id) || `edu-${i + 1}`,
+    degree: str(e.degree),
+    institution: str(e.institution),
+    end_date: optStr(e.end_date),
+    description: optStr(e.description),
+  }));
+
+  const projects = (p.projects ?? []) as Project[];
+  const selected_projects: SelectedProject[] = projects.map((pr, i) => ({
+    id: str(pr.id) || `proj-${i + 1}`,
+    name: str(pr.name),
+    description: str(pr.description),
+    url: optUrl(pr.url),
+    // Le canonique utilise `completion_date` là où ProfileData a `end_date`.
+    completion_date: optStr(pr.end_date),
+    relevant_skills: (pr.technologies ?? []).filter(isNonEmptyStr),
+  }));
+
+  const certifications = (p.certifications ?? []) as Certification[];
+  const selected_certifications: SelectedCertification[] = certifications.map((c, i) => ({
+    id: str(c.id) || `cert-${i + 1}`,
+    name: str(c.name),
+    issuer: str(c.issuer),
+    issue_date: optStr(c.issue_date),
+    url: optUrl(c.credential_url),
+  }));
+
+  return {
+    personal_info,
+    summary: str(p.summary),
+    selected_experiences,
+    highlighted_skills,
+    selected_educations,
+    selected_projects,
+    selected_certifications,
+    // `optimization_notes` volontairement absent (jamais produit côté app).
+  };
+}
+
+// ===========================================================================
+// Validation avant save (revue M0-T08a) : la coercition backend ÉCARTE en
+// silence les entrées qui ne satisfont pas le schéma canonique (expérience sans
+// date AAAA-MM, listes au-delà du plafond). Plutôt que de laisser l'utilisateur
+// voir « CV enregistré » puis découvrir la disparition au rechargement, on
+// bloque le save avec un message explicite.
+// ===========================================================================
+
+/** Plafond backend (`MAX_LIST_ITEMS`) appliqué à `highlighted_skills` APRÈS la
+ * fusion hard + soft : au-delà, les compétences excédentaires sont tronquées. */
+export const CV_SAVE_MAX_SKILLS = 30;
+
+const MONTH_RE = /^[0-9]{4}-(0[1-9]|1[0-2])$/;
+
+function isMonth(v: unknown): boolean {
+  return typeof v === 'string' && MONTH_RE.test(v.trim());
+}
+
+/** Problèmes qui causeraient une perte silencieuse au save ; [] si tout est sûr. */
+export function validateProfileForCVSave(profile: UserProfile): string[] {
+  const problems: string[] = [];
+  const p = (profile ?? {}) as Partial<UserProfile>;
+
+  for (const e of p.experiences ?? []) {
+    const label = str(e.title).trim() || str(e.company).trim();
+    const hasContent =
+      isNonEmptyStr(e.description) ||
+      (Array.isArray(e.achievements) && e.achievements.some(isNonEmptyStr));
+    if (!label) {
+      // Carte totalement vide : écartée sans dommage ; avec du contenu, on bloque.
+      if (hasContent) {
+        problems.push(
+          'Une expérience doit avoir un titre ou une entreprise pour être enregistrée.',
+        );
+      }
+      continue;
+    }
+    if (!isMonth(e.start_date)) {
+      problems.push(
+        `L'expérience « ${label} » doit avoir une date de début (AAAA-MM) pour être enregistrée.`,
+      );
+    } else if (!e.is_current && !isMonth(e.end_date)) {
+      problems.push(
+        `L'expérience « ${label} » est marquée terminée : renseignez sa date de fin (AAAA-MM) ou cochez « Poste actuel ».`,
+      );
+    }
+  }
+
+  const skillCount = (p.skills?.hard?.length ?? 0) + (p.skills?.soft?.length ?? 0);
+  if (skillCount > CV_SAVE_MAX_SKILLS) {
+    problems.push(
+      `Au plus ${CV_SAVE_MAX_SKILLS} compétences (techniques + transversales) peuvent être enregistrées — ${skillCount} saisies.`,
+    );
+  }
+
+  return problems;
 }

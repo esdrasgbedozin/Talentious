@@ -91,6 +91,28 @@ sur le chemin d'édition (revue de code M0, constat B1).
 
 - Le rendu serveur V2 part d'un `cv_data_json` propre et schéma-valide, quel que soit
   le chemin d'écriture (génération ou édition).
+- **Chemin d'écriture « édition » — correctif M0-T08a.** Cet invariant était en fait
+  rompu : l'éditeur frontend manipule du `ProfileData` et sauvegardait `cv_data_json`
+  tel quel ; or la coercition backend ne lit que les clés canoniques `selected_*` →
+  elle **remplaçait le corps du CV par des tableaux vides** (perte de données en prod).
+  Correctif : l'adaptateur frontend `profileToGeneratedCV()` (`frontend/src/lib/cv.ts`,
+  inverse de `normalizeCVData`) convertit au save, dans `updateCV`, pour honorer le
+  contrat `PUT /cv` = `GeneratedCVData`. C'est un **pont transitoire** : l'éditeur reste
+  en `ProfileData`. La cible (éditeur + rendu canoniques de bout en bout, suppression de
+  `normalizeCVData`) est **M0-T08b**. Champs non modélisés par le canonique au save :
+  `achievements` est plié dans `description` ; `languages`, formation
+  `field/grade/location/start_date`, projet `role/start_date` et certification
+  `expiration_date/credential_id` sont perdus au save tant que T08b n'a pas aligné les
+  schémas (l'éditeur affiche encore ces champs — à masquer ou replier en T08b).
+  Garde-fous complémentaires (revue M0-T08a) : `validateProfileForCVSave` **bloque au
+  save** les entrées que la coercition écarterait en silence (expérience sans date
+  AAAA-MM, poste « terminé » sans date de fin — sinon relu comme « Présent » —, plus de
+  30 compétences hard+soft) ; l'éditeur **resynchronise son état** sur la réponse du PUT
+  (ce qui est réellement stocké devient visible immédiatement) ; les URLs sans schéma
+  sont préfixées `https://` (le backend rejette toute URL non http(s)) ; `normalizeCVData`
+  lit aussi la clé canonique `url` des certifications (sinon perdue au cycle
+  lecture→save). Stabilité prouvée par test de **point fixe**
+  (`profileToGeneratedCV(normalizeCVData(g)) = g`).
 - Un CV dont la génération produirait un contenu inexploitable échoue proprement (pas de
   CV cassé stocké), au prix d'un nouvel essai utilisateur.
 - Les CV V1 déjà stockés peuvent être non canoniques : traitement décidé à PAH-M0 (non

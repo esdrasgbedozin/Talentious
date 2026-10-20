@@ -28,6 +28,7 @@ import {
   createEmptyCertification,
 } from '@/types/profile';
 import { getCV, updateCV, getErrorMessage } from '@/lib/api';
+import { validateProfileForCVSave } from '@/lib/cv';
 
 export default function CVEditorPage() {
   const params = useParams<{ id: string }>();
@@ -140,9 +141,24 @@ export default function CVEditorPage() {
 
   const handleSave = async () => {
     if (!cvId) return;
+    // Bloque les saves qui perdraient des entrées en silence (la coercition
+    // backend écarte toute expérience sans date AAAA-MM, etc. — M0-T08a).
+    const problems = validateProfileForCVSave(profile);
+    if (problems.length > 0) {
+      toast.error(problems[0]);
+      return;
+    }
     setIsSaving(true);
     try {
-      await updateCV(cvId, { cv_name: cvName.trim() || 'CV sans nom', cv_data_json: profile });
+      const updated = await updateCV(cvId, {
+        cv_name: cvName.trim() || 'CV sans nom',
+        cv_data_json: profile,
+      });
+      // Resynchronise l'éditeur sur ce qui est RÉELLEMENT stocké (réponse déjà
+      // re-normalisée par updateCV) : toute entrée écartée ou tronquée par la
+      // coercition backend devient visible immédiatement, pas au rechargement.
+      setProfile({ ...createEmptyProfile(), ...updated.cv_data_json });
+      setCvName(updated.cv_name);
       setIsDirty(false);
       toast.success('CV enregistré.');
     } catch (err) {
