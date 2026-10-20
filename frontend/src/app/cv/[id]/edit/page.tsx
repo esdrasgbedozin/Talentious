@@ -5,7 +5,7 @@
  * a live A4 preview. Loads via getCV, saves via updateCV (PUT /cv/{id}). Reuses the
  * profile form components so the editing UX is identical to the master profile.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Printer } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -28,7 +28,7 @@ import {
   createEmptyCertification,
 } from '@/types/profile';
 import { getCV, updateCV, getErrorMessage } from '@/lib/api';
-import { validateProfileForCVSave } from '@/lib/cv';
+import { normalizeCVData, profileToGeneratedCV, validateProfileForCVSave } from '@/lib/cv';
 
 export default function CVEditorPage() {
   const params = useParams<{ id: string }>();
@@ -51,7 +51,9 @@ export default function CVEditorPage() {
       .then((cv) => {
         if (cancelled) return;
         setCvName(cv.cv_name);
-        setProfile({ ...createEmptyProfile(), ...cv.cv_data_json });
+        // L'éditeur travaille encore en ProfileData (formulaires partagés avec le
+        // profil maître) : il normalise le canonique à SON bord (migration : T08c).
+        setProfile({ ...createEmptyProfile(), ...normalizeCVData(cv.cv_data_json) });
       })
       .catch((err) => !cancelled && setLoadError(getErrorMessage(err)))
       .finally(() => !cancelled && setIsLoading(false));
@@ -154,10 +156,10 @@ export default function CVEditorPage() {
         cv_name: cvName.trim() || 'CV sans nom',
         cv_data_json: profile,
       });
-      // Resynchronise l'éditeur sur ce qui est RÉELLEMENT stocké (réponse déjà
-      // re-normalisée par updateCV) : toute entrée écartée ou tronquée par la
-      // coercition backend devient visible immédiatement, pas au rechargement.
-      setProfile({ ...createEmptyProfile(), ...updated.cv_data_json });
+      // Resynchronise l'éditeur sur ce qui est RÉELLEMENT stocké : toute entrée
+      // écartée ou tronquée par la coercition backend devient visible
+      // immédiatement, pas au rechargement.
+      setProfile({ ...createEmptyProfile(), ...normalizeCVData(updated.cv_data_json) });
       setCvName(updated.cv_name);
       setIsDirty(false);
       toast.success('CV enregistré.');
@@ -167,6 +169,11 @@ export default function CVEditorPage() {
       setIsSaving(false);
     }
   };
+
+  // L'aperçu passe par la MÊME conversion que le save : il montre exactement ce
+  // qui sera stocké puis exporté (aperçu = PDF). Mémoïsé pour ne pas recréer
+  // l'objet (et re-déclencher la mesure du renderer) à chaque frappe hors profil.
+  const previewCv = useMemo(() => profileToGeneratedCV(profile), [profile]);
 
   const confirmLeave = () =>
     !isDirty ||
@@ -415,7 +422,7 @@ export default function CVEditorPage() {
             <p className="mb-3 text-sm font-medium text-text-secondary">Aperçu en direct</p>
             <div className="overflow-hidden rounded-lg border border-border bg-white shadow-sm">
               <div style={{ zoom: 0.62 }}>
-                <CVRenderer profile={profile} />
+                <CVRenderer cv={previewCv} />
               </div>
             </div>
           </div>

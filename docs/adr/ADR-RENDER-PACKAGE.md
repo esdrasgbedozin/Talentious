@@ -104,11 +104,18 @@ couvre les deux : la décision du package partagé et son intégration au build.
   Le renderer consomme encore `ProfileData` ; sa migration vers le schéma canonique
   `GeneratedCVData` est un ticket distinct (**M0-T08b**, changement de comportement) car
   `cv_data_json` est désormais stocké en `GeneratedCVData` (ADR-CONTENT-SCHEMA).
-- **Dette tracée (revue M0-T08)** : les tests de rendu (`CVRenderer.snapshot.test.tsx` +
-  fixtures) vivent encore **côté frontend** alors que le composant est dans le package ;
-  quand l'export-service (M2) consommera le package, ils ne le suivront pas. À déplacer
-  dans `packages/cv-render` (tests + fixtures en `ProfileData`) — rattaché à M0-T08b ou
-  ticket dédié.
+- **M0-T08b (fait)** : le renderer consomme le **schéma canonique `GeneratedCVData`**
+  (prop `cv`) — zéro transformation dans le package, condition de l'injection directe
+  par l'export-service (M2) et de « aperçu = PDF » : l'aperçu éditeur passe par
+  `profileToGeneratedCV(état)` (même pipeline que le save) et la page print injecte le
+  canonique stocké tel quel (`toCanonicalCVData` ponte les CV V1 legacy, passthrough
+  strict sinon). `end_date` null ⇒ « aujourd'hui » ; compétences par expérience rendues ;
+  section Langues retirée (hors canonique) ; `optimization_notes` jamais rendu (BLK-5,
+  testé). **Dette T08 soldée** : les tests de rendu vivent désormais **dans le package**
+  (`src/__tests__/`, fixtures canoniques partagées `fixtures/cv-reference/` importées en
+  relatif — source unique, celle du futur contrat visuel M2). La migration de l'éditeur
+  (encore ProfileData) est **M0-T08c** ; le package n'a pas encore de config eslint
+  (gates : tsc strict + jest) — rattaché à T08c.
 - L'invariant « aperçu = PDF » devient **testable** une fois l'export-service branché
   (M2) : baseline de non-régression visuelle sur les mêmes fixtures (M0-T01).
 

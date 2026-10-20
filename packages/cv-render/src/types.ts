@@ -6,10 +6,8 @@
 import type { components } from './generated/api';
 
 /**
- * Forme actuellement consommée par `CVRenderer` (extraction M0-T08, à
- * comportement constant). La migration du renderer vers le schéma canonique
- * `GeneratedCVData` est un ticket distinct (changement de comportement).
+ * Schéma de contenu CANONIQUE unique (ADR-CONTENT-SCHEMA) : sortie de l'agent,
+ * charge stockée (`cv_data_json`) et entrée de `CVRenderer` (depuis M0-T08b) —
+ * aucune transformation entre ces usages.
  */
-export type ProfileData = components['schemas']['ProfileData'];
-
 export type GeneratedCVData = components['schemas']['GeneratedCVData'];

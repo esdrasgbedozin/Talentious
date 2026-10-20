@@ -61,7 +61,7 @@ describe('updateCV — envoie du GeneratedCVData au réseau (M0-T08a)', () => {
     putSpy.mockRestore();
   });
 
-  it('normalise la réponse du PUT en ProfileData (symétrie avec getCV)', async () => {
+  it('renvoie la réponse du PUT en canonique (passthrough, symétrie avec getCV)', async () => {
     const putSpy = jest.spyOn(apiClient, 'put').mockResolvedValue({
       data: {
         cv_name: 'CV',
@@ -86,10 +86,11 @@ describe('updateCV — envoie du GeneratedCVData au réseau (M0-T08a)', () => {
     });
 
     const result = await updateCV('cv-123', { cv_name: 'CV' });
-    // La forme canonique du serveur est re-normalisée pour les consommateurs ProfileData.
-    expect(result.cv_data_json.experiences).toHaveLength(1);
-    expect(result.cv_data_json.experiences[0].title).toBe('Dev');
-    expect(result.cv_data_json.experiences[0].is_current).toBe(true);
+    // La forme canonique du serveur passe TELLE QUELLE (le renderer la consomme
+    // directement ; l'éditeur normalise à son bord — M0-T08b).
+    expect(result.cv_data_json.selected_experiences).toHaveLength(1);
+    expect(result.cv_data_json.selected_experiences[0].title).toBe('Dev');
+    expect(result.cv_data_json.selected_experiences[0].end_date).toBeNull();
 
     putSpy.mockRestore();
   });

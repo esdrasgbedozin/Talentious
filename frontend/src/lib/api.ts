@@ -5,11 +5,14 @@
 
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import type { UserProfile } from '@/types/profile';
-import { normalizeCVData, profileToGeneratedCV } from '@/lib/cv';
+import { profileToGeneratedCV, toCanonicalCVData } from '@/lib/cv';
+import type { components } from '@/generated/api';
 import {
   formatValidationMessage,
   type InvalidParam,
 } from '@/lib/validationErrors';
+
+type GeneratedCVData = components['schemas']['GeneratedCVData'];
 
 // Base URL of the FastAPI backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -330,14 +333,17 @@ export const resetPassword = async (
 
 export interface CVDetail extends CVBase {
   job_offer_context: string | null;
-  cv_data_json: UserProfile;
+  // Schéma canonique unique (ADR-CONTENT-SCHEMA) : alimenté TEL QUEL au renderer
+  // partagé (aperçu = PDF). L'éditeur, encore en ProfileData, normalise à SON bord.
+  cv_data_json: GeneratedCVData;
   gcs_pdf_url: string | null;
 }
 
-/** Fetch a single CV, normalizing its content to canonical ProfileData. */
+/** Fetch a single CV; `cv_data_json` is canonical GeneratedCVData (a legacy V1
+ * ProfileData payload is bridged, a canonical one passes through untouched). */
 export const getCV = async (cvId: string): Promise<CVDetail> => {
   const { data } = await apiClient.get<CVDetail>(`/cv/${cvId}`);
-  return { ...data, cv_data_json: normalizeCVData(data.cv_data_json) };
+  return { ...data, cv_data_json: toCanonicalCVData(data.cv_data_json) };
 };
 
 /**
@@ -358,7 +364,7 @@ export const updateCV = async (
     body.cv_data_json = profileToGeneratedCV(payload.cv_data_json);
   }
   const { data } = await apiClient.put<CVDetail>(`/cv/${cvId}`, body);
-  return { ...data, cv_data_json: normalizeCVData(data.cv_data_json) };
+  return { ...data, cv_data_json: toCanonicalCVData(data.cv_data_json) };
 };
 
 /**

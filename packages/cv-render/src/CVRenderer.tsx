@@ -1,9 +1,10 @@
 'use client';
 
 /**
- * CVRenderer — renders a ProfileData (cv_data_json) as a clean, ATS-friendly,
- * print-optimized A4 CV. Used both for the live preview in the editor and for the
- * print/PDF route.
+ * CVRenderer — renders a canonical GeneratedCVData (cv_data_json, the ONE content
+ * schema: agent output = storage = render input, ADR-CONTENT-SCHEMA) as a clean,
+ * ATS-friendly, print-optimized A4 CV. Used by the live preview, the print/PDF
+ * route, and (M2) the export-service — with NO runtime transformation.
  *
  * Single-page guarantee: the sheet is a fixed A4 box (210×297mm, overflow hidden)
  * and the content is auto-scaled down just enough to fit exactly one page. Because
@@ -14,10 +15,10 @@
  * Empty sections are skipped so partial CVs still render cleanly.
  */
 import { useLayoutEffect, useRef, useState } from 'react';
-import type { ProfileData as UserProfile } from './types';
+import type { GeneratedCVData } from './types';
 
 interface CVRendererProps {
-  profile: UserProfile;
+  cv: GeneratedCVData;
 }
 
 // A4 geometry and sheet padding (mm). Kept in sync with the print @page rules.
@@ -59,19 +60,27 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function CVRenderer({ profile }: CVRendererProps) {
-  const p = profile.personal_info;
+export default function CVRenderer({ cv }: CVRendererProps) {
+  const p = cv.personal_info;
   const fullName = [p?.first_name, p?.last_name].filter(Boolean).join(' ').trim();
   const location = [p?.city, p?.country].filter(Boolean).join(', ');
   const contactBits = [p?.email, p?.phone, location, p?.linkedin].filter(Boolean);
 
-  const experiences = profile.experiences ?? [];
-  const educations = profile.educations ?? [];
-  const projects = profile.projects ?? [];
-  const certifications = profile.certifications ?? [];
-  const languages = profile.languages ?? [];
-  const hardSkills = profile.skills?.hard ?? [];
-  const softSkills = profile.skills?.soft ?? [];
+  const experiences = cv.selected_experiences ?? [];
+  const educations = cv.selected_educations ?? [];
+  const projects = cv.selected_projects ?? [];
+  const certifications = cv.selected_certifications ?? [];
+  // highlighted_skills est une liste plate catégorisée : scindée pour l'affichage.
+  // Tolérance défensive (defense in depth) : les CV V1 stockés AVANT la ceinture
+  // de coercition portent des catégories libres (« Hard Skill », « technical »…)
+  // — on scinde sur « soft » (insensible à la casse), tout le reste est technique,
+  // comme l'ancien normalizeCVData. L'enum canonique satisfait trivialement ce test.
+  const allSkills = cv.highlighted_skills ?? [];
+  const isSoft = (category: unknown) =>
+    typeof category === 'string' && category.toLowerCase().includes('soft');
+  const named = allSkills.filter((s) => s && typeof s.name === 'string' && s.name);
+  const hardSkills = named.filter((s) => !isSoft(s.category)).map((s) => s.name);
+  const softSkills = named.filter((s) => isSoft(s.category)).map((s) => s.name);
 
   // Measure the natural (unscaled) content height and shrink to fit one A4 page.
   // scrollHeight ignores the CSS transform, so measuring while scaled is stable
@@ -94,7 +103,7 @@ export default function CVRenderer({ profile }: CVRendererProps) {
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [profile]);
+  }, [cv]);
 
   return (
     <div
@@ -128,10 +137,10 @@ export default function CVRenderer({ profile }: CVRendererProps) {
       </header>
 
       {/* Summary */}
-      {profile.summary?.trim() && (
+      {cv.summary?.trim() && (
         <section className="mb-4">
           <SectionTitle>Profil</SectionTitle>
-          <p className="whitespace-pre-line text-text-primary">{profile.summary}</p>
+          <p className="whitespace-pre-line text-text-primary">{cv.summary}</p>
         </section>
       )}
 
@@ -150,7 +159,9 @@ export default function CVRenderer({ profile }: CVRendererProps) {
                     )}
                   </h3>
                   <span className="flex-shrink-0 text-[10px] text-text-secondary">
-                    {dateRange(exp.start_date, exp.end_date, exp.is_current)}
+                    {/* Canonique : pas d'is_current — end_date null = poste en cours
+                        ("" aussi : CV V1 stockés avant coercition). */}
+                    {dateRange(exp.start_date, exp.end_date, !exp.end_date)}
                   </span>
                 </div>
                 {exp.location && (
@@ -159,12 +170,10 @@ export default function CVRenderer({ profile }: CVRendererProps) {
                 {exp.description && (
                   <p className="mt-1 whitespace-pre-line text-text-primary">{exp.description}</p>
                 )}
-                {Array.isArray(exp.achievements) && exp.achievements.filter(Boolean).length > 0 && (
-                  <ul className="mt-1 list-disc space-y-0.5 pl-4 text-text-primary marker:text-action">
-                    {exp.achievements.filter(Boolean).map((a, j) => (
-                      <li key={j}>{a}</li>
-                    ))}
-                  </ul>
+                {(exp.highlighted_skills ?? []).filter(Boolean).length > 0 && (
+                  <p className="mt-0.5 text-[10px] text-text-secondary">
+                    {(exp.highlighted_skills ?? []).filter(Boolean).join(' · ')}
+                  </p>
                 )}
               </div>
             ))}
@@ -180,19 +189,12 @@ export default function CVRenderer({ profile }: CVRendererProps) {
             {educations.map((edu, i) => (
               <div key={edu.id ?? i} className="break-inside-avoid">
                 <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="font-semibold text-text-primary">
-                    {edu.degree}
-                    {edu.field && (
-                      <span className="font-normal text-text-secondary"> · {edu.field}</span>
-                    )}
-                  </h3>
+                  <h3 className="font-semibold text-text-primary">{edu.degree}</h3>
                   <span className="flex-shrink-0 text-[10px] text-text-secondary">
-                    {dateRange(edu.start_date, edu.end_date)}
+                    {formatMonthYear(edu.end_date)}
                   </span>
                 </div>
-                <p className="text-[10px] text-text-secondary">
-                  {[edu.institution, edu.location, edu.grade].filter(Boolean).join(' · ')}
-                </p>
+                <p className="text-[10px] text-text-secondary">{edu.institution}</p>
                 {edu.description && (
                   <p className="mt-0.5 whitespace-pre-line text-text-primary">{edu.description}</p>
                 )}
@@ -229,22 +231,17 @@ export default function CVRenderer({ profile }: CVRendererProps) {
             {projects.map((proj, i) => (
               <div key={proj.id ?? i} className="break-inside-avoid">
                 <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="font-semibold text-text-primary">
-                    {proj.name}
-                    {proj.role && (
-                      <span className="font-normal text-text-secondary"> — {proj.role}</span>
-                    )}
-                  </h3>
+                  <h3 className="font-semibold text-text-primary">{proj.name}</h3>
                   <span className="flex-shrink-0 text-[10px] text-text-secondary">
-                    {dateRange(proj.start_date, proj.end_date)}
+                    {formatMonthYear(proj.completion_date)}
                   </span>
                 </div>
                 {proj.description && (
                   <p className="mt-0.5 whitespace-pre-line text-text-primary">{proj.description}</p>
                 )}
-                {Array.isArray(proj.technologies) && proj.technologies.filter(Boolean).length > 0 && (
+                {(proj.relevant_skills ?? []).filter(Boolean).length > 0 && (
                   <p className="mt-0.5 text-[10px] text-text-secondary">
-                    {proj.technologies.filter(Boolean).join(' · ')}
+                    {(proj.relevant_skills ?? []).filter(Boolean).join(' · ')}
                   </p>
                 )}
               </div>
@@ -275,18 +272,8 @@ export default function CVRenderer({ profile }: CVRendererProps) {
         </section>
       )}
 
-      {/* Languages */}
-      {languages.length > 0 && (
-        <section className="break-inside-avoid">
-          <SectionTitle>Langues</SectionTitle>
-          <p className="text-text-primary">
-            {languages
-              .filter((l) => l.name)
-              .map((l) => (l.level ? `${l.name} (${l.level})` : l.name))
-              .join(' · ')}
-          </p>
-        </section>
-      )}
+      {/* Pas de section Langues : hors schéma canonique GeneratedCVData (M0-T08b).
+          `optimization_notes` (champ interne, BLK-5) n'est jamais rendu. */}
         </div>
       </div>
     </div>

@@ -14,6 +14,7 @@ import type { components } from '@/generated/api';
 import {
   normalizeCVData,
   profileToGeneratedCV,
+  toCanonicalCVData,
   validateProfileForCVSave,
   CV_SAVE_MAX_SKILLS,
 } from '@/lib/cv';
@@ -256,6 +257,45 @@ describe('profileToGeneratedCV — non-perte du corps du CV au save (M0-T08a)', 
     };
     const g = profileToGeneratedCV(p);
     expect(g.selected_experiences[0].description).toBe('• A1');
+  });
+});
+
+describe('toCanonicalCVData — alimentation du renderer canonique (M0-T08b)', () => {
+  it('passthrough STRICT quand le contenu est déjà canonique (zéro transformation)', () => {
+    const canonical = {
+      personal_info: { first_name: 'A', last_name: 'B', email: 'a@b.fr' },
+      summary: 'S',
+      selected_experiences: [
+        {
+          id: 'exp-1',
+          title: 'Dev',
+          company: 'Acme',
+          start_date: '2021-01',
+          end_date: null,
+          description: 'D',
+          // Produit par l'agent : doit survivre tel quel (normalizeCVData le perdrait).
+          highlighted_skills: ['Python', 'FastAPI'],
+        },
+      ],
+      highlighted_skills: [],
+      selected_educations: [],
+    };
+    const out = toCanonicalCVData(canonical);
+    expect(out).toBe(canonical); // même référence : aucune copie, aucune mutation
+    expect(out.selected_experiences[0].highlighted_skills).toEqual(['Python', 'FastAPI']);
+  });
+
+  it('ponte un CV V1 legacy (forme ProfileData) vers le canonique', () => {
+    const out = toCanonicalCVData(fullProfile);
+    expect(out.selected_experiences).toHaveLength(2);
+    expect(out.selected_experiences[0].title).toBe('Lead Backend');
+    expect(out.highlighted_skills.length).toBe(5);
+  });
+
+  it('entrée inexploitable ⇒ canonique sûr et vide', () => {
+    const out = toCanonicalCVData(null);
+    expect(out.selected_experiences).toEqual([]);
+    expect(out.highlighted_skills).toEqual([]);
   });
 });
 

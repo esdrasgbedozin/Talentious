@@ -182,7 +182,9 @@ export function normalizeCVData(raw: unknown): UserProfile {
 // La fidélité fine des champs non canoniques (`languages`, formation
 // `field/grade/location/start_date`, projet `role/start_date`, certification
 // `expiration_date/credential_id`) est traitée par la migration canonique de
-// bout en bout (M0-T08b).
+// bout en bout (M0-T08c). ATTENTION : les `highlighted_skills` PAR EXPÉRIENCE
+// (produits par l'agent) ne sont pas modélisés en ProfileData — un cycle
+// éditeur (load→save) les efface ; réinjection prévue en T08c.
 // ===========================================================================
 
 function optStr(v: unknown): string | null {
@@ -298,6 +300,22 @@ export function profileToGeneratedCV(profile: UserProfile): GeneratedCVData {
     selected_certifications,
     // `optimization_notes` volontairement absent (jamais produit côté app).
   };
+}
+
+/**
+ * `cv_data_json` tel que stocké → GeneratedCVData canonique pour le renderer.
+ *
+ * Passthrough STRICT quand le contenu est déjà canonique (zéro transformation,
+ * ADR-CONTENT-SCHEMA — préserve notamment les `highlighted_skills` par
+ * expérience produits par l'agent, que `normalizeCVData` ne modélise pas).
+ * Un CV V1 legacy (forme ProfileData) est ponté via normalisation + conversion ;
+ * ce pont disparaît avec la décision backfill (PAH-M0) et la migration T08c.
+ */
+export function toCanonicalCVData(raw: unknown): GeneratedCVData {
+  if (raw && typeof raw === 'object' && 'selected_experiences' in raw) {
+    return raw as GeneratedCVData;
+  }
+  return profileToGeneratedCV(normalizeCVData(raw));
 }
 
 // ===========================================================================

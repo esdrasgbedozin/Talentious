@@ -98,12 +98,21 @@ sur le chemin d'édition (revue de code M0, constat B1).
   Correctif : l'adaptateur frontend `profileToGeneratedCV()` (`frontend/src/lib/cv.ts`,
   inverse de `normalizeCVData`) convertit au save, dans `updateCV`, pour honorer le
   contrat `PUT /cv` = `GeneratedCVData`. C'est un **pont transitoire** : l'éditeur reste
-  en `ProfileData`. La cible (éditeur + rendu canoniques de bout en bout, suppression de
-  `normalizeCVData`) est **M0-T08b**. Champs non modélisés par le canonique au save :
-  `achievements` est plié dans `description` ; `languages`, formation
+  en `ProfileData`. Le **rendu** est canonique depuis **M0-T08b** (fait) : le package
+  consomme `GeneratedCVData` tel quel (aperçu éditeur via `profileToGeneratedCV(état)`,
+  page print via le canonique stocké, CV V1 legacy pontés par `toCanonicalCVData` —
+  passthrough strict si déjà canonique). La migration de l'**éditeur** et la résorption
+  des ponts sont **M0-T08c**. Champs non modélisés par le canonique côté éditeur
+  (ProfileData) : `achievements` est plié dans `description` ; `languages`, formation
   `field/grade/location/start_date`, projet `role/start_date` et certification
-  `expiration_date/credential_id` sont perdus au save tant que T08b n'a pas aligné les
-  schémas (l'éditeur affiche encore ces champs — à masquer ou replier en T08b).
+  `expiration_date/credential_id` sont perdus tant que T08c n'a pas aligné les schémas
+  (l'éditeur affiche encore ces champs — à masquer ou replier en T08c). Précisions
+  (revue T08b) : pour un CV **legacy ProfileData**, cette perte intervient désormais
+  **dès le chargement** de l'éditeur (double passage `toCanonicalCVData` →
+  `normalizeCVData`), plus seulement au save ; inversement, un cycle éditeur
+  (load→save) d'un CV **canonique** efface les **`highlighted_skills` par expérience**
+  (et `level`/`importance` des compétences), non modélisés en ProfileData —
+  réinjection ou éditeur canonique en **T08c**.
   Garde-fous complémentaires (revue M0-T08a) : `validateProfileForCVSave` **bloque au
   save** les entrées que la coercition écarterait en silence (expérience sans date
   AAAA-MM, poste « terminé » sans date de fin — sinon relu comme « Présent » —, plus de

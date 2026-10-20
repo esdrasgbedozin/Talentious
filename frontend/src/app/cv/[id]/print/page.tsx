@@ -100,7 +100,8 @@ export default function CVPrintPage() {
         className="cv-print-fit mx-auto w-[210mm] bg-white shadow-lg print:w-auto print:shadow-none"
         style={{ zoom: fitZoom }}
       >
-        <CVRenderer profile={cv.cv_data_json} />
+        {/* Canonique stocké, injecté TEL QUEL — même payload que l'export-service (M2). */}
+        <CVRenderer cv={cv.cv_data_json} />
       </div>
     </div>
   );
