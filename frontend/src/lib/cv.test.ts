@@ -9,15 +9,14 @@
  *
  * Ce test prouve d'abord l'exigence (rouge : `profileToGeneratedCV` n'existe pas),
  * puis la non-perte du corps après implémentation.
+ *
+ * Depuis M0-T08c, l'éditeur travaille directement en canonique (voir
+ * `cvEditor.test.ts`) : ce fichier teste le PONT LEGACY (lecture des CV V1
+ * stockés en ProfileData), seul usage restant de ce module — résorption
+ * définitive après la décision backfill (PAH-M0).
  */
 import type { components } from '@/generated/api';
-import {
-  normalizeCVData,
-  profileToGeneratedCV,
-  toCanonicalCVData,
-  validateProfileForCVSave,
-  CV_SAVE_MAX_SKILLS,
-} from '@/lib/cv';
+import { normalizeCVData, profileToGeneratedCV, toCanonicalCVData } from '@/lib/cv';
 import { createEmptyProfile, type UserProfile } from '@/types/profile';
 
 type GeneratedCVData = components['schemas']['GeneratedCVData'];
@@ -296,124 +295,5 @@ describe('toCanonicalCVData — alimentation du renderer canonique (M0-T08b)', (
     const out = toCanonicalCVData(null);
     expect(out.selected_experiences).toEqual([]);
     expect(out.highlighted_skills).toEqual([]);
-  });
-});
-
-describe('validateProfileForCVSave — garde-fou contre les pertes silencieuses au save (revue M0-T08a)', () => {
-  const base = createEmptyProfile();
-
-  it('accepte un profil valide (aucun problème)', () => {
-    expect(validateProfileForCVSave(fullProfile)).toEqual([]);
-  });
-
-  it('B1 : bloque une expérience remplie sans date de début (sinon supprimée en silence)', () => {
-    const p: UserProfile = {
-      ...base,
-      experiences: [
-        {
-          id: 'exp-1',
-          title: 'Dev',
-          company: 'Acme',
-          location: '',
-          start_date: '',
-          end_date: '',
-          is_current: true,
-          description: 'Desc',
-          achievements: [],
-        },
-      ],
-    };
-    const problems = validateProfileForCVSave(p);
-    expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('date de début');
-    expect(problems[0]).toContain('Dev');
-  });
-
-  it('bloque un poste terminé sans date de fin (sinon il redevient « Présent »)', () => {
-    const p: UserProfile = {
-      ...base,
-      experiences: [
-        {
-          id: 'exp-1',
-          title: 'Dev',
-          company: 'Acme',
-          location: '',
-          start_date: '2021-01',
-          end_date: '',
-          is_current: false,
-          description: '',
-          achievements: [],
-        },
-      ],
-    };
-    const problems = validateProfileForCVSave(p);
-    expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('date de fin');
-  });
-
-  it('bloque une expérience avec contenu mais sans titre ni entreprise (sinon écartée)', () => {
-    const p: UserProfile = {
-      ...base,
-      experiences: [
-        {
-          id: 'exp-1',
-          title: '',
-          company: '',
-          location: '',
-          start_date: '2021-01',
-          end_date: '',
-          is_current: true,
-          description: 'Contenu réel saisi',
-          achievements: [],
-        },
-      ],
-    };
-    const problems = validateProfileForCVSave(p);
-    expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('titre');
-  });
-
-  it('ignore une carte d\'expérience totalement vide (écartée sans dommage)', () => {
-    const p: UserProfile = {
-      ...base,
-      experiences: [
-        {
-          id: 'exp-1',
-          title: '',
-          company: '',
-          location: '',
-          start_date: '',
-          end_date: '',
-          is_current: false,
-          description: '',
-          achievements: [],
-        },
-      ],
-    };
-    expect(validateProfileForCVSave(p)).toEqual([]);
-  });
-
-  it(`bloque au-delà de ${CV_SAVE_MAX_SKILLS} compétences hard+soft (plafond backend)`, () => {
-    const p: UserProfile = {
-      ...base,
-      skills: {
-        hard: Array.from({ length: 25 }, (_, i) => `H${i}`),
-        soft: Array.from({ length: 10 }, (_, i) => `S${i}`),
-      },
-    };
-    const problems = validateProfileForCVSave(p);
-    expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('35');
-  });
-
-  it(`accepte exactement ${CV_SAVE_MAX_SKILLS} compétences`, () => {
-    const p: UserProfile = {
-      ...base,
-      skills: {
-        hard: Array.from({ length: 20 }, (_, i) => `H${i}`),
-        soft: Array.from({ length: 10 }, (_, i) => `S${i}`),
-      },
-    };
-    expect(validateProfileForCVSave(p)).toEqual([]);
   });
 });

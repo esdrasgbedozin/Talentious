@@ -1,15 +1,13 @@
 /**
- * CV data normalization (read side) + conversion to the canonical schema (write side).
+ * PONT LEGACY V1 — lecture des CV stockés en ProfileData (M0-T08c).
  *
- * READ — `normalizeCVData` : maps a stored `cv_data_json` (canonical GeneratedCVData,
- * or legacy V1 ProfileData) to the ProfileData shape the editor and renderer still
- * consume. The ProfileData branch only serves LEGACY V1 CVs: since M0-T08a the editor
- * saves canonical GeneratedCVData, so fresh writes always take the canonical branch.
- *
- * WRITE — `profileToGeneratedCV` : inverse mapping, applied at save time (updateCV)
- * so the `PUT /cv` contract (GeneratedCVData) is honored and the backend coercion
- * does not wipe the CV body (M0-T08a). `validateProfileForCVSave` blocks the saves
- * that would silently lose entries (backend coercion drops them).
+ * Depuis M0-T08c l'app parle GeneratedCVData de bout en bout (renderer, éditeur,
+ * `PUT /cv`) : le SEUL usage restant de ce module est `toCanonicalCVData`,
+ * appelé en lecture (getCV/updateCV) pour ponter un `cv_data_json` V1 legacy
+ * (forme ProfileData) vers le canonique. `normalizeCVData` et
+ * `profileToGeneratedCV` ne servent plus que ce pont (et ses tests) — ne pas
+ * les réutiliser ailleurs. Résorption définitive après la décision backfill
+ * des CV V1 (point d'arrêt PAH-M0).
  */
 import {
   createEmptyProfile,
@@ -172,19 +170,14 @@ export function normalizeCVData(raw: unknown): UserProfile {
 }
 
 // ===========================================================================
-// ProfileData -> GeneratedCVData (sens INVERSE de normalizeCVData).
-//
-// L'éditeur manipule du ProfileData ; le contrat `PUT /cv` et le stockage
-// attendent le schéma canonique `GeneratedCVData`. Sans cette conversion au
-// save, la coercition backend (qui ne lit que les clés `selected_*`) vide le
-// corps du CV (M0-T08a). On préserve ici tout ce que le canonique sait porter ;
-// le contenu visible non modélisé (`achievements`) est plié dans `description`.
-// La fidélité fine des champs non canoniques (`languages`, formation
+// ProfileData -> GeneratedCVData (sens INVERSE de normalizeCVData) — seconde
+// moitié du pont legacy : un CV V1 (forme ProfileData) est normalisé puis
+// reconverti en canonique à la LECTURE (toCanonicalCVData). On préserve tout ce
+// que le canonique sait porter ; le contenu non modélisé (`achievements`) est
+// plié dans `description`, le reste (`languages`, formation
 // `field/grade/location/start_date`, projet `role/start_date`, certification
-// `expiration_date/credential_id`) est traitée par la migration canonique de
-// bout en bout (M0-T08c). ATTENTION : les `highlighted_skills` PAR EXPÉRIENCE
-// (produits par l'agent) ne sont pas modélisés en ProfileData — un cycle
-// éditeur (load→save) les efface ; réinjection prévue en T08c.
+// `expiration_date/credential_id`) est perdu au passage du pont — population
+// concernée et backfill arbitrés à PAH-M0.
 // ===========================================================================
 
 function optStr(v: unknown): string | null {
@@ -309,7 +302,7 @@ export function profileToGeneratedCV(profile: UserProfile): GeneratedCVData {
  * ADR-CONTENT-SCHEMA — préserve notamment les `highlighted_skills` par
  * expérience produits par l'agent, que `normalizeCVData` ne modélise pas).
  * Un CV V1 legacy (forme ProfileData) est ponté via normalisation + conversion ;
- * ce pont disparaît avec la décision backfill (PAH-M0) et la migration T08c.
+ * ce pont disparaît avec la décision backfill des CV V1 (PAH-M0).
  */
 export function toCanonicalCVData(raw: unknown): GeneratedCVData {
   if (raw && typeof raw === 'object' && 'selected_experiences' in raw) {
@@ -318,60 +311,3 @@ export function toCanonicalCVData(raw: unknown): GeneratedCVData {
   return profileToGeneratedCV(normalizeCVData(raw));
 }
 
-// ===========================================================================
-// Validation avant save (revue M0-T08a) : la coercition backend ÉCARTE en
-// silence les entrées qui ne satisfont pas le schéma canonique (expérience sans
-// date AAAA-MM, listes au-delà du plafond). Plutôt que de laisser l'utilisateur
-// voir « CV enregistré » puis découvrir la disparition au rechargement, on
-// bloque le save avec un message explicite.
-// ===========================================================================
-
-/** Plafond backend (`MAX_LIST_ITEMS`) appliqué à `highlighted_skills` APRÈS la
- * fusion hard + soft : au-delà, les compétences excédentaires sont tronquées. */
-export const CV_SAVE_MAX_SKILLS = 30;
-
-const MONTH_RE = /^[0-9]{4}-(0[1-9]|1[0-2])$/;
-
-function isMonth(v: unknown): boolean {
-  return typeof v === 'string' && MONTH_RE.test(v.trim());
-}
-
-/** Problèmes qui causeraient une perte silencieuse au save ; [] si tout est sûr. */
-export function validateProfileForCVSave(profile: UserProfile): string[] {
-  const problems: string[] = [];
-  const p = (profile ?? {}) as Partial<UserProfile>;
-
-  for (const e of p.experiences ?? []) {
-    const label = str(e.title).trim() || str(e.company).trim();
-    const hasContent =
-      isNonEmptyStr(e.description) ||
-      (Array.isArray(e.achievements) && e.achievements.some(isNonEmptyStr));
-    if (!label) {
-      // Carte totalement vide : écartée sans dommage ; avec du contenu, on bloque.
-      if (hasContent) {
-        problems.push(
-          'Une expérience doit avoir un titre ou une entreprise pour être enregistrée.',
-        );
-      }
-      continue;
-    }
-    if (!isMonth(e.start_date)) {
-      problems.push(
-        `L'expérience « ${label} » doit avoir une date de début (AAAA-MM) pour être enregistrée.`,
-      );
-    } else if (!e.is_current && !isMonth(e.end_date)) {
-      problems.push(
-        `L'expérience « ${label} » est marquée terminée : renseignez sa date de fin (AAAA-MM) ou cochez « Poste actuel ».`,
-      );
-    }
-  }
-
-  const skillCount = (p.skills?.hard?.length ?? 0) + (p.skills?.soft?.length ?? 0);
-  if (skillCount > CV_SAVE_MAX_SKILLS) {
-    problems.push(
-      `Au plus ${CV_SAVE_MAX_SKILLS} compétences (techniques + transversales) peuvent être enregistrées — ${skillCount} saisies.`,
-    );
-  }
-
-  return problems;
-}

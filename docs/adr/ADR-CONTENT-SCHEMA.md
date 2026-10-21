@@ -95,33 +95,37 @@ sur le chemin d'édition (revue de code M0, constat B1).
   rompu : l'éditeur frontend manipule du `ProfileData` et sauvegardait `cv_data_json`
   tel quel ; or la coercition backend ne lit que les clés canoniques `selected_*` →
   elle **remplaçait le corps du CV par des tableaux vides** (perte de données en prod).
-  Correctif : l'adaptateur frontend `profileToGeneratedCV()` (`frontend/src/lib/cv.ts`,
-  inverse de `normalizeCVData`) convertit au save, dans `updateCV`, pour honorer le
-  contrat `PUT /cv` = `GeneratedCVData`. C'est un **pont transitoire** : l'éditeur reste
-  en `ProfileData`. Le **rendu** est canonique depuis **M0-T08b** (fait) : le package
-  consomme `GeneratedCVData` tel quel (aperçu éditeur via `profileToGeneratedCV(état)`,
-  page print via le canonique stocké, CV V1 legacy pontés par `toCanonicalCVData` —
-  passthrough strict si déjà canonique). La migration de l'**éditeur** et la résorption
-  des ponts sont **M0-T08c**. Champs non modélisés par le canonique côté éditeur
-  (ProfileData) : `achievements` est plié dans `description` ; `languages`, formation
-  `field/grade/location/start_date`, projet `role/start_date` et certification
-  `expiration_date/credential_id` sont perdus tant que T08c n'a pas aligné les schémas
-  (l'éditeur affiche encore ces champs — à masquer ou replier en T08c). Précisions
-  (revue T08b) : pour un CV **legacy ProfileData**, cette perte intervient désormais
-  **dès le chargement** de l'éditeur (double passage `toCanonicalCVData` →
-  `normalizeCVData`), plus seulement au save ; inversement, un cycle éditeur
-  (load→save) d'un CV **canonique** efface les **`highlighted_skills` par expérience**
-  (et `level`/`importance` des compétences), non modélisés en ProfileData —
-  réinjection ou éditeur canonique en **T08c**.
-  Garde-fous complémentaires (revue M0-T08a) : `validateProfileForCVSave` **bloque au
-  save** les entrées que la coercition écarterait en silence (expérience sans date
-  AAAA-MM, poste « terminé » sans date de fin — sinon relu comme « Présent » —, plus de
-  30 compétences hard+soft) ; l'éditeur **resynchronise son état** sur la réponse du PUT
-  (ce qui est réellement stocké devient visible immédiatement) ; les URLs sans schéma
-  sont préfixées `https://` (le backend rejette toute URL non http(s)) ; `normalizeCVData`
-  lit aussi la clé canonique `url` des certifications (sinon perdue au cycle
-  lecture→save). Stabilité prouvée par test de **point fixe**
-  (`profileToGeneratedCV(normalizeCVData(g)) = g`).
+  Le **rendu** est canonique depuis **M0-T08b**, et l'**éditeur** depuis **M0-T08c**
+  (fait) : son état EST le `GeneratedCVData` (formulaires dédiés aux champs canoniques,
+  compétences par expérience éditables), chargé via `getCV` + `ensureCVShape` et envoyé
+  **tel quel** au `PUT /cv` (`frontend/src/lib/cvEditor.ts`). `ensureCVShape` normalise
+  les CV V1 **bruts** (stockés avant la ceinture) vers ce que le backend stockerait —
+  listes absentes complétées, ids garantis uniques, champs requis non-chaînes remis à
+  `''`, `end_date` `''` → null (poste en cours), catégories libres (« Soft Skill »)
+  canonicalisées à l'enum — sans quoi un simple save faisait basculer les compétences
+  soft en « techniques » et décochait « Poste actuel » (revue T08c, B1/B2) ; un
+  canonique propre traverse à l'identique (testé, y compris un cycle V1 brut avec
+  coercition backend simulée no-op). Un cycle éditeur
+  d'un CV canonique ne perd **plus rien** : `highlighted_skills` par expérience et
+  `level`/`importance` des compétences survivent (l'édition par noms préserve les
+  métadonnées des compétences conservées — `withSkillNames`). Le **seul pont restant**
+  est `toCanonicalCVData` (lecture, `frontend/src/lib/cv.ts`) pour les CV V1 legacy
+  stockés en ProfileData : à ce passage, `achievements` est plié dans `description` et
+  les champs non modélisés (`languages`, formation `field/grade/location/start_date`,
+  projet `role/start_date`, certification `expiration_date/credential_id`) sont perdus
+  — population et backfill arbitrés à **PAH-M0**, où ce pont sera résorbé.
+  Garde-fous au save (revue M0-T08a, portés en canonique par T08c et alignés sur les
+  règles d'éviction backend — revue T08c, C3) : `validateCVForSave` **bloque** les
+  entrées que la coercition écarterait ou tronquerait en silence (expérience sans date
+  AAAA-MM ; date de fin vide sans « Poste actuel » — `end_date` null = poste en cours
+  dans le canonique ; projet/certification avec contenu mais sans nom ; formation sans
+  diplôme ni établissement ; toute liste au-delà du plafond backend de 30, compétences
+  par expérience/projet comprises) ;
+  `sanitizeCVForSave` écarte les brouillons vides, normalise les optionnels vides en
+  null, préfixe `https://` les URLs sans schéma (le backend rejette toute URL non
+  http(s)) et ne renvoie **jamais** `optimization_notes` (BLK-5) ; l'éditeur
+  **resynchronise son état** sur la réponse du PUT et son **aperçu rend exactement le
+  payload du save** (aperçu = PDF).
 - Un CV dont la génération produirait un contenu inexploitable échoue proprement (pas de
   CV cassé stocké), au prix d'un nouvel essai utilisateur.
 - Les CV V1 déjà stockés peuvent être non canoniques : traitement décidé à PAH-M0 (non

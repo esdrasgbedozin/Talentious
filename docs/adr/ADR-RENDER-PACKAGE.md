@@ -113,9 +113,14 @@ couvre les deux : la décision du package partagé et son intégration au build.
   section Langues retirée (hors canonique) ; `optimization_notes` jamais rendu (BLK-5,
   testé). **Dette T08 soldée** : les tests de rendu vivent désormais **dans le package**
   (`src/__tests__/`, fixtures canoniques partagées `fixtures/cv-reference/` importées en
-  relatif — source unique, celle du futur contrat visuel M2). La migration de l'éditeur
-  (encore ProfileData) est **M0-T08c** ; le package n'a pas encore de config eslint
-  (gates : tsc strict + jest) — rattaché à T08c.
+  relatif — source unique, celle du futur contrat visuel M2).
+- **M0-T08c (fait)** : l'**éditeur** travaille lui aussi en canonique (état =
+  `GeneratedCVData`, envoyé tel quel au `PUT /cv` ; son aperçu rend exactement le
+  payload du save) — `profileToGeneratedCV`/`normalizeCVData` ne subsistent que dans le
+  pont de lecture des CV V1 legacy (`toCanonicalCVData`, résorbé à PAH-M0). Le package a
+  sa **config eslint** (`eslint.config.mjs`, même socle que le frontend, script `lint`) :
+  gates du package = eslint + tsc strict + jest — **en local** ; le branchement CI de
+  ces gates reste à faire (revue T08c, S7 — tracé roadmap).
 - L'invariant « aperçu = PDF » devient **testable** une fois l'export-service branché
   (M2) : baseline de non-régression visuelle sur les mêmes fixtures (M0-T01).
 

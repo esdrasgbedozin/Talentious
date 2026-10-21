@@ -5,7 +5,7 @@
 
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import type { UserProfile } from '@/types/profile';
-import { profileToGeneratedCV, toCanonicalCVData } from '@/lib/cv';
+import { toCanonicalCVData } from '@/lib/cv';
 import type { components } from '@/generated/api';
 import {
   formatValidationMessage,
@@ -349,20 +349,18 @@ export const getCV = async (cvId: string): Promise<CVDetail> => {
 /**
  * Update a CV's name and/or content (PUT /cv/{id}).
  *
- * The editor manipulates ProfileData, but the `PUT /cv` contract and backend
- * coercion expect the canonical GeneratedCVData — sending ProfileData silently
- * wipes the CV body (M0-T08a). Convert here (symmetric with getCV's read-side
- * normalization) so the contract is honored and nothing is lost.
+ * The editor works on the canonical GeneratedCVData (M0-T08c), the exact shape
+ * the `PUT /cv` contract and backend coercion expect: the state is sent AS IS,
+ * zero transformation (ADR-CONTENT-SCHEMA) — per-experience highlighted_skills
+ * included. Sending anything else silently wipes the CV body (M0-T08a).
  */
 export const updateCV = async (
   cvId: string,
-  payload: { cv_name?: string; cv_data_json?: UserProfile },
+  payload: { cv_name?: string; cv_data_json?: GeneratedCVData },
 ): Promise<CVDetail> => {
   const body: Record<string, unknown> = {};
   if (payload.cv_name !== undefined) body.cv_name = payload.cv_name;
-  if (payload.cv_data_json !== undefined) {
-    body.cv_data_json = profileToGeneratedCV(payload.cv_data_json);
-  }
+  if (payload.cv_data_json !== undefined) body.cv_data_json = payload.cv_data_json;
   const { data } = await apiClient.put<CVDetail>(`/cv/${cvId}`, body);
   return { ...data, cv_data_json: toCanonicalCVData(data.cv_data_json) };
 };
