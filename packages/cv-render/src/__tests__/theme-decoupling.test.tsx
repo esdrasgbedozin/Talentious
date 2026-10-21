@@ -60,7 +60,7 @@ function packageSources(dir = join(__dirname, '..')): Array<{ file: string; cont
 }
 
 describe('découplage du thème — garde-fou permanent (rouge T09 → vert T10)', () => {
-  it.failing('aucun token global de l\'app dans les sources du package (grep)', () => {
+  it('aucun token global de l\'app dans les sources du package (grep)', () => {
     const sources = packageSources();
     // Contrôle positif (revue T09) : un scan aveugle (répertoire vide ou filtre
     // cassé) passerait en silence — on exige qu'il voie réellement des sources.
@@ -74,7 +74,7 @@ describe('découplage du thème — garde-fou permanent (rouge T09 → vert T10)
     expect(offenders).toEqual([]);
   });
 
-  it.failing('le rendu suit le thème CV : les titres de section portent var(--cv-accent) et aucune classe interdite ne fuit dans le balisage', () => {
+  it('le rendu suit le thème CV : les titres de section portent var(--cv-accent) et aucune classe interdite ne fuit dans le balisage', () => {
     const { container } = render(
       <div style={themeToCssVars(null) as React.CSSProperties}>
         <CVRenderer cv={complete} />

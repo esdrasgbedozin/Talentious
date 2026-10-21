@@ -16,10 +16,23 @@
  */
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { GeneratedCVData } from './types';
+import type { components } from './generated/api';
+import { themeToCssVars } from './theme';
+
+type CVThemeTokens = components['schemas']['CVThemeTokens'];
 
 interface CVRendererProps {
   cv: GeneratedCVData;
+  /** Snapshot de thème du document (contrat `CVThemeTokens`). Absent : défaut
+   * anthracite quasi-monochrome (D2) — cas de tous les documents existants. */
+  theme?: CVThemeTokens | null;
 }
+
+// Styles THÉMABLES : toujours en inline `var(--cv-*)` (règle ADR-THEME-DECOUPLED
+// arbitrée en revue T09) — jamais de classe de charte app, jamais de build CSS
+// requis pour que le thème s'applique (aperçu Next = Chromium export-service).
+const mutedText = { color: 'var(--cv-muted)' } as const;
+const headingFont = { fontFamily: 'var(--cv-font-heading)' } as const;
 
 // A4 geometry and sheet padding (mm). Kept in sync with the print @page rules.
 const A4_WIDTH_MM = 210;
@@ -54,13 +67,16 @@ function dateRange(start?: string | null, end?: string | null, isCurrent?: boole
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mb-2 border-b border-border pb-1 text-[13px] font-bold uppercase tracking-wide text-action">
+    <h2
+      className="mb-2 border-b pb-1 text-[13px] font-bold uppercase tracking-wide"
+      style={{ ...headingFont, color: 'var(--cv-accent)', borderColor: 'var(--cv-muted)' }}
+    >
       {children}
     </h2>
   );
 }
 
-export default function CVRenderer({ cv }: CVRendererProps) {
+export default function CVRenderer({ cv, theme }: CVRendererProps) {
   const p = cv.personal_info;
   const fullName = [p?.first_name, p?.last_name].filter(Boolean).join(' ').trim();
   const location = [p?.city, p?.country].filter(Boolean).join(', ');
@@ -107,8 +123,15 @@ export default function CVRenderer({ cv }: CVRendererProps) {
 
   return (
     <div
-      className="cv-sheet relative mx-auto overflow-hidden bg-white text-text-primary"
-      style={{ width: `${A4_WIDTH_MM}mm`, height: `${A4_HEIGHT_MM}mm` }}
+      className="cv-sheet relative mx-auto overflow-hidden"
+      style={{
+        ...themeToCssVars(theme),
+        width: `${A4_WIDTH_MM}mm`,
+        height: `${A4_HEIGHT_MM}mm`,
+        backgroundColor: 'var(--cv-background)',
+        color: 'var(--cv-text)',
+        fontFamily: 'var(--cv-font-body)',
+      }}
     >
       <div style={{ padding: `${PAD_Y_MM}mm ${PAD_X_MM}mm` }}>
         <div
@@ -121,14 +144,14 @@ export default function CVRenderer({ cv }: CVRendererProps) {
         >
       {/* Header */}
       <header className="mb-4">
-        <h1 className="text-3xl font-bold tracking-tight text-primary">
+        <h1 className="text-3xl font-bold tracking-tight" style={headingFont}>
           {fullName || 'Votre nom'}
         </h1>
         {contactBits.length > 0 && (
-          <p className="mt-2 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-text-secondary">
+          <p className="mt-2 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px]" style={mutedText}>
             {contactBits.map((bit, i) => (
               <span key={i} className="flex items-center gap-2">
-                {i > 0 && <span className="text-border">•</span>}
+                {i > 0 && <span style={mutedText}>•</span>}
                 {bit}
               </span>
             ))}
@@ -140,7 +163,7 @@ export default function CVRenderer({ cv }: CVRendererProps) {
       {cv.summary?.trim() && (
         <section className="mb-4">
           <SectionTitle>Profil</SectionTitle>
-          <p className="whitespace-pre-line text-text-primary">{cv.summary}</p>
+          <p className="whitespace-pre-line">{cv.summary}</p>
         </section>
       )}
 
@@ -152,26 +175,26 @@ export default function CVRenderer({ cv }: CVRendererProps) {
             {experiences.map((exp, i) => (
               <div key={exp.id ?? i} className="break-inside-avoid">
                 <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="font-semibold text-text-primary">
+                  <h3 className="font-semibold">
                     {exp.title}
                     {exp.company && (
-                      <span className="font-normal text-text-secondary"> — {exp.company}</span>
+                      <span className="font-normal" style={mutedText}> — {exp.company}</span>
                     )}
                   </h3>
-                  <span className="flex-shrink-0 text-[10px] text-text-secondary">
+                  <span className="flex-shrink-0 text-[10px]" style={mutedText}>
                     {/* Canonique : pas d'is_current — end_date null = poste en cours
                         ("" aussi : CV V1 stockés avant coercition). */}
                     {dateRange(exp.start_date, exp.end_date, !exp.end_date)}
                   </span>
                 </div>
                 {exp.location && (
-                  <p className="text-[10px] italic text-text-secondary">{exp.location}</p>
+                  <p className="text-[10px] italic" style={mutedText}>{exp.location}</p>
                 )}
                 {exp.description && (
-                  <p className="mt-1 whitespace-pre-line text-text-primary">{exp.description}</p>
+                  <p className="mt-1 whitespace-pre-line">{exp.description}</p>
                 )}
                 {(exp.highlighted_skills ?? []).filter(Boolean).length > 0 && (
-                  <p className="mt-0.5 text-[10px] text-text-secondary">
+                  <p className="mt-0.5 text-[10px]" style={mutedText}>
                     {(exp.highlighted_skills ?? []).filter(Boolean).join(' · ')}
                   </p>
                 )}
@@ -189,14 +212,14 @@ export default function CVRenderer({ cv }: CVRendererProps) {
             {educations.map((edu, i) => (
               <div key={edu.id ?? i} className="break-inside-avoid">
                 <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="font-semibold text-text-primary">{edu.degree}</h3>
-                  <span className="flex-shrink-0 text-[10px] text-text-secondary">
+                  <h3 className="font-semibold">{edu.degree}</h3>
+                  <span className="flex-shrink-0 text-[10px]" style={mutedText}>
                     {formatMonthYear(edu.end_date)}
                   </span>
                 </div>
-                <p className="text-[10px] text-text-secondary">{edu.institution}</p>
+                <p className="text-[10px]" style={mutedText}>{edu.institution}</p>
                 {edu.description && (
-                  <p className="mt-0.5 whitespace-pre-line text-text-primary">{edu.description}</p>
+                  <p className="mt-0.5 whitespace-pre-line">{edu.description}</p>
                 )}
               </div>
             ))}
@@ -210,13 +233,13 @@ export default function CVRenderer({ cv }: CVRendererProps) {
           <SectionTitle>Compétences</SectionTitle>
           {hardSkills.length > 0 && (
             <div className="mb-1.5">
-              <span className="font-semibold text-text-primary">Techniques : </span>
+              <span className="font-semibold">Techniques : </span>
               <SkillChips skills={hardSkills} />
             </div>
           )}
           {softSkills.length > 0 && (
             <div>
-              <span className="font-semibold text-text-primary">Transversales : </span>
+              <span className="font-semibold">Transversales : </span>
               <SkillChips skills={softSkills} />
             </div>
           )}
@@ -231,16 +254,16 @@ export default function CVRenderer({ cv }: CVRendererProps) {
             {projects.map((proj, i) => (
               <div key={proj.id ?? i} className="break-inside-avoid">
                 <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="font-semibold text-text-primary">{proj.name}</h3>
-                  <span className="flex-shrink-0 text-[10px] text-text-secondary">
+                  <h3 className="font-semibold">{proj.name}</h3>
+                  <span className="flex-shrink-0 text-[10px]" style={mutedText}>
                     {formatMonthYear(proj.completion_date)}
                   </span>
                 </div>
                 {proj.description && (
-                  <p className="mt-0.5 whitespace-pre-line text-text-primary">{proj.description}</p>
+                  <p className="mt-0.5 whitespace-pre-line">{proj.description}</p>
                 )}
                 {(proj.relevant_skills ?? []).filter(Boolean).length > 0 && (
-                  <p className="mt-0.5 text-[10px] text-text-secondary">
+                  <p className="mt-0.5 text-[10px]" style={mutedText}>
                     {(proj.relevant_skills ?? []).filter(Boolean).join(' · ')}
                   </p>
                 )}
@@ -257,13 +280,13 @@ export default function CVRenderer({ cv }: CVRendererProps) {
           <div className="space-y-1">
             {certifications.map((cert, i) => (
               <div key={cert.id ?? i} className="flex items-baseline justify-between gap-3">
-                <span className="text-text-primary">
+                <span>
                   <span className="font-semibold">{cert.name}</span>
                   {cert.issuer && (
-                    <span className="text-text-secondary"> — {cert.issuer}</span>
+                    <span style={mutedText}> — {cert.issuer}</span>
                   )}
                 </span>
-                <span className="flex-shrink-0 text-[10px] text-text-secondary">
+                <span className="flex-shrink-0 text-[10px]" style={mutedText}>
                   {formatMonthYear(cert.issue_date)}
                 </span>
               </div>
@@ -286,7 +309,8 @@ function SkillChips({ skills }: { skills: string[] }) {
       {skills.filter(Boolean).map((skill, i) => (
         <span
           key={i}
-          className="rounded bg-action/10 px-2 py-0.5 text-[10px] text-text-primary print:bg-action/10"
+          className="rounded px-2 py-0.5 text-[10px]"
+          style={{ backgroundColor: 'color-mix(in srgb, var(--cv-accent) 10%, transparent)' }}
         >
           {skill}
         </span>
