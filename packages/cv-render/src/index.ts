@@ -23,4 +23,5 @@ export type CvRenderPackage = typeof CV_RENDER_PACKAGE;
 // canonique GeneratedCVData (prop `cv`), sans transformation — même entrée pour
 // l'aperçu Next et l'export-service (M2).
 export { default as CVRenderer } from './CVRenderer';
+export { themeToCssVars, DEFAULT_CV_THEME_TOKENS } from './theme';
 export type { GeneratedCVData } from './types';
