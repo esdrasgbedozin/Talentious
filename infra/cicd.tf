@@ -90,6 +90,17 @@ resource "google_project_iam_member" "deployer_firebase_hosting" {
   member  = "serviceAccount:${google_service_account.deployer.email}"
 }
 
+# firebase-tools vérifie au pré-vol que l'API Hosting est activée
+# (GET serviceusage/services/firebasehosting.googleapis.com) : sans ce droit de
+# LECTURE, `firebase deploy --only hosting` échoue en 403 avant de purger le
+# CDN (déploiements #38/#39 du 2026-10-22). Viewer = services.get/list
+# uniquement — aucun droit d'activation ni d'usage.
+resource "google_project_iam_member" "deployer_serviceusage_viewer" {
+  project = var.project_id
+  role    = "roles/serviceusage.serviceUsageViewer"
+  member  = "serviceAccount:${google_service_account.deployer.email}"
+}
+
 # Nécessaire pour déployer des révisions qui tournent sous les SA runtime
 # (actAs) — restreint aux 5 SA de service, pas au niveau projet.
 resource "google_service_account_iam_member" "deployer_acts_as" {
