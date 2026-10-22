@@ -24,6 +24,8 @@ export type CvRenderPackage = typeof CV_RENDER_PACKAGE;
 // l'aperçu Next et l'export-service (M2).
 export { default as CVRenderer } from './CVRenderer';
 export { themeToCssVars, DEFAULT_CV_THEME_TOKENS } from './theme';
+export { getCVLocale, CV_RENDER_LOCALES, DEFAULT_CV_LANGUAGE } from './i18n';
+export type { CVLocale, DocumentLanguage } from './i18n';
 export {
   getTemplate,
   resolveTemplateId,

@@ -28,10 +28,16 @@ divergence casserait « aperçu = PDF ».
    `template_id` elle-même (T12 consomme `getTemplate`).
 
 2. **Contrat de template unique.** Tout template est un composant
-   `CVTemplateProps = { cv: GeneratedCVData, theme?: CVThemeTokens | null }`.
-   Le template choisit la STRUCTURE ; le thème reste orthogonal
-   (ADR-THEME-DECOUPLED) : n'importe quel thème s'applique à n'importe quel
-   template.
+   `CVTemplateProps = { cv: GeneratedCVData, theme?: CVThemeTokens | null,
+   language?: DocumentLanguage | null }` (langue ajoutée en M0-T13 : libellés de
+   RENDU — sections, mois, « aujourd'hui » — via le dictionnaire `i18n.ts`,
+   repli FR strict ; ne traduit jamais le contenu). Le template choisit la
+   STRUCTURE ; le thème reste orthogonal (ADR-THEME-DECOUPLED) : n'importe quel
+   thème s'applique à n'importe quel template. NOTE (relevé en revue T11+T12) :
+   en M0, les pages éditeur/print ne transmettent NI `theme` NI `language` —
+   défauts (anthracite, FR) partout. Le branchement de l'enveloppe snapshotée
+   (`theme_json`/`language`, M1-T13) arrive avec le choix de template/thème (M3)
+   et le multilingue (M7) : trou assumé, pas un oubli.
 
 3. **Repli garanti, jamais d'échec.** Un `template_id` inconnu, absent ou
    corrompu résout vers `modern_sobre` (le template gratuit) : un document ne

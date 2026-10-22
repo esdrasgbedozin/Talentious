@@ -18,6 +18,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import type { GeneratedCVData } from './types';
 import type { components } from './generated/api';
 import { themeToCssVars } from './theme';
+import { getCVLocale, type CVLocale, type DocumentLanguage } from './i18n';
 
 type CVThemeTokens = components['schemas']['CVThemeTokens'];
 
@@ -26,6 +27,10 @@ interface CVRendererProps {
   /** Snapshot de thème du document (contrat `CVThemeTokens`). Absent : défaut
    * anthracite quasi-monochrome (D2) — cas de tous les documents existants. */
   theme?: CVThemeTokens | null;
+  /** Langue de RENDU de l'enveloppe (`DocumentLanguage`) : libellés générés
+   * (sections, mois, « aujourd'hui ») uniquement — ne traduit jamais le
+   * contenu. Absent ou inconnu : FR (tous les documents existants). */
+  language?: DocumentLanguage | null;
 }
 
 // Styles THÉMABLES : toujours en inline `var(--cv-*)` (règle ADR-THEME-DECOUPLED
@@ -44,23 +49,26 @@ const MM_TO_PX = 96 / 25.4;
 // content instead. In practice content stays well above this floor.
 const MIN_SCALE = 0.62;
 
-/** "2020-03" | "2020-03-15" → "mars 2020"; "" → "". */
-function formatMonthYear(value?: string | null): string {
-  if (!value) return '';
+/** "2020-03" | "2020-03-15" → "mars 2020" / "Mar 2020" selon la locale ; "" → "". */
+function formatMonthYear(t: CVLocale, value?: string | null): string {
+  // Document corrompu (non-chaîne) : ne jamais renvoyer un objet comme enfant
+  // React — le rendu Chromium (M2) d'un document ne doit pas pouvoir planter.
+  if (!value || typeof value !== 'string') return '';
   const match = /^(\d{4})-(\d{2})/.exec(value);
   if (!match) return value;
   const [, year, month] = match;
-  const months = [
-    'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
-    'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.',
-  ];
   const idx = Number(month) - 1;
-  return idx >= 0 && idx < 12 ? `${months[idx]} ${year}` : year;
+  return idx >= 0 && idx < 12 ? `${t.months[idx]} ${year}` : year;
 }
 
-function dateRange(start?: string | null, end?: string | null, isCurrent?: boolean): string {
-  const from = formatMonthYear(start);
-  const to = isCurrent ? "aujourd'hui" : formatMonthYear(end);
+function dateRange(
+  t: CVLocale,
+  start?: string | null,
+  end?: string | null,
+  isCurrent?: boolean,
+): string {
+  const from = formatMonthYear(t, start);
+  const to = isCurrent ? t.present : formatMonthYear(t, end);
   if (from && to) return `${from} — ${to}`;
   return from || to || '';
 }
@@ -76,7 +84,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function CVRenderer({ cv, theme }: CVRendererProps) {
+export default function CVRenderer({ cv, theme, language }: CVRendererProps) {
+  const t = getCVLocale(language);
   const p = cv.personal_info;
   const fullName = [p?.first_name, p?.last_name].filter(Boolean).join(' ').trim();
   const location = [p?.city, p?.country].filter(Boolean).join(', ');
@@ -162,7 +171,7 @@ export default function CVRenderer({ cv, theme }: CVRendererProps) {
       {/* Summary */}
       {cv.summary?.trim() && (
         <section className="mb-4">
-          <SectionTitle>Profil</SectionTitle>
+          <SectionTitle>{t.sections.profile}</SectionTitle>
           <p className="whitespace-pre-line">{cv.summary}</p>
         </section>
       )}
@@ -170,7 +179,7 @@ export default function CVRenderer({ cv, theme }: CVRendererProps) {
       {/* Experiences */}
       {experiences.length > 0 && (
         <section className="mb-4">
-          <SectionTitle>Expérience professionnelle</SectionTitle>
+          <SectionTitle>{t.sections.experience}</SectionTitle>
           <div className="space-y-3">
             {experiences.map((exp, i) => (
               <div key={exp.id ?? i} className="break-inside-avoid">
@@ -184,7 +193,7 @@ export default function CVRenderer({ cv, theme }: CVRendererProps) {
                   <span className="flex-shrink-0 text-[10px]" style={mutedText}>
                     {/* Canonique : pas d'is_current — end_date null = poste en cours
                         ("" aussi : CV V1 stockés avant coercition). */}
-                    {dateRange(exp.start_date, exp.end_date, !exp.end_date)}
+                    {dateRange(t, exp.start_date, exp.end_date, !exp.end_date)}
                   </span>
                 </div>
                 {exp.location && (
@@ -207,14 +216,14 @@ export default function CVRenderer({ cv, theme }: CVRendererProps) {
       {/* Education */}
       {educations.length > 0 && (
         <section className="mb-4">
-          <SectionTitle>Formation</SectionTitle>
+          <SectionTitle>{t.sections.education}</SectionTitle>
           <div className="space-y-2">
             {educations.map((edu, i) => (
               <div key={edu.id ?? i} className="break-inside-avoid">
                 <div className="flex items-baseline justify-between gap-3">
                   <h3 className="font-semibold">{edu.degree}</h3>
                   <span className="flex-shrink-0 text-[10px]" style={mutedText}>
-                    {formatMonthYear(edu.end_date)}
+                    {formatMonthYear(t, edu.end_date)}
                   </span>
                 </div>
                 <p className="text-[10px]" style={mutedText}>{edu.institution}</p>
@@ -230,16 +239,16 @@ export default function CVRenderer({ cv, theme }: CVRendererProps) {
       {/* Skills */}
       {(hardSkills.length > 0 || softSkills.length > 0) && (
         <section className="mb-4 break-inside-avoid">
-          <SectionTitle>Compétences</SectionTitle>
+          <SectionTitle>{t.sections.skills}</SectionTitle>
           {hardSkills.length > 0 && (
             <div className="mb-1.5">
-              <span className="font-semibold">Techniques : </span>
+              <span className="font-semibold">{t.skillGroups.hard}{t.colon}</span>
               <SkillChips skills={hardSkills} />
             </div>
           )}
           {softSkills.length > 0 && (
             <div>
-              <span className="font-semibold">Transversales : </span>
+              <span className="font-semibold">{t.skillGroups.soft}{t.colon}</span>
               <SkillChips skills={softSkills} />
             </div>
           )}
@@ -249,14 +258,14 @@ export default function CVRenderer({ cv, theme }: CVRendererProps) {
       {/* Projects */}
       {projects.length > 0 && (
         <section className="mb-4">
-          <SectionTitle>Projets</SectionTitle>
+          <SectionTitle>{t.sections.projects}</SectionTitle>
           <div className="space-y-2">
             {projects.map((proj, i) => (
               <div key={proj.id ?? i} className="break-inside-avoid">
                 <div className="flex items-baseline justify-between gap-3">
                   <h3 className="font-semibold">{proj.name}</h3>
                   <span className="flex-shrink-0 text-[10px]" style={mutedText}>
-                    {formatMonthYear(proj.completion_date)}
+                    {formatMonthYear(t, proj.completion_date)}
                   </span>
                 </div>
                 {proj.description && (
@@ -276,7 +285,7 @@ export default function CVRenderer({ cv, theme }: CVRendererProps) {
       {/* Certifications */}
       {certifications.length > 0 && (
         <section className="mb-4 break-inside-avoid">
-          <SectionTitle>Certifications</SectionTitle>
+          <SectionTitle>{t.sections.certifications}</SectionTitle>
           <div className="space-y-1">
             {certifications.map((cert, i) => (
               <div key={cert.id ?? i} className="flex items-baseline justify-between gap-3">
@@ -287,7 +296,7 @@ export default function CVRenderer({ cv, theme }: CVRendererProps) {
                   )}
                 </span>
                 <span className="flex-shrink-0 text-[10px]" style={mutedText}>
-                  {formatMonthYear(cert.issue_date)}
+                  {formatMonthYear(t, cert.issue_date)}
                 </span>
               </div>
             ))}

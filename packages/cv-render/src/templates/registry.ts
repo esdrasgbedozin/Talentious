@@ -20,13 +20,16 @@ import type { ComponentType } from 'react';
 import CVRenderer from '../CVRenderer';
 import type { GeneratedCVData } from '../types';
 import type { components } from '../generated/api';
+import type { DocumentLanguage } from '../i18n';
 
 type CVThemeTokens = components['schemas']['CVThemeTokens'];
 
-/** Props communes à TOUT template : contenu canonique + thème snapshoté. */
+/** Props communes à TOUT template : contenu canonique + enveloppe snapshotée
+ * (thème, langue de rendu — M0-T13). */
 export interface CVTemplateProps {
   cv: GeneratedCVData;
   theme?: CVThemeTokens | null;
+  language?: DocumentLanguage | null;
 }
 
 export type CVTemplateComponent = ComponentType<CVTemplateProps>;
