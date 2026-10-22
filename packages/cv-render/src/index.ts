@@ -24,4 +24,10 @@ export type CvRenderPackage = typeof CV_RENDER_PACKAGE;
 // l'aperçu Next et l'export-service (M2).
 export { default as CVRenderer } from './CVRenderer';
 export { themeToCssVars, DEFAULT_CV_THEME_TOKENS } from './theme';
+export {
+  getTemplate,
+  resolveTemplateId,
+  FALLBACK_TEMPLATE_ID,
+} from './templates/registry';
+export type { CVTemplateProps, CVTemplateComponent } from './templates/registry';
 export type { GeneratedCVData } from './types';
