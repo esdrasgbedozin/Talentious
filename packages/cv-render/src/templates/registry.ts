@@ -43,6 +43,10 @@ const TEMPLATES: Record<string, CVTemplateComponent> = {
   modern_sobre: CVRenderer,
 };
 
+/** Ids canoniques du registre (gelés) — pour itérer sur TOUS les templates
+ * (test structurel du build CSS M0-T14 : chaque classe de chaque template). */
+export const TEMPLATE_IDS: readonly string[] = Object.freeze(Object.keys(TEMPLATES));
+
 /** Alias d'ids legacy → id canonique. `modern_v1` : défaut V1 du cv_worker,
  * encore stampé sur les documents existants (dette tracée, ADR). */
 const TEMPLATE_ALIASES: Record<string, string> = {

@@ -84,6 +84,22 @@ couvre les deux : la décision du package partagé et son intégration au build.
   arrive aux tickets suivants : extraction `CVRenderer` sans changement de comportement
   (M0-T08), découplage du thème en tokens CV-scopés (M0-T09/T10), registre de templates
   (M0-T11), i18n (M0-T13), build CSS injectable (M0-T14), polices embarquées (M0-T16).
+- **M0-T14 (fait, durci en revue)** : build CSS autonome — `npm run build:css`
+  (Tailwind v4 CLI **épinglé 4.3.3 exact** : le script dépend de la forme
+  d'émission ; montées de version délibérées), entrée `src/styles/cv.css` avec
+  `source(none)` + `@source` sur `src/` seul, **tests exclus du scan**
+  (`@source not`) → `dist/cv.css` (non versionné — CI/M2 doivent exécuter
+  `build:css` avant tout consommateur). Les variables moteur émises sur
+  `:root, :host` sont re-scopées sur `.cv-sheet, :host` par
+  `scripts/build-css.mjs`, sur la **forme exacte** `:root, :host` uniquement —
+  tout `:root` sous une autre forme fait échouer le build (garde significative,
+  pas un remplacement aveugle). L'artefact ne contient AUCUNE règle `:root` ;
+  le **preflight** (resets `*`, `html`…) reste global sous `@layer` : artefact
+  réservé à un document DÉDIÉ possédé par le package (`setContent`), jamais
+  injecté dans un hôte quelconque (thème : `--cv-*` inline, ADR-THEME-DECOUPLED).
+  Test : sélecteur **borné** (pas de faux positif préfixe) de chaque classe
+  posée par chaque template du registre (`TEMPLATE_IDS`) sur les 3 fixtures,
+  contrôles positif/négatif du détecteur, garde anti-charte app.
 - **M0-T08 (fait)** : `CVRenderer` extrait dans le package (export nommé `CVRenderer`),
   **à comportement constant**. Preuve d'équivalence, du plus fort au plus faible : (a) la
   source extraite est **identique octet-à-octet** à l'ancien composant, à la seule ligne
