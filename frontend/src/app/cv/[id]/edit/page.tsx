@@ -21,7 +21,11 @@ import CVExperienceForm from '@/components/cv/CVExperienceForm';
 import CVEducationForm from '@/components/cv/CVEducationForm';
 import CVProjectForm from '@/components/cv/CVProjectForm';
 import CVCertificationForm from '@/components/cv/CVCertificationForm';
-import { CVRenderer, type GeneratedCVData } from '@talentious/cv-render';
+import {
+  FALLBACK_TEMPLATE_ID,
+  getTemplate,
+  type GeneratedCVData,
+} from '@talentious/cv-render';
 import { useToast } from '@/components/ui/Toast';
 import { getCV, updateCV, getErrorMessage } from '@/lib/api';
 import {
@@ -52,6 +56,9 @@ export default function CVEditorPage() {
 
   const [cvName, setCvName] = useState('');
   const [cv, setCv] = useState<GeneratedCVData>(createEmptyCVData());
+  // Enveloppe du document : le template est résolu par le registre (M0-T12,
+  // ADR-TEMPLATE-REGISTRY), jamais mappé ici. Repli sûr tant que rien n'est chargé.
+  const [templateId, setTemplateId] = useState<string>(FALLBACK_TEMPLATE_ID);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -66,6 +73,7 @@ export default function CVEditorPage() {
       .then((detail) => {
         if (cancelled) return;
         setCvName(detail.cv_name);
+        setTemplateId(detail.template_id);
         setCv(ensureCVShape(detail.cv_data_json));
       })
       .catch((err) => !cancelled && setLoadError(getErrorMessage(err)))
@@ -152,6 +160,7 @@ export default function CVEditorPage() {
   // L'aperçu rend EXACTEMENT le payload du save (aperçu = PDF). Mémoïsé pour ne
   // pas recréer l'objet (et re-déclencher la mesure du renderer) inutilement.
   const previewCv = useMemo(() => sanitizeCVForSave(cv), [cv]);
+  const Template = getTemplate(templateId);
 
   const hardSkills = useMemo(() => skillNames(cv.highlighted_skills, 'hard_skill'), [cv]);
   const softSkills = useMemo(() => skillNames(cv.highlighted_skills, 'soft_skill'), [cv]);
@@ -427,7 +436,8 @@ export default function CVEditorPage() {
             <p className="mb-3 text-sm font-medium text-text-secondary">Aperçu en direct</p>
             <div className="overflow-hidden rounded-lg border border-border bg-white shadow-sm">
               <div style={{ zoom: 0.62 }}>
-                <CVRenderer cv={previewCv} />
+                {/* eslint-disable-next-line react-hooks/static-components -- référence stable du registre (ADR-TEMPLATE-REGISTRY) */}
+                <Template cv={previewCv} />
               </div>
             </div>
           </div>
