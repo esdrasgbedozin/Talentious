@@ -11,6 +11,7 @@ import { Printer, ArrowLeft } from 'lucide-react';
 import { getTemplate } from '@talentious/cv-render';
 import Button from '@/components/ui/Button';
 import { getCV, getErrorMessage, type CVDetail } from '@/lib/api';
+import { ensureCVShape } from '@/lib/cvEditor';
 
 export default function CVPrintPage() {
   const params = useParams<{ id: string }>();
@@ -44,7 +45,10 @@ export default function CVPrintPage() {
     getCV(cvId)
       .then((data) => {
         if (cancelled) return;
-        setCv(data);
+        // Même défense au chargement que l'éditeur : depuis la suppression du
+        // pont (PAH-M0), getCV est un passthrough strict — un cv_data_json
+        // corrompu (null, non-objet) ne doit pas faire une page blanche.
+        setCv({ ...data, cv_data_json: ensureCVShape(data.cv_data_json) });
         // The browser uses document.title as the default "Save as PDF" filename.
         document.title = data.cv_name || 'CV';
         if (!previewOnly) {

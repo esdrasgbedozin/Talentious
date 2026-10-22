@@ -103,6 +103,21 @@ describe('M0-T12 — page print', () => {
     render(<CVPrintPage />);
     expect(await screen.findByText(/Camille/)).toBeInTheDocument();
   });
+
+  it('cv_data_json corrompu (null malgré le contrat) : la page rend une feuille vide, pas une page blanche', async () => {
+    // Depuis la suppression du pont (PAH-M0), getCV est un passthrough strict :
+    // la défense au chargement vit dans la page (ensureCVShape, comme
+    // l'éditeur). Sans elle, CVRenderer lit `cv.personal_info` sur null
+    // → TypeError → page blanche à l'impression (revue du ticket).
+    const detail = cvDetail('modern_sobre');
+    detail.cv_data_json = null as unknown as GeneratedCVData;
+    getCVMock.mockResolvedValue(detail);
+    const { container } = render(<CVPrintPage />);
+    // La feuille se rend (vide), et le chargement va au bout (document.title
+    // est posé après setCv — il n'est jamais atteint si le rendu crashe).
+    await waitFor(() => expect(document.title).toBe('CV Camille'));
+    expect(container.querySelector('.cv-sheet')).toBeTruthy();
+  });
 });
 
 describe('M0-T12 — éditeur (aperçu)', () => {

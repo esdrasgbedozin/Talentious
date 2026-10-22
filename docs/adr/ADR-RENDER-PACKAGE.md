@@ -170,18 +170,19 @@ couvre les deux : la décision du package partagé et son intégration au build.
   `cv_data_json` est désormais stocké en `GeneratedCVData` (ADR-CONTENT-SCHEMA).
 - **M0-T08b (fait)** : le renderer consomme le **schéma canonique `GeneratedCVData`**
   (prop `cv`) — zéro transformation dans le package, condition de l'injection directe
-  par l'export-service (M2) et de « aperçu = PDF » : l'aperçu éditeur passe par
-  `profileToGeneratedCV(état)` (même pipeline que le save) et la page print injecte le
-  canonique stocké tel quel (`toCanonicalCVData` ponte les CV V1 legacy, passthrough
-  strict sinon). `end_date` null ⇒ « aujourd'hui » ; compétences par expérience rendues ;
+  par l'export-service (M2) et de « aperçu = PDF » : la page print injecte le
+  canonique stocké tel quel (depuis PAH-M0 : passthrough strict de `getCV`, canonicité
+  garantie en base — le pont `toCanonicalCVData` a été supprimé ; `ensureCVShape`
+  reste la défense au chargement). `end_date` null ⇒ « aujourd'hui » ; compétences par expérience rendues ;
   section Langues retirée (hors canonique) ; `optimization_notes` jamais rendu (BLK-5,
   testé). **Dette T08 soldée** : les tests de rendu vivent désormais **dans le package**
   (`src/__tests__/`, fixtures canoniques partagées `fixtures/cv-reference/` importées en
   relatif — source unique, celle du futur contrat visuel M2).
 - **M0-T08c (fait)** : l'**éditeur** travaille lui aussi en canonique (état =
   `GeneratedCVData`, envoyé tel quel au `PUT /cv` ; son aperçu rend exactement le
-  payload du save) — `profileToGeneratedCV`/`normalizeCVData` ne subsistent que dans le
-  pont de lecture des CV V1 legacy (`toCanonicalCVData`, résorbé à PAH-M0). Le package a
+  payload du save) — `profileToGeneratedCV`/`normalizeCVData`/`toCanonicalCVData` ont été
+  **supprimés à PAH-M0 (2026-10-22)** avec le backfill v2 des CV V1 (canonicité
+  garantie en base). Le package a
   sa **config eslint** (`eslint.config.mjs`, même socle que le frontend, script `lint`) :
   gates du package = eslint + tsc strict + jest — **en local** ; le branchement CI de
   ces gates reste à faire (revue T08c, S7 — tracé roadmap).

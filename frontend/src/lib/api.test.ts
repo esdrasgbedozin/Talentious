@@ -1,9 +1,11 @@
 /**
  * M0-T08a/T08c — `updateCV` parle GeneratedCVData de bout en bout : l'éditeur
- * canonique envoie son état TEL QUEL au PUT /cv (plus aucune conversion
- * ProfileData dans l'app — le pont ne subsiste qu'en lecture des CV V1 legacy).
+ * canonique envoie son état TEL QUEL au PUT /cv. Depuis PAH-M0 (2026-10-22),
+ * la LECTURE est aussi un passthrough strict : la base prod est intégralement
+ * canonique (backfill v2 + ceinture de coercition au worker), le pont legacy
+ * `toCanonicalCVData` a été supprimé.
  */
-import { apiClient, updateCV } from '@/lib/api';
+import { apiClient, getCV, updateCV } from '@/lib/api';
 import { createEmptyCVData, createEmptyCVExperience } from '@/lib/cvEditor';
 
 describe('updateCV — envoie du GeneratedCVData au réseau (M0-T08a → T08c)', () => {
@@ -86,5 +88,41 @@ describe('updateCV — envoie du GeneratedCVData au réseau (M0-T08a → T08c)',
     expect(result.cv_data_json.selected_experiences[0].end_date).toBeNull();
 
     putSpy.mockRestore();
+  });
+});
+
+describe('updateCV — retour passthrough strict (PAH-M0, pont legacy supprimé)', () => {
+  it('renvoie cv_data_json de la réponse PAR RÉFÉRENCE (zéro re-pontage)', async () => {
+    const serverCv = { personal_info: { first_name: 'A' }, summary: 'S' };
+    const putSpy = jest
+      .spyOn(apiClient, 'put')
+      .mockResolvedValue({ data: { cv_name: 'CV', cv_data_json: serverCv } });
+
+    const result = await updateCV('cv-123', { cv_name: 'CV' });
+    expect(result.cv_data_json).toBe(serverCv);
+
+    putSpy.mockRestore();
+  });
+});
+
+describe('getCV — lecture passthrough strict (PAH-M0, pont legacy supprimé)', () => {
+  it('renvoie cv_data_json TEL QUEL, même pour une forme legacy résiduelle', async () => {
+    // La garantie de canonicité vit désormais EN BASE (backfill v2 + ceinture
+    // du worker), plus dans l'app : une forme legacy qui réapparaîtrait ne doit
+    // PAS être re-pontée en silence — elle doit se voir (et se traiter en base,
+    // le backfill committé est idempotent). Passthrough par RÉFÉRENCE.
+    const legacy = {
+      personal_info: { first_name: 'J', last_name: 'M', email: 'j@m.fr' },
+      summary: 'V1 brut',
+      experiences: [{ title: 'Dev', company: 'Acme', start_date: '2020-01' }],
+    };
+    const getSpy = jest
+      .spyOn(apiClient, 'get')
+      .mockResolvedValue({ data: { cv_name: 'CV', cv_data_json: legacy } });
+
+    const result = await getCV('cv-123');
+    expect(result.cv_data_json).toBe(legacy);
+
+    getSpy.mockRestore();
   });
 });

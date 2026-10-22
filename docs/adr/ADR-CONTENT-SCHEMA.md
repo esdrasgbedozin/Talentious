@@ -108,12 +108,14 @@ sur le chemin d'édition (revue de code M0, constat B1).
   coercition backend simulée no-op). Un cycle éditeur
   d'un CV canonique ne perd **plus rien** : `highlighted_skills` par expérience et
   `level`/`importance` des compétences survivent (l'édition par noms préserve les
-  métadonnées des compétences conservées — `withSkillNames`). Le **seul pont restant**
-  est `toCanonicalCVData` (lecture, `frontend/src/lib/cv.ts`) pour les CV V1 legacy
-  stockés en ProfileData : à ce passage, `achievements` est plié dans `description` et
-  les champs non modélisés (`languages`, formation `field/grade/location/start_date`,
-  projet `role/start_date`, certification `expiration_date/credential_id`) sont perdus
-  — population et backfill arbitrés à **PAH-M0**, où ce pont sera résorbé.
+  métadonnées des compétences conservées — `withSkillNames`). Le pont de lecture
+  `toCanonicalCVData` (`frontend/src/lib/cv.ts`) a été **SUPPRIMÉ à PAH-M0
+  (2026-10-22)** : la canonicité est garantie **en base** (backfill v2 des CV V1 —
+  canonicalisation des formes legacy puis coercition, contrôle 6/6 conformes — et
+  ceinture de coercition du worker à la génération). `getCV`/`updateCV` sont des
+  passthrough stricts ; la défense au chargement (`ensureCVShape`) reste aux deux
+  points de consommation (éditeur ET page print). Pertes assumées du backfill :
+  formation `field` et `languages` (non modélisés, déjà invisibles via le pont).
   Garde-fous au save (revue M0-T08a, portés en canonique par T08c et alignés sur les
   règles d'éviction backend — revue T08c, C3) : `validateCVForSave` **bloque** les
   entrées que la coercition écarterait ou tronquerait en silence (expérience sans date
