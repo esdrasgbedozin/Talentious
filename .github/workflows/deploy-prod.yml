@@ -146,7 +146,12 @@ jobs:
       - name: Run Alembic migrations
         working-directory: backend
         env:
-          DATABASE_URL: postgresql+asyncpg://talentious-app:${{ secrets.CLOUD_SQL_DB_PASSWORD }}@127.0.0.1:5432/talentious
+          # Base RÉELLE de l'app : talentious_app (vérifiée au head Alembic le
+          # 2026-10-22). `talentious` est l'ancienne base, vide de trafic — la
+          # CI la « migrait » à chaque deploy pendant que la vraie base restait
+          # migrée à la main. Reprise de talentious_app sous Terraform (import)
+          # tracée pour M1 (premier ticket migrations).
+          DATABASE_URL: postgresql+asyncpg://talentious-app:${{ secrets.CLOUD_SQL_DB_PASSWORD }}@127.0.0.1:5432/talentious_app
         run: alembic upgrade head
 
   deploy:
