@@ -146,12 +146,13 @@ jobs:
       - name: Run Alembic migrations
         working-directory: backend
         env:
-          # Base RÉELLE de l'app : talentious_app (vérifiée au head Alembic le
-          # 2026-10-22). `talentious` est l'ancienne base, vide de trafic — la
-          # CI la « migrait » à chaque deploy pendant que la vraie base restait
-          # migrée à la main. Reprise de talentious_app sous Terraform (import)
-          # tracée pour M1 (premier ticket migrations).
-          DATABASE_URL: postgresql+asyncpg://talentious-app:${{ secrets.CLOUD_SQL_DB_PASSWORD }}@127.0.0.1:5432/talentious_app
+          # Base RÉELLE de la prod : `talentious` — VÉRIFIÉ sur l'instance le
+          # 2026-10-22 (`gcloud sql databases list` → postgres + talentious
+          # seulement ; secret DATABASE_URL de l'app et Terraform `db_name`
+          # cohérents). `talentious_app` n'existe qu'en LOCAL (compose) : le
+          # hotfix #40 l'avait transposée à tort ici et cassait le migrate
+          # (« database does not exist »).
+          DATABASE_URL: postgresql+asyncpg://talentious-app:${{ secrets.CLOUD_SQL_DB_PASSWORD }}@127.0.0.1:5432/talentious
         run: alembic upgrade head
 
   deploy:
