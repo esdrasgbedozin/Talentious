@@ -12,6 +12,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildFontFaces } from './fonts.mjs';
 
 const pkgRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const input = path.join(pkgRoot, 'src/styles/cv.css');
@@ -43,5 +44,11 @@ if (rescoped.includes(':root')) {
     'build-css: `:root` présent hors de la forme attendue `:root, :host` — re-scope à adapter avant de livrer.',
   );
 }
-writeFileSync(output, rescoped);
-console.log(`build-css: ${path.relative(pkgRoot, output)} généré (${occurrences} émission(s) \`${TAILWIND_ROOT_SELECTOR}\` re-scopée(s) sur .cv-sheet).`);
+// Polices embarquées (M0-T16) : @font-face locaux concaténés à l'artefact,
+// woff2 copiés dans dist/fonts/ — un seul couple (cv.css + fonts/) à injecter
+// par l'export-service.
+const fontFaces = buildFontFaces(outDir);
+writeFileSync(output, `${rescoped}\n${fontFaces}`);
+console.log(
+  `build-css: ${path.relative(pkgRoot, output)} généré (${occurrences} émission(s) \`${TAILWIND_ROOT_SELECTOR}\` re-scopée(s) sur .cv-sheet ; @font-face locaux ajoutés).`,
+);

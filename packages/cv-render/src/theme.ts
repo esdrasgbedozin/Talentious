@@ -26,8 +26,10 @@ export const DEFAULT_CV_THEME_TOKENS: CVThemeTokens = {
 };
 
 /** Liste blanche des polices du contrat (`CVFontFamily`) ; `satisfies` garantit
- * qu'elle reste alignée sur l'enum généré — toute dérive casse la compilation. */
-const FONT_WHITELIST = [
+ * qu'elle reste alignée sur l'enum généré — toute dérive casse la compilation.
+ * Exportée (M0-T16) : les polices EMBARQUÉES (manifeste `scripts/fonts.manifest.json`)
+ * doivent couvrir exactement cette liste — testé dans css-build.test. */
+export const CV_FONT_FAMILIES = [
   'Inter',
   'Source Sans 3',
   'IBM Plex Sans',
@@ -59,7 +61,7 @@ function fontStack(font: CVFontFamily): string {
 
 function safeFontStack(value: unknown, fallback: CVFontFamily): string {
   const s = typeof value === 'string' ? value.trim() : '';
-  const font = (FONT_WHITELIST as readonly string[]).includes(s)
+  const font = (CV_FONT_FAMILIES as readonly string[]).includes(s)
     ? (s as CVFontFamily)
     : fallback;
   return fontStack(font);

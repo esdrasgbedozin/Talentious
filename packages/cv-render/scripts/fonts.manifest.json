@@ -1,0 +1,10 @@
+{
+  "Inter": { "slug": "inter", "weights": [400, 600, 700], "italicWeights": [400] },
+  "Source Sans 3": { "slug": "source-sans-3", "weights": [400, 600, 700], "italicWeights": [400] },
+  "IBM Plex Sans": { "slug": "ibm-plex-sans", "weights": [400, 600, 700], "italicWeights": [400] },
+  "Work Sans": { "slug": "work-sans", "weights": [400, 600, 700], "italicWeights": [400] },
+  "Source Serif 4": { "slug": "source-serif-4", "weights": [400, 600, 700], "italicWeights": [400] },
+  "Lora": { "slug": "lora", "weights": [400, 600, 700], "italicWeights": [400] },
+  "Merriweather": { "slug": "merriweather", "weights": [400, 600, 700], "italicWeights": [400] },
+  "IBM Plex Serif": { "slug": "ibm-plex-serif", "weights": [400, 600, 700], "italicWeights": [400] }
+}

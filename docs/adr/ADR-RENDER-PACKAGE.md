@@ -100,6 +100,34 @@ couvre les deux : la décision du package partagé et son intégration au build.
   Test : sélecteur **borné** (pas de faux positif préfixe) de chaque classe
   posée par chaque template du registre (`TEMPLATE_IDS`) sur les 3 fixtures,
   contrôles positif/négatif du détecteur, garde anti-charte app.
+- **M0-T16 (fait, durci en revue)** : polices curatées OFL embarquées. Source :
+  packages `@fontsource/*` **épinglés exacts** (provenance versionnée, intégrité
+  sha512 du lockfile — pas de binaires vendorés en git), en **devDependencies**
+  du package (arbitrage revue T16, moindre privilège : les polices ne servent
+  qu'au BUILD du CSS ; l'export-service exécutera `build:css` dans son propre
+  build Docker, comme le frontend). Le manifeste `scripts/fonts.manifest.json`
+  — **validé strictement au chargement** (familles `[A-Za-z0-9 ]`, slugs
+  `[a-z0-9-]`, graisses entières 100-900 : anti-injection CSS/traversal) —
+  couvre **exactement** la liste blanche du contrat (`CVFontFamily` ↔
+  `CV_FONT_FAMILIES`, testé) : 8 familles × (400, 600, 700 + italique 400),
+  sous-ensemble **latin** seul (couvre FR/EN, œ compris ; glyphe hors latin →
+  pile de secours). `build:css` **purge puis** copie les woff2 (+ LICENSE OFL
+  par fonderie, une par famille, testé) dans `dist/fonts/` (jamais de fichier
+  fantôme d'un build précédent) et concatène les `@font-face` LOCAUX à
+  `dist/cv.css` (`url('fonts/…')` relatifs — `fonts/` doit rester VOISIN de
+  cv.css —, `font-display: block`, cohérent avec `fonts.ready` de M0-T15).
+  Critères testés : allowlist == fichiers présents dans les DEUX sens (comptage
+  exact des règles, signature WOFF2 des fichiers) ; hors commentaires, aucun
+  vecteur de chargement autre que `url('fonts/*.woff2') format('woff2')` —
+  pas d'`@import`, `image-set()`, `local()`, `http(s):` (preuve par mutation :
+  URL CDN ⇒ tests rouges). **Contrat de consommation M2 (à honorer en
+  M2-T04/T05)** : un document `setContent` est en `about:blank` — les `url()`
+  relatives n'y résolvent PAS ; l'export-service doit servir `dist/`
+  (interception `page.route`, base `file://` ou inline base64), vérifier
+  `document.fonts.check('12px "<famille>"')` après `fonts.ready` (une famille
+  manquante retombe en silence sur la police système), et bloquer tout réseau
+  Chromium. Sans cela, « aperçu = PDF » n'est pas démontré pour les polices.
+  La recette VISUELLE des choix typographiques reste F-08 (PAH-M0).
 - **M0-T15 (fait, durci en revue)** : auto-fit isolé dans `src/fit.ts` —
   `computeFitScale` (fonction pure : plafond 1, plancher `MIN_SCALE`, neutre sur
   toute mesure non exploitable), consommée par `CVRenderer`. Signal de rendu

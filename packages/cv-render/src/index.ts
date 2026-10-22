@@ -23,7 +23,7 @@ export type CvRenderPackage = typeof CV_RENDER_PACKAGE;
 // canonique GeneratedCVData (prop `cv`), sans transformation — même entrée pour
 // l'aperçu Next et l'export-service (M2).
 export { default as CVRenderer } from './CVRenderer';
-export { themeToCssVars, DEFAULT_CV_THEME_TOKENS } from './theme';
+export { themeToCssVars, DEFAULT_CV_THEME_TOKENS, CV_FONT_FAMILIES } from './theme';
 export { getCVLocale, CV_RENDER_LOCALES, DEFAULT_CV_LANGUAGE } from './i18n';
 // Auto-fit isolé + signal de rendu stable (M0-T15) : CV_READY_FLAG est le point
 // d'attente de l'export-service (M2) avant page.pdf().
