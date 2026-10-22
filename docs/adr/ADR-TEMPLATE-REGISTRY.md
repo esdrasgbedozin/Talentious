@@ -46,11 +46,11 @@ divergence casserait « aperçu = PDF ».
    serait masquer une corruption.
 
 4. **Alias legacy `modern_v1 → modern_sobre`.** Les documents V1 restent
-   rendus sans migration de données. DETTE : `cv_worker.py` stampe encore
-   `DEFAULT_TEMPLATE_ID = "modern_v1"` sur les NOUVEAUX documents (backend,
-   hors périmètre T11-FRONT) — à basculer sur `modern_sobre` côté backend,
-   après quoi l'alias ne sert plus que l'existant (backfill éventuel à
-   PAH-M0 ; l'alias reste tant que des documents `modern_v1` existent).
+   rendus sans migration de données. La dette du stamp est SOLDÉE à PAH-M0
+   (2026-10-22) : `cv_worker.py` stampe désormais
+   `DEFAULT_TEMPLATE_ID = "modern_sobre"` sur les nouveaux documents ;
+   l'alias ne sert plus que le stock existant et reste tant que des
+   documents `modern_v1` existent en base.
 
 5. **Ajouter un template = 3 gestes** : le composant dans
    `src/templates/`, son entrée dans `TEMPLATES`, son entrée au catalogue

@@ -288,6 +288,9 @@ class TestWorker:
             assert refreshed.cv_id is not None
             cv = await check.get(GeneratedCV, refreshed.cv_id)
             assert cv is not None
+            # PAH-M0 : les nouveaux CV sont estampillés du template V2 canonique
+            # `modern_sobre` (l'alias `modern_v1` du registre reste pour le stock).
+            assert cv.template_id == "modern_sobre"
             # Le contenu stocké est le GeneratedCVData coercé (enveloppe canonique).
             assert cv.cv_data_json["summary"] == "optimized"
             # C6 : l'identité vient du PROFIL vérifié, pas de la sortie du LLM

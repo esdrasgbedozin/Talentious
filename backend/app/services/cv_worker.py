@@ -32,7 +32,10 @@ from app.services.writer_client import writer_client
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TEMPLATE_ID = "modern_v1"
+# PAH-M0 (2026-10-22) : les nouveaux CV portent l'id canonique V2 du registre
+# (`modern_sobre`) ; `modern_v1` ne subsiste que comme ALIAS de lecture pour le
+# stock existant (packages/cv-render, registre des templates).
+DEFAULT_TEMPLATE_ID = "modern_sobre"
 
 # Safe, client-facing failure messages. The raw exception is logged server-side
 # (exc_info=True) but NEVER stored in job.error_message, which is returned to the
