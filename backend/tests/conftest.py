@@ -2,6 +2,9 @@
 Pytest configuration and fixtures for testing.
 """
 
+import uuid
+
+import psycopg2
 import pytest
 from typing import AsyncGenerator
 from httpx import AsyncClient, ASGITransport
@@ -204,3 +207,39 @@ async def admin_headers(client: AsyncClient, admin_user: User) -> dict:
     assert response.status_code == 200
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+# --- Base JETABLE pour les tests de migrations (M1-T01/M1-T02) ---------------
+# Créée vierge sur le serveur de TEST_DATABASE_URL, détruite après le test :
+# les cycles Alembic (upgrade/downgrade) ne touchent jamais `talentious_test`.
+# NB : le défaut de TEST_DATABASE_URL vise `@db/` (service compose, exécution
+# DANS le conteneur) — en local hors conteneur, exporter la variable vers
+# `@localhost:5432/talentious_test`, comme pour le reste de la suite.
+
+
+def sync_db_url(url: str) -> str:
+    """URL psycopg2 (driver sync) depuis une URL asyncpg."""
+    return url.replace("postgresql+asyncpg://", "postgresql://")
+
+
+@pytest.fixture()
+def disposable_db_url():
+    """Base jetable nommée `migcheck_<hex>` (motif exigé par check_migrations)."""
+    name = f"migcheck_{uuid.uuid4().hex[:12]}"
+    admin = psycopg2.connect(sync_db_url(TEST_DATABASE_URL))
+    admin.autocommit = True
+    try:
+        with admin.cursor() as cur:
+            cur.execute(f'CREATE DATABASE "{name}"')
+        base, _, _ = TEST_DATABASE_URL.rpartition("/")
+        yield f"{base}/{name}"
+        with admin.cursor() as cur:
+            # Déloger toute connexion restante avant la destruction.
+            cur.execute(
+                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                "WHERE datname = %s AND pid <> pg_backend_pid()",
+                (name,),
+            )
+            cur.execute(f'DROP DATABASE "{name}"')
+    finally:
+        admin.close()

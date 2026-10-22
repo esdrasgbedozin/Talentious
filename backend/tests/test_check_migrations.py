@@ -19,7 +19,6 @@ propre base jetable — le cycle Alembic ne touche jamais `talentious_test`.
 import os
 import subprocess
 import sys
-import uuid
 from pathlib import Path
 
 import psycopg2
@@ -32,37 +31,9 @@ from scripts.check_migrations import (
     run_cycle,
 )
 
-TEST_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    "postgresql+asyncpg://talentious:talentious@localhost:5432/talentious_test",
-)
-
-
-def _sync_url(url: str) -> str:
-    return url.replace("postgresql+asyncpg://", "postgresql://")
-
-
-@pytest.fixture()
-def disposable_db_url():
-    """Base jetable sur le serveur de test : créée vierge, détruite après."""
-    name = f"migcheck_{uuid.uuid4().hex[:12]}"
-    admin = psycopg2.connect(_sync_url(TEST_DATABASE_URL))
-    admin.autocommit = True
-    try:
-        with admin.cursor() as cur:
-            cur.execute(f'CREATE DATABASE "{name}"')
-        base, _, _ = TEST_DATABASE_URL.rpartition("/")
-        yield f"{base}/{name}"
-        with admin.cursor() as cur:
-            # Déloger toute connexion restante avant le DROP.
-            cur.execute(
-                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
-                "WHERE datname = %s AND pid <> pg_backend_pid()",
-                (name,),
-            )
-            cur.execute(f'DROP DATABASE "{name}"')
-    finally:
-        admin.close()
+# La fixture `disposable_db_url` (base jetable, créée/détruite par test) vit
+# dans conftest.py — partagée avec les tests de migrations (M1-T02…).
+from tests.conftest import sync_db_url as _sync_url
 
 
 class TestGardeFousURL:
