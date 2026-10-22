@@ -34,6 +34,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # M1-T01 — Garde-fou MIGRATIONS sur PR : cycle `upgrade head → downgrade base
+  # → upgrade head` sur un Postgres ÉPHÉMÈRE (service container, détruit après
+  # le job). Toute migration non réversible (downgrade manquant, incomplet, ou
+  # qui fuit tables/types ENUM) casse ICI, avant le merge — plus jamais dans le
+  # job `migrate` du déploiement prod. Runbook : docs/RUNBOOK_MIGRATIONS.md.
+  migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: talentious
+          POSTGRES_PASSWORD: talentious
+          POSTGRES_DB: talentious_migcheck
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install backend deps
+        run: pip install -r backend/requirements.txt
+      - name: Cycle up/down/up sur base éphémère
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://talentious:talentious@127.0.0.1:5432/talentious_migcheck
+        run: python scripts/check_migrations.py
+
   build:
     runs-on: ubuntu-latest
     strategy:

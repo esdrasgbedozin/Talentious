@@ -124,6 +124,7 @@ jobs:
   migrate:
     needs: build-push
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: google-github-actions/auth@v2
@@ -138,11 +139,32 @@ jobs:
       - name: Install backend deps
         run: pip install -r backend/requirements.txt
       - name: Start Cloud SQL proxy
+        # Attente de DISPONIBILITÉ réelle au lieu d'un `sleep 5` aveugle : le
+        # run #39 (2026-10-22) a échoué sur « server closed the connection
+        # unexpectedly » — proxy lancé mais pas prêt (DET-CI-DBPROD). Un port
+        # TCP ouvert ne prouve rien (le proxy ouvre son port AVANT de joindre
+        # l'instance) : on sonde son endpoint /readiness (--health-check), qui
+        # ne répond 200 qu'une fois l'instance réellement joignable.
         run: |
           curl -sSLo cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.13.0/cloud-sql-proxy.linux.amd64
+          # SHA-256 officiel (notes de release GitHub v2.13.0, contre-vérifié
+          # sur le binaire le 2026-10-23) : le proxy tourne avec les
+          # identifiants WIF du déployeur, on ne l'exécute pas sans contrôle.
+          echo "90fb622971bd8ed650f040dbdbc0f1be65ea528e2c72fa3b4717838e56abdf39  cloud-sql-proxy" | sha256sum -c -
           chmod +x cloud-sql-proxy
-          ./cloud-sql-proxy --port 5432 ${{ env.SQL_CONNECTION }} &
-          sleep 5
+          ./cloud-sql-proxy --port 5432 --health-check --http-address 127.0.0.1 --http-port 9090 \
+            ${{ env.SQL_CONNECTION }} > proxy.log 2>&1 &
+          PROXY_PID=$!
+          for i in $(seq 1 30); do
+            if ! kill -0 "$PROXY_PID" 2>/dev/null; then
+              echo "::error::Cloud SQL proxy mort au démarrage"; cat proxy.log; exit 1
+            fi
+            if curl -sf http://127.0.0.1:9090/readiness > /dev/null; then
+              echo "Proxy prêt (essai $i)"; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Cloud SQL proxy indisponible après 60 s"; cat proxy.log; exit 1
       - name: Run Alembic migrations
         working-directory: backend
         env:
@@ -153,7 +175,26 @@ jobs:
           # hotfix #40 l'avait transposée à tort ici et cassait le migrate
           # (« database does not exist »).
           DATABASE_URL: postgresql+asyncpg://talentious-app:${{ secrets.CLOUD_SQL_DB_PASSWORD }}@127.0.0.1:5432/talentious
-        run: alembic upgrade head
+        # Un (1) retry, UNIQUEMENT sur erreur de CONNEXION (cas du run #39) :
+        # une erreur SQL déterministe échoue immédiatement et bloque le
+        # déploiement (fail-safe : pas de rollout sans migrations). Le retry
+        # est sûr aujourd'hui car env.py exécute TOUT le run `upgrade` dans UNE
+        # transaction (DDL transactionnel Postgres). ⚠️ Exception à ne PAS
+        # étendre : une future migration non transactionnelle (CREATE INDEX
+        # CONCURRENTLY, ALTER TYPE … ADD VALUE en autocommit_block) devra
+        # retirer ce retry. Procédure manuelle : docs/RUNBOOK_MIGRATIONS.md.
+        run: |
+          set -o pipefail
+          if ! alembic upgrade head 2>&1 | tee alembic.log; then
+            if grep -qiE 'server closed the connection|connection refused|could not connect|connection reset|SSL SYSCALL' alembic.log; then
+              echo "::warning::échec de CONNEXION au migrate — retry unique après 10 s"
+              sleep 10
+              alembic upgrade head
+            else
+              echo "::error::échec non transitoire des migrations — pas de retry"
+              exit 1
+            fi
+          fi
 
   deploy:
     needs: migrate
