@@ -18,6 +18,11 @@ on:
       - "backend/**"
       - "frontend/**"
       - "agents/**"
+      - "packages/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".dockerignore"
+      - "**/*.dockerignore"
       - ".github/workflows/deploy-prod.yml"
   workflow_dispatch: {}
 
@@ -82,7 +87,9 @@ jobs:
             context: backend
             dockerfile: backend/Dockerfile.prod
           - name: frontend
-            context: frontend
+            # Contexte RACINE depuis M0-T07 : le build frontend consomme le
+            # package workspace packages/cv-render + le lockfile unique racine.
+            context: .
             dockerfile: frontend/Dockerfile.prod
           - name: parser-pdf
             context: agents/parser-pdf

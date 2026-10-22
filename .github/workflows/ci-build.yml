@@ -1,0 +1,75 @@
+# =============================================================================
+# Garde-fou de BUILD sur PR — valide que toutes les images Docker se
+# construisent AVANT le merge sur main (le deploy-prod.yml ne build qu'au push
+# main). Introduit avec M0-T07 : le build frontend passe en contexte RACINE
+# (workspaces npm) ; ce check attrape toute casse du Dockerfile/contexte/lockfile
+# avant qu'elle n'atteigne la branche de déploiement.
+# - AUCUN push d'image, AUCUNE auth GCP, AUCUN secret : build local au runner.
+# - ubuntu-latest = linux/amd64 : parité avec la CI de déploiement et Cloud Run
+#   (et avec les binaires natifs linux du package-lock.json racine).
+# =============================================================================
+
+name: CI Build (PR)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "agents/**"
+      - "packages/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".dockerignore"
+      - "**/*.dockerignore"
+      - ".github/workflows/ci-build.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: backend
+            context: backend
+            dockerfile: backend/Dockerfile.prod
+          - name: frontend
+            # Contexte RACINE depuis M0-T07 (workspaces npm) — identique à
+            # deploy-prod.yml.
+            context: .
+            dockerfile: frontend/Dockerfile.prod
+          - name: parser-pdf
+            context: agents/parser-pdf
+            dockerfile: agents/parser-pdf/Dockerfile
+          - name: analyseur-offre
+            context: agents/analyseur-offre
+            dockerfile: agents/analyseur-offre/Dockerfile
+          - name: redacteur-cv
+            context: agents/redacteur-cv
+            dockerfile: agents/redacteur-cv/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build ${{ matrix.name }} (sans push)
+        run: |
+          EXTRA_ARGS=()
+          if [ "${{ matrix.name }}" = "frontend" ]; then
+            # Mêmes build-args que le déploiement (valeurs PUBLIQUES, pas des secrets).
+            EXTRA_ARGS=(
+              --build-arg "NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://api.talentious.app' }}"
+              --build-arg "NEXT_PUBLIC_ENVIRONMENT=production"
+              --build-arg "NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ vars.GOOGLE_OAUTH_CLIENT_ID || '' }}"
+            )
+          fi
+          docker build -f "${{ matrix.dockerfile }}" "${EXTRA_ARGS[@]}" \
+            -t "${{ matrix.name }}:pr" "${{ matrix.context }}"

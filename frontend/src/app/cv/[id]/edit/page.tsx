@@ -1,11 +1,15 @@
 'use client';
 
 /**
- * CV Editor — edit a generated CV's content (cv_data_json, ProfileData shape) with
- * a live A4 preview. Loads via getCV, saves via updateCV (PUT /cv/{id}). Reuses the
- * profile form components so the editing UX is identical to the master profile.
+ * CV Editor — edit a generated CV's content with a live A4 preview.
+ *
+ * The editor state IS the canonical `GeneratedCVData` (M0-T08c, ADR-CONTENT-SCHEMA):
+ * loaded via getCV (a legacy V1 CV is bridged once, read-side), edited through
+ * dedicated canonical forms, and saved AS IS via updateCV (PUT /cv expects this
+ * exact shape). Per-experience highlighted_skills are editable and survive the
+ * whole cycle. The preview renders the exact save payload (aperçu = PDF).
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Printer } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -13,21 +17,36 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import ProfileSection from '@/components/profile/ProfileSection';
 import SkillsInput from '@/components/profile/SkillsInput';
-import ExperienceForm from '@/components/profile/ExperienceForm';
-import EducationForm from '@/components/profile/EducationForm';
-import ProjectForm from '@/components/profile/ProjectForm';
-import CertificationForm from '@/components/profile/CertificationForm';
-import CVRenderer from '@/components/cv/CVRenderer';
-import { useToast } from '@/components/ui/Toast';
+import CVExperienceForm from '@/components/cv/CVExperienceForm';
+import CVEducationForm from '@/components/cv/CVEducationForm';
+import CVProjectForm from '@/components/cv/CVProjectForm';
+import CVCertificationForm from '@/components/cv/CVCertificationForm';
 import {
-  UserProfile,
-  createEmptyProfile,
-  createEmptyExperience,
-  createEmptyEducation,
-  createEmptyProject,
-  createEmptyCertification,
-} from '@/types/profile';
+  FALLBACK_TEMPLATE_ID,
+  getTemplate,
+  type GeneratedCVData,
+} from '@talentious/cv-render';
+import { useToast } from '@/components/ui/Toast';
 import { getCV, updateCV, getErrorMessage } from '@/lib/api';
+import {
+  CV_SAVE_MAX_SKILLS,
+  createEmptyCVData,
+  createEmptyCVExperience,
+  createEmptyCVEducation,
+  createEmptyCVProject,
+  createEmptyCVCertification,
+  ensureCVShape,
+  skillNames,
+  withSkillNames,
+  sanitizeCVForSave,
+  validateCVForSave,
+} from '@/lib/cvEditor';
+
+type ListKey =
+  | 'selected_experiences'
+  | 'selected_educations'
+  | 'selected_projects'
+  | 'selected_certifications';
 
 export default function CVEditorPage() {
   const params = useParams<{ id: string }>();
@@ -36,21 +55,26 @@ export default function CVEditorPage() {
   const cvId = params?.id;
 
   const [cvName, setCvName] = useState('');
-  const [profile, setProfile] = useState<UserProfile>(createEmptyProfile());
+  const [cv, setCv] = useState<GeneratedCVData>(createEmptyCVData());
+  // Enveloppe du document : le template est résolu par le registre (M0-T12,
+  // ADR-TEMPLATE-REGISTRY), jamais mappé ici. Repli sûr tant que rien n'est chargé.
+  const [templateId, setTemplateId] = useState<string>(FALLBACK_TEMPLATE_ID);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Load the CV.
+  // Load the CV — getCV returns the canonical content; ensureCVShape only
+  // fills missing lists (raw V1 CVs stored before the coercion belt).
   useEffect(() => {
     if (!cvId) return;
     let cancelled = false;
     getCV(cvId)
-      .then((cv) => {
+      .then((detail) => {
         if (cancelled) return;
-        setCvName(cv.cv_name);
-        setProfile({ ...createEmptyProfile(), ...cv.cv_data_json });
+        setCvName(detail.cv_name);
+        setTemplateId(detail.template_id);
+        setCv(ensureCVShape(detail.cv_data_json));
       })
       .catch((err) => !cancelled && setLoadError(getErrorMessage(err)))
       .finally(() => !cancelled && setIsLoading(false));
@@ -72,8 +96,8 @@ export default function CVEditorPage() {
   }, [isDirty]);
 
   // State helpers — every mutation marks the CV dirty.
-  const mutate = useCallback((updater: (prev: UserProfile) => UserProfile) => {
-    setProfile(updater);
+  const mutate = useCallback((updater: (prev: GeneratedCVData) => GeneratedCVData) => {
+    setCv(updater);
     setIsDirty(true);
   }, []);
 
@@ -82,56 +106,22 @@ export default function CVEditorPage() {
       ...prev,
       personal_info: { ...prev.personal_info, [field]: value },
     }));
-  const updateSummary = (value: string) =>
-    mutate((prev) => ({ ...prev, summary: value }));
-  const updateSkills = (type: 'hard' | 'soft', skills: string[]) =>
-    mutate((prev) => ({ ...prev, skills: { ...prev.skills, [type]: skills } }));
+  const updateSummary = (value: string) => mutate((prev) => ({ ...prev, summary: value }));
+  const updateSkills = (category: 'hard_skill' | 'soft_skill', names: string[]) =>
+    mutate((prev) => ({
+      ...prev,
+      highlighted_skills: withSkillNames(prev.highlighted_skills, names, category),
+    }));
 
-  const addExperience = () =>
-    mutate((prev) => ({ ...prev, experiences: [createEmptyExperience(), ...prev.experiences] }));
-  const updateExperience = (id: string, field: string, value: unknown) =>
+  const addItem = <K extends ListKey>(key: K, item: GeneratedCVData[K][number]) =>
+    mutate((prev) => ({ ...prev, [key]: [item, ...prev[key]] }));
+  const updateItem = (key: ListKey, id: string, field: string, value: unknown) =>
     mutate((prev) => ({
       ...prev,
-      experiences: prev.experiences.map((e) => (e.id === id ? { ...e, [field]: value } : e)),
+      [key]: prev[key].map((item) => (item.id === id ? { ...item, [field]: value } : item)),
     }));
-  const removeExperience = (id: string) =>
-    mutate((prev) => ({ ...prev, experiences: prev.experiences.filter((e) => e.id !== id) }));
-
-  const addEducation = () =>
-    mutate((prev) => ({ ...prev, educations: [createEmptyEducation(), ...prev.educations] }));
-  const updateEducation = (id: string, field: string, value: unknown) =>
-    mutate((prev) => ({
-      ...prev,
-      educations: prev.educations.map((e) => (e.id === id ? { ...e, [field]: value } : e)),
-    }));
-  const removeEducation = (id: string) =>
-    mutate((prev) => ({ ...prev, educations: prev.educations.filter((e) => e.id !== id) }));
-
-  const addProject = () =>
-    mutate((prev) => ({ ...prev, projects: [createEmptyProject(), ...prev.projects] }));
-  const updateProject = (id: string, field: string, value: unknown) =>
-    mutate((prev) => ({
-      ...prev,
-      projects: prev.projects.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
-    }));
-  const removeProject = (id: string) =>
-    mutate((prev) => ({ ...prev, projects: prev.projects.filter((p) => p.id !== id) }));
-
-  const addCertification = () =>
-    mutate((prev) => ({
-      ...prev,
-      certifications: [createEmptyCertification(), ...prev.certifications],
-    }));
-  const updateCertification = (id: string, field: string, value: unknown) =>
-    mutate((prev) => ({
-      ...prev,
-      certifications: prev.certifications.map((c) => (c.id === id ? { ...c, [field]: value } : c)),
-    }));
-  const removeCertification = (id: string) =>
-    mutate((prev) => ({
-      ...prev,
-      certifications: prev.certifications.filter((c) => c.id !== id),
-    }));
+  const removeItem = (key: ListKey, id: string) =>
+    mutate((prev) => ({ ...prev, [key]: prev[key].filter((item) => item.id !== id) }));
 
   const handleNameChange = (value: string) => {
     setCvName(value);
@@ -140,9 +130,24 @@ export default function CVEditorPage() {
 
   const handleSave = async () => {
     if (!cvId) return;
+    // Bloque les saves qui perdraient des entrées en silence (la coercition
+    // backend écarte toute expérience sans date AAAA-MM, etc. — M0-T08a).
+    const problems = validateCVForSave(cv);
+    if (problems.length > 0) {
+      toast.error(problems[0]);
+      return;
+    }
     setIsSaving(true);
     try {
-      await updateCV(cvId, { cv_name: cvName.trim() || 'CV sans nom', cv_data_json: profile });
+      const updated = await updateCV(cvId, {
+        cv_name: cvName.trim() || 'CV sans nom',
+        cv_data_json: sanitizeCVForSave(cv),
+      });
+      // Resynchronise l'éditeur sur ce qui est RÉELLEMENT stocké : toute entrée
+      // écartée ou tronquée par la coercition backend devient visible
+      // immédiatement, pas au rechargement.
+      setCv(ensureCVShape(updated.cv_data_json));
+      setCvName(updated.cv_name);
       setIsDirty(false);
       toast.success('CV enregistré.');
     } catch (err) {
@@ -151,6 +156,14 @@ export default function CVEditorPage() {
       setIsSaving(false);
     }
   };
+
+  // L'aperçu rend EXACTEMENT le payload du save (aperçu = PDF). Mémoïsé pour ne
+  // pas recréer l'objet (et re-déclencher la mesure du renderer) inutilement.
+  const previewCv = useMemo(() => sanitizeCVForSave(cv), [cv]);
+  const Template = getTemplate(templateId);
+
+  const hardSkills = useMemo(() => skillNames(cv.highlighted_skills, 'hard_skill'), [cv]);
+  const softSkills = useMemo(() => skillNames(cv.highlighted_skills, 'soft_skill'), [cv]);
 
   const confirmLeave = () =>
     !isDirty ||
@@ -241,39 +254,37 @@ export default function CVEditorPage() {
             title="Informations personnelles"
             description="Coordonnées affichées en en-tête du CV"
             defaultOpen
-            isComplete={
-              !!(profile.personal_info?.first_name && profile.personal_info?.last_name)
-            }
+            isComplete={!!(cv.personal_info.first_name && cv.personal_info.last_name)}
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <Input
                 label="Prénom"
-                value={profile.personal_info?.first_name || ''}
+                value={cv.personal_info.first_name || ''}
                 onChange={(e) => updatePersonalInfo('first_name', e.target.value)}
               />
               <Input
                 label="Nom"
-                value={profile.personal_info?.last_name || ''}
+                value={cv.personal_info.last_name || ''}
                 onChange={(e) => updatePersonalInfo('last_name', e.target.value)}
               />
               <Input
                 label="Email"
-                value={profile.personal_info?.email || ''}
+                value={cv.personal_info.email || ''}
                 onChange={(e) => updatePersonalInfo('email', e.target.value)}
               />
               <Input
                 label="Téléphone"
-                value={profile.personal_info?.phone || ''}
+                value={cv.personal_info.phone || ''}
                 onChange={(e) => updatePersonalInfo('phone', e.target.value)}
               />
               <Input
                 label="Ville"
-                value={profile.personal_info?.city || ''}
+                value={cv.personal_info.city || ''}
                 onChange={(e) => updatePersonalInfo('city', e.target.value)}
               />
               <Input
                 label="LinkedIn"
-                value={profile.personal_info?.linkedin || ''}
+                value={cv.personal_info.linkedin || ''}
                 onChange={(e) => updatePersonalInfo('linkedin', e.target.value)}
               />
             </div>
@@ -283,10 +294,10 @@ export default function CVEditorPage() {
             title="Profil"
             description="Résumé d'accroche en haut du CV"
             defaultOpen
-            isComplete={(profile.summary?.trim().length || 0) > 0}
+            isComplete={(cv.summary?.trim().length || 0) > 0}
           >
             <textarea
-              value={profile.summary || ''}
+              value={cv.summary || ''}
               onChange={(e) => updateSummary(e.target.value)}
               rows={5}
               placeholder="Résumé professionnel percutant en 2-3 phrases…"
@@ -296,38 +307,50 @@ export default function CVEditorPage() {
 
           <ProfileSection
             title="Expériences professionnelles"
-            isComplete={profile.experiences.length > 0}
+            isComplete={cv.selected_experiences.length > 0}
           >
             <div className="space-y-4">
               <div className="flex justify-end">
-                <Button variant="primary" size="sm" onClick={addExperience}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => addItem('selected_experiences', createEmptyCVExperience())}
+                >
                   + Ajouter une expérience
                 </Button>
               </div>
-              {profile.experiences.map((exp) => (
-                <ExperienceForm
+              {cv.selected_experiences.map((exp) => (
+                <CVExperienceForm
                   key={exp.id}
                   experience={exp}
-                  onChange={(field, value) => updateExperience(exp.id, field, value)}
-                  onRemove={() => removeExperience(exp.id)}
+                  onChange={(field, value) =>
+                    updateItem('selected_experiences', exp.id, field, value)
+                  }
+                  onRemove={() => removeItem('selected_experiences', exp.id)}
                 />
               ))}
             </div>
           </ProfileSection>
 
-          <ProfileSection title="Formation" isComplete={profile.educations.length > 0}>
+          <ProfileSection title="Formation" isComplete={cv.selected_educations.length > 0}>
             <div className="space-y-4">
               <div className="flex justify-end">
-                <Button variant="primary" size="sm" onClick={addEducation}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => addItem('selected_educations', createEmptyCVEducation())}
+                >
                   + Ajouter une formation
                 </Button>
               </div>
-              {profile.educations.map((edu) => (
-                <EducationForm
+              {cv.selected_educations.map((edu) => (
+                <CVEducationForm
                   key={edu.id}
                   education={edu}
-                  onChange={(field, value) => updateEducation(edu.id, field, value)}
-                  onRemove={() => removeEducation(edu.id)}
+                  onChange={(field, value) =>
+                    updateItem('selected_educations', edu.id, field, value)
+                  }
+                  onRemove={() => removeItem('selected_educations', edu.id)}
                 />
               ))}
             </div>
@@ -335,37 +358,43 @@ export default function CVEditorPage() {
 
           <ProfileSection
             title="Compétences"
-            isComplete={
-              (profile.skills?.hard.length || 0) + (profile.skills?.soft.length || 0) > 0
-            }
+            isComplete={cv.highlighted_skills.length > 0}
           >
             <div className="space-y-4">
               <SkillsInput
                 label="Compétences techniques"
-                skills={profile.skills?.hard || []}
-                onChange={(skills) => updateSkills('hard', skills)}
+                skills={hardSkills}
+                onChange={(names) => updateSkills('hard_skill', names)}
+                maxSkills={CV_SAVE_MAX_SKILLS}
               />
               <SkillsInput
                 label="Compétences transversales"
-                skills={profile.skills?.soft || []}
-                onChange={(skills) => updateSkills('soft', skills)}
+                skills={softSkills}
+                onChange={(names) => updateSkills('soft_skill', names)}
+                maxSkills={CV_SAVE_MAX_SKILLS}
               />
             </div>
           </ProfileSection>
 
-          <ProfileSection title="Projets" isComplete={profile.projects.length > 0}>
+          <ProfileSection title="Projets" isComplete={cv.selected_projects.length > 0}>
             <div className="space-y-4">
               <div className="flex justify-end">
-                <Button variant="primary" size="sm" onClick={addProject}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => addItem('selected_projects', createEmptyCVProject())}
+                >
                   + Ajouter un projet
                 </Button>
               </div>
-              {profile.projects.map((proj) => (
-                <ProjectForm
+              {cv.selected_projects.map((proj) => (
+                <CVProjectForm
                   key={proj.id}
                   project={proj}
-                  onChange={(field, value) => updateProject(proj.id, field, value)}
-                  onRemove={() => removeProject(proj.id)}
+                  onChange={(field, value) =>
+                    updateItem('selected_projects', proj.id, field, value)
+                  }
+                  onRemove={() => removeItem('selected_projects', proj.id)}
                 />
               ))}
             </div>
@@ -373,20 +402,28 @@ export default function CVEditorPage() {
 
           <ProfileSection
             title="Certifications"
-            isComplete={profile.certifications.length > 0}
+            isComplete={cv.selected_certifications.length > 0}
           >
             <div className="space-y-4">
               <div className="flex justify-end">
-                <Button variant="primary" size="sm" onClick={addCertification}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() =>
+                    addItem('selected_certifications', createEmptyCVCertification())
+                  }
+                >
                   + Ajouter une certification
                 </Button>
               </div>
-              {profile.certifications.map((cert) => (
-                <CertificationForm
+              {cv.selected_certifications.map((cert) => (
+                <CVCertificationForm
                   key={cert.id}
                   certification={cert}
-                  onChange={(field, value) => updateCertification(cert.id, field, value)}
-                  onRemove={() => removeCertification(cert.id)}
+                  onChange={(field, value) =>
+                    updateItem('selected_certifications', cert.id, field, value)
+                  }
+                  onRemove={() => removeItem('selected_certifications', cert.id)}
                 />
               ))}
             </div>
@@ -399,7 +436,8 @@ export default function CVEditorPage() {
             <p className="mb-3 text-sm font-medium text-text-secondary">Aperçu en direct</p>
             <div className="overflow-hidden rounded-lg border border-border bg-white shadow-sm">
               <div style={{ zoom: 0.62 }}>
-                <CVRenderer profile={profile} />
+                {/* eslint-disable-next-line react-hooks/static-components -- référence stable du registre (ADR-TEMPLATE-REGISTRY) */}
+                <Template cv={previewCv} />
               </div>
             </div>
           </div>

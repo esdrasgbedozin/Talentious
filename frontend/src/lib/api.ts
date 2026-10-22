@@ -5,11 +5,13 @@
 
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import type { UserProfile } from '@/types/profile';
-import { normalizeCVData } from '@/lib/cv';
+import type { components } from '@/generated/api';
 import {
   formatValidationMessage,
   type InvalidParam,
 } from '@/lib/validationErrors';
+
+type GeneratedCVData = components['schemas']['GeneratedCVData'];
 
 // Base URL of the FastAPI backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -330,22 +332,39 @@ export const resetPassword = async (
 
 export interface CVDetail extends CVBase {
   job_offer_context: string | null;
-  cv_data_json: UserProfile;
+  // Schéma canonique unique (ADR-CONTENT-SCHEMA) : alimenté TEL QUEL au renderer
+  // partagé (aperçu = PDF). Depuis PAH-M0, ce typage est garanti par la BASE
+  // (backfill v2 + ceinture de coercition du worker), plus par l'app : les
+  // consommateurs gardent leur défense au chargement (ensureCVShape).
+  cv_data_json: GeneratedCVData;
   gcs_pdf_url: string | null;
 }
 
-/** Fetch a single CV, normalizing its content to canonical ProfileData. */
+/** Fetch a single CV; `cv_data_json` is canonical GeneratedCVData, passed
+ * through UNTOUCHED. La canonicité est garantie EN BASE depuis PAH-M0
+ * (backfill v2 des CV V1 + ceinture de coercition du worker) : le pont legacy
+ * `toCanonicalCVData` est supprimé. */
 export const getCV = async (cvId: string): Promise<CVDetail> => {
   const { data } = await apiClient.get<CVDetail>(`/cv/${cvId}`);
-  return { ...data, cv_data_json: normalizeCVData(data.cv_data_json) };
+  return data;
 };
 
-/** Update a CV's name and/or content (PUT /cv/{id}). */
+/**
+ * Update a CV's name and/or content (PUT /cv/{id}).
+ *
+ * The editor works on the canonical GeneratedCVData (M0-T08c), the exact shape
+ * the `PUT /cv` contract and backend coercion expect: the state is sent AS IS,
+ * zero transformation (ADR-CONTENT-SCHEMA) — per-experience highlighted_skills
+ * included. Sending anything else silently wipes the CV body (M0-T08a).
+ */
 export const updateCV = async (
   cvId: string,
-  payload: { cv_name?: string; cv_data_json?: UserProfile },
+  payload: { cv_name?: string; cv_data_json?: GeneratedCVData },
 ): Promise<CVDetail> => {
-  const { data } = await apiClient.put<CVDetail>(`/cv/${cvId}`, payload);
+  const body: Record<string, unknown> = {};
+  if (payload.cv_name !== undefined) body.cv_name = payload.cv_name;
+  if (payload.cv_data_json !== undefined) body.cv_data_json = payload.cv_data_json;
+  const { data } = await apiClient.put<CVDetail>(`/cv/${cvId}`, body);
   return data;
 };
 

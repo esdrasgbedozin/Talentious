@@ -19,12 +19,13 @@ from fastapi import (
     status,
 )
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.database import get_db, get_session_factory
+from app.generated.models import GeneratedCVData
 from app.models import (
     CareerPass,
     CVJob,
@@ -35,6 +36,7 @@ from app.models import (
     UserRole,
 )
 from app.routes.auth import get_current_active_user
+from app.services.cv_content_coercion import CVContentCoercionError, coerce_cv_content
 from app.services.cv_worker import run_cv_generation
 
 logger = logging.getLogger(__name__)
@@ -419,7 +421,21 @@ async def update_cv(
     if request.cv_name is not None:
         cv.cv_name = request.cv_name
     if request.cv_data_json is not None:
-        cv.cv_data_json = request.cv_data_json
+        # Même ceinture de sécurité que la génération : le contenu édité est aussi
+        # l'entrée directe du rendu HTML serveur V2 (export-service). On coerce en
+        # liste blanche PUIS on valide le schéma canonique ; un contenu dangereux ou
+        # inexploitable est refusé (422) plutôt que stocké brut (faille XSS/SSRF).
+        # Contrairement à la génération, l'identité N'est PAS ancrée sur le profil :
+        # ici c'est le propriétaire authentifié qui édite ses propres données.
+        try:
+            coerced, _ = coerce_cv_content(request.cv_data_json)
+            GeneratedCVData.model_validate(coerced)
+        except (CVContentCoercionError, ValidationError):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Le contenu du CV est invalide ou n'a pas pu être validé.",
+            )
+        cv.cv_data_json = coerced
 
     cv.updated_at = datetime.now(timezone.utc)
 

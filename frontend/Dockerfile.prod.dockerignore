@@ -1,0 +1,31 @@
+# Ignore SPECIFIQUE au build frontend prod. BuildKit lit ce fichier
+# (<dockerfile>.dockerignore) EN PRIORITE sur le .dockerignore racine lorsque
+# `docker build -f frontend/Dockerfile.prod .` (contexte racine depuis M0-T07).
+#
+# Strategie ALLOWLIST : le contexte envoye au demon ne contient QUE les
+# workspaces reellement copies par le Dockerfile (frontend/, packages/) et les
+# manifestes racine. Re-cloisonne le build malgre le contexte racine et
+# garantit qu'aucun secret d'infra (tfstate, .env) ni code backend/agents ne
+# transite par le contexte Docker. Les motifs sont relatifs a la RACINE du
+# contexte. Voir ADR-RENDER-PACKAGE, revue securite M0-T07.
+
+# 1) Tout ignorer par defaut.
+*
+
+# 2) Re-inclure uniquement ce dont le build a besoin.
+!package.json
+!package-lock.json
+!frontend
+!packages
+
+# 3) Re-exclure l'ephemere et les secrets a l'interieur des dossiers re-inclus
+#    (les regles plus tardives l'emportent).
+**/node_modules
+**/.next
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+**/.DS_Store
+**/coverage
+**/tsconfig.tsbuildinfo

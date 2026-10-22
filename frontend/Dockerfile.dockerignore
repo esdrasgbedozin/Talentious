@@ -1,0 +1,47 @@
+# .dockerignore du build DEV (frontend/Dockerfile, context: . depuis M0-T08).
+#
+# IMPORTANT (BuildKit) : quand un `<dockerfile>.dockerignore` existe, il REMPLACE
+# le `.dockerignore` racine pour CE build — il n'y a pas de fusion. Ce fichier
+# doit donc porter lui-meme TOUTES les exclusions de secrets ; garder ses regles
+# de secrets alignees sur le `.dockerignore` racine. Raison d'etre : le build dev
+# est passe en `context: .` (workspaces npm) ; sans exclusion explicite, un
+# tfstate ou un .env entrerait dans le contexte envoye au demon. Docker N'HONORE
+# PAS .gitignore. (Revue securite M0-T08, suggestion 1.)
+
+# Le build dev ne COPIE que frontend/ et packages/ : on exclut le reste du
+# monorepo pour garder le contexte leger.
+backend/
+agents/
+
+# Deps et artefacts (reinstalles/rebuild dans l'image, jamais copies de l'hote).
+**/node_modules
+**/.next
+**/.venv
+**/.venv-*
+**/__pycache__
+**/*.pyc
+
+# Artefacts Terraform : secrets de prod EN CLAIR (tfstate = mot de passe Cloud
+# SQL, etc.). Aligne sur le .dockerignore racine.
+infra/
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfplan
+**/tf.plan
+**/.terraform
+
+.git
+.github
+.vscode
+.idea
+
+**/.env
+**/.env.*
+!**/.env.example
+
+**/*.log
+**/.DS_Store
+**/coverage
+**/.pytest_cache
+**/.mypy_cache
+**/tsconfig.tsbuildinfo

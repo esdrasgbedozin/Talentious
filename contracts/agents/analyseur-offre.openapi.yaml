@@ -1,11 +1,17 @@
 openapi: 3.0.3
 info:
   title: Agent Analyseur-Offre
-  version: "1.0.0"
+  version: "1.1.0"
   description: |
     Microservice privé d'analyse d'offres d'emploi. Encapsule un appel Vertex AI
     (Gemini 2.5 Flash, région europe-west9) pour extraire les compétences, le niveau
-    de séniorité, les responsabilités clés et le ton d'une offre d'emploi.
+    de séniorité, les responsabilités clés, le ton et les mots-clés d'une offre d'emploi.
+
+    L'analyse est la source commune de la génération de CV, de la lettre de motivation,
+    de la relecture orientée offre et du Score ATS. Le Score ATS est calculé de façon
+    déterministe par le backend à partir de la sortie structurée `keywords` (aucun appel
+    LLM au moment du score) ; l'analyse est mise en cache côté backend par empreinte du
+    texte de l'offre.
 
     ## Accès
     Ce service est privé (Cloud Run --no-allow-unauthenticated). Seul le compte
@@ -45,7 +51,8 @@ paths:
       description: |
         Reçoit le texte brut d'une offre d'emploi et retourne une analyse structurée :
         compétences techniques (hard_skills), compétences comportementales (soft_skills),
-        niveau de séniorité, responsabilités principales et ton de l'offre.
+        niveau de séniorité, responsabilités principales, ton de l'offre et mots-clés
+        normalisés (keywords) exploitables pour le matching ATS déterministe.
 
         L'appel Vertex AI inclut une logique de retry (3 tentatives max) avec validation
         de la sortie JSON contre ce schéma.
@@ -199,18 +206,64 @@ components:
           description: Importance de la compétence pour le poste
           example: "Critical"
 
+    ATSKeyword:
+      type: object
+      description: |
+        Mot-clé normalisé de l'offre, destiné au matching ATS déterministe côté backend
+        (recouvrement avec le contenu du CV, sans appel LLM). Forme identique à
+        openapi.yaml#/components/schemas/ATSKeyword.
+      required:
+        - name
+        - category
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: |
+            Terme canonique, court et matchable (un terme, pas une phrase). Dédoublonné
+            au sein de la liste.
+          example: "Python"
+        category:
+          type: string
+          enum: [hard_skill, soft_skill, requirement]
+          description: |
+            - `hard_skill` : compétence technique, outil, langage.
+            - `soft_skill` : compétence comportementale.
+            - `requirement` : exigence non-compétence (diplôme, certification, séniorité, langue).
+          example: "hard_skill"
+        importance:
+          type: string
+          nullable: true
+          enum: [Critical, Important, "Nice to have"]
+          description: Importance du mot-clé pour le poste (pondère le score)
+          example: "Critical"
+        aliases:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+          maxItems: 5
+          default: []
+          description: Variantes et synonymes reconnus lors du matching (ex. « JS » pour « JavaScript »)
+          example: ["Python 3", "py"]
+
     AnalysisResult:
       type: object
       description: |
         Résultat structuré de l'analyse d'une offre d'emploi.
         Ce schéma est réutilisé en entrée de l'agent rédacteur-cv
         (agents/redacteur-cv.openapi.yaml#/components/schemas/OfferAnalysis).
+
+        `keywords` est la sortie structurée dédiée au Score ATS. Une analyse mise en
+        cache avant l'introduction de ce champ n'en contient pas : le backend la
+        ré-analyse avant tout calcul de score.
       required:
         - hard_skills
         - soft_skills
         - seniority_level
         - key_responsibilities
         - tone
+        - keywords
       properties:
         hard_skills:
           type: array
@@ -253,6 +306,23 @@ components:
           type: string
           description: Ton général de l'offre d'emploi
           example: "innovant"
+        keywords:
+          type: array
+          items:
+            $ref: '#/components/schemas/ATSKeyword'
+          maxItems: 60
+          description: |
+            Mots-clés normalisés de l'offre pour le matching ATS déterministe (compétences
+            techniques et comportementales, exigences). Sans doublon.
+          example:
+            - name: "Python"
+              category: "hard_skill"
+              importance: "Critical"
+              aliases: ["Python 3"]
+            - name: "Collaboration"
+              category: "soft_skill"
+              importance: "Important"
+              aliases: []
 
     HealthResponse:
       type: object
@@ -270,4 +340,4 @@ components:
           example: "analyseur-offre"
         version:
           type: string
-          example: "1.0.0"
+          example: "1.1.0"

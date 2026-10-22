@@ -1,0 +1,24 @@
+/*
+ * Entrée Tailwind v4 du package (M0-T14) — CSS autonome pour consommer le
+ * renderer HORS Next (export-service M2, setContent).
+ *
+ * `source(none)` désactive la détection automatique (déterminisme : seules les
+ * sources du package comptent, jamais l'app) ; `@source` re-déclare src/.
+ * Le thème CV (couleurs/polices) n'est PAS ici : il arrive par variables
+ * inline `--cv-*` sur la racine du CV (ADR-THEME-DECOUPLED). Ce fichier ne
+ * produit que la couche UTILITAIRE (layout) + preflight.
+ *
+ * Les variables internes du moteur (--spacing, --tw-*…) sont émises par
+ * Tailwind sur `:root, :host` : le script de build les re-scope sur
+ * `.cv-sheet, :host` — aucune règle :root dans l'artefact (critère M0-T14).
+ * Le PREFLIGHT (resets `*`, `html`…) reste global, sous @layer : l'artefact
+ * est réservé à un document DÉDIÉ que le package possède (setContent de
+ * l'export-service) — ne pas l'injecter dans un hôte quelconque.
+ *
+ * Les tests (et leurs sentinelles de classes interdites) sont exclus du scan :
+ * seules les sources de rendu produisent des utilitaires.
+ */
+@import 'tailwindcss' source(none);
+@source '../';
+@source not '../**/*.test.*';
+@source not '../__tests__';

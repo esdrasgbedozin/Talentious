@@ -8,9 +8,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Printer, ArrowLeft } from 'lucide-react';
-import CVRenderer from '@/components/cv/CVRenderer';
+import { getTemplate } from '@talentious/cv-render';
 import Button from '@/components/ui/Button';
 import { getCV, getErrorMessage, type CVDetail } from '@/lib/api';
+import { ensureCVShape } from '@/lib/cvEditor';
 
 export default function CVPrintPage() {
   const params = useParams<{ id: string }>();
@@ -44,7 +45,10 @@ export default function CVPrintPage() {
     getCV(cvId)
       .then((data) => {
         if (cancelled) return;
-        setCv(data);
+        // Même défense au chargement que l'éditeur : depuis la suppression du
+        // pont (PAH-M0), getCV est un passthrough strict — un cv_data_json
+        // corrompu (null, non-objet) ne doit pas faire une page blanche.
+        setCv({ ...data, cv_data_json: ensureCVShape(data.cv_data_json) });
         // The browser uses document.title as the default "Save as PDF" filename.
         document.title = data.cv_name || 'CV';
         if (!previewOnly) {
@@ -71,7 +75,11 @@ export default function CVPrintPage() {
     );
   }
 
-  if (!cv) {
+  // Résolution template_id → composant déléguée au registre (M0-T12,
+  // ADR-TEMPLATE-REGISTRY) : alias V1 et repli sûr compris — jamais de page vide.
+  const Template = cv ? getTemplate(cv.template_id) : null;
+
+  if (!cv || !Template) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-action border-t-transparent" />
@@ -100,7 +108,9 @@ export default function CVPrintPage() {
         className="cv-print-fit mx-auto w-[210mm] bg-white shadow-lg print:w-auto print:shadow-none"
         style={{ zoom: fitZoom }}
       >
-        <CVRenderer profile={cv.cv_data_json} />
+        {/* Canonique stocké, injecté TEL QUEL — même payload que l'export-service (M2). */}
+        {/* eslint-disable-next-line react-hooks/static-components -- référence stable du registre (ADR-TEMPLATE-REGISTRY) */}
+        <Template cv={cv.cv_data_json} />
       </div>
     </div>
   );

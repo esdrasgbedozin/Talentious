@@ -1,0 +1,46 @@
+{
+  "name": "@talentious/cv-render",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Package de rendu CV partagé (aperçu Next + export-service PDF/docx). Garantit l'invariant « aperçu = PDF » — voir ADR-RENDER-PACKAGE. Consommé en source via transpilePackages.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "jest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "build:css": "node scripts/build-css.mjs"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@fontsource/ibm-plex-sans": "5.3.0",
+    "@fontsource/ibm-plex-serif": "5.3.0",
+    "@fontsource/inter": "5.3.0",
+    "@fontsource/lora": "5.3.0",
+    "@fontsource/merriweather": "5.3.0",
+    "@fontsource/source-sans-3": "5.3.1",
+    "@fontsource/source-serif-4": "5.3.1",
+    "@fontsource/work-sans": "5.3.0",
+    "@tailwindcss/cli": "4.3.3",
+    "@testing-library/react": "^16.3.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.1",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "tailwindcss": "4.3.3",
+    "ts-jest": "^29.4.0",
+    "typescript": "^5"
+  }
+}
