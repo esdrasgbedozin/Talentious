@@ -100,6 +100,26 @@ couvre les deux : la décision du package partagé et son intégration au build.
   Test : sélecteur **borné** (pas de faux positif préfixe) de chaque classe
   posée par chaque template du registre (`TEMPLATE_IDS`) sur les 3 fixtures,
   contrôles positif/négatif du détecteur, garde anti-charte app.
+- **M0-T15 (fait, durci en revue)** : auto-fit isolé dans `src/fit.ts` —
+  `computeFitScale` (fonction pure : plafond 1, plancher `MIN_SCALE`, neutre sur
+  toute mesure non exploitable), consommée par `CVRenderer`. Signal de rendu
+  stable `window.__CV_READY__` posé **après** `fonts.ready` **et après** le
+  re-fit aux métriques finales des polices (jamais avant le commit DOM de
+  l'ajustement) ; `whenFontsReady` ne rejette jamais ET est bornée par
+  `FONTS_READY_TIMEOUT_MS` (5 s : une police qui pend ne suspend pas un export ;
+  M2 garde SES timeouts `waitForFunction` + job). Cycle de vie : signal **retiré**
+  au démontage et au changement de `cv`, re-posé à la fin du nouveau cycle —
+  jamais de signal périmé ; `fit()` sous `finally` (un fit qui lève signale quand
+  même). CONTRAT : une seule instance de CVRenderer par document d'export (page
+  Chromium neuve par export). `CV_READY_FLAG` exporté : point d'attente M2.
+  **Limites connues (assumées, à traiter en M2)** : un re-fit ResizeObserver
+  postérieur au signal n'est pas re-signalé ; le signal n'attend pas les images
+  (aucune aujourd'hui) ; sous `MIN_SCALE` le contenu est tronqué sans indicateur
+  (`__CV_OVERFLOW__` à envisager) ; un crash de rendu ne produit aucun signal —
+  la défense principale est la validation du contenu à l'entrée de
+  l'export-service (M2-T16), un error boundary `__CV_ERROR__` à envisager en
+  M2-T04. La contradiction R1 (auto-fit JS vs « JS désactivé »,
+  ADR-RENDER-SECURITY) reste à trancher au spike M2-T05.
 - **M0-T08 (fait)** : `CVRenderer` extrait dans le package (export nommé `CVRenderer`),
   **à comportement constant**. Preuve d'équivalence, du plus fort au plus faible : (a) la
   source extraite est **identique octet-à-octet** à l'ancien composant, à la seule ligne

@@ -14,11 +14,12 @@
  *
  * Empty sections are skipped so partial CVs still render cleanly.
  */
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { GeneratedCVData } from './types';
 import type { components } from './generated/api';
 import { themeToCssVars } from './theme';
 import { getCVLocale, type CVLocale, type DocumentLanguage } from './i18n';
+import { computeFitScale, signalCVReady, whenFontsReady } from './fit';
 
 type CVThemeTokens = components['schemas']['CVThemeTokens'];
 
@@ -45,9 +46,6 @@ const A4_HEIGHT_MM = 297;
 const PAD_Y_MM = 14;
 const PAD_X_MM = 16;
 const MM_TO_PX = 96 / 25.4;
-// Never shrink below this — past it the CV is unreadable and the user should trim
-// content instead. In practice content stays well above this floor.
-const MIN_SCALE = 0.62;
 
 /** "2020-03" | "2020-03-15" → "mars 2020" / "Mar 2020" selon la locale ; "" → "". */
 function formatMonthYear(t: CVLocale, value?: string | null): string {
@@ -113,6 +111,9 @@ export default function CVRenderer({ cv, theme, language }: CVRendererProps) {
   // keeps it correct as the user edits the CV live.
   const contentRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  // Compteur de cycles « polices prêtes + re-fit commité » : incrémenté (jamais
+  // booléen) pour que CHAQUE changement de cv re-déclenche l'effet de signal.
+  const [fitSettled, setFitSettled] = useState(0);
 
   useLayoutEffect(() => {
     const el = contentRef.current;
@@ -121,14 +122,39 @@ export default function CVRenderer({ cv, theme, language }: CVRendererProps) {
     const fit = () => {
       const natural = el.scrollHeight;
       if (!natural) return;
-      const next = Math.min(1, availableHeightPx / natural);
-      setScale(next < MIN_SCALE ? MIN_SCALE : next);
+      setScale(computeFitScale(natural, availableHeightPx));
     };
+    // Ce fit force un layout (lecture de scrollHeight) AVANT whenFontsReady :
+    // c'est ce qui déclenche le chargement des polices utilisées — fonts.ready
+    // ne peut pas se résoudre « à vide » (garantie reprise par M0-T16).
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
-    return () => ro.disconnect();
+    // Polices chargées = métriques finales : re-fit déterministe, PUIS signal
+    // de rendu stable (effet [fitSettled] ci-dessous — posé après le commit DOM
+    // du re-fit, jamais avant). `finally` : même si fit() lève, le signal part
+    // — un export ne reste pas suspendu (revue sécurité T14+T15).
+    let cancelled = false;
+    void whenFontsReady(document).then(() => {
+      if (cancelled) return;
+      try {
+        fit();
+      } finally {
+        setFitSettled((n) => n + 1);
+      }
+    });
+    return () => {
+      cancelled = true;
+      ro.disconnect();
+      // Démontage ou changement de cv : retirer le signal — un waitForFunction
+      // ne doit jamais lire un signal périmé (reposé à la fin du nouveau cycle).
+      delete window.__CV_READY__;
+    };
   }, [cv]);
+
+  useEffect(() => {
+    if (fitSettled > 0) signalCVReady(window);
+  }, [fitSettled]);
 
   return (
     <div
