@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     app_name: str = "Talentious API"
     environment: str = "development"
     debug: bool = True
+    log_level: str = "INFO"  # logs structurés JSON (app.core.logging_config)
 
     # Database
     # Use asyncpg dialect by default for async SQLAlchemy engine

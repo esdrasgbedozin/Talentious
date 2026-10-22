@@ -9,7 +9,10 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from slowapi.errors import RateLimitExceeded
 
+import uuid
+
 from app.config import settings
+from app.core.logging_config import configure_logging, request_id_var
 from app.core.problem import (
     http_exception_handler,
     unhandled_exception_handler,
@@ -17,6 +20,9 @@ from app.core.problem import (
 )
 from app.core.rate_limit import limiter, rate_limit_handler
 from app.routes import account, admin, auth, billing, profile, cv
+
+# Logs structurés JSON dès l'import du module (uvicorn importe `app`).
+configure_logging(settings.log_level)
 
 # Create FastAPI application
 app = FastAPI(
@@ -48,6 +54,21 @@ async def no_store_cache(request, call_next):
     response = await call_next(request)
     response.headers.setdefault("Cache-Control", "no-store")
     return response
+
+
+@app.middleware("http")
+async def request_id_middleware(request, call_next):
+    """Corrélation des logs : pose un request_id (repris de l'en-tête entrant
+    s'il existe, sinon généré) propagé à tous les logs de la requête, et renvoyé
+    au client dans l'en-tête X-Request-ID."""
+    rid = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:12]
+    token = request_id_var.set(rid)
+    try:
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = rid
+        return response
+    finally:
+        request_id_var.reset(token)
 
 
 # Rate limiting (slowapi) — the limiter must be on app.state.

@@ -216,6 +216,152 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /auth/verify-email:
+    post:
+      tags: [Auth]
+      operationId: verifyEmail
+      summary: Confirmer une adresse email via le token du lien
+      description: |
+        Valide l'adresse email à partir du token du lien de vérification.
+        Idempotent : vérifier un compte déjà vérifié réussit.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Email confirmé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Lien invalide ou expiré
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/resend-verification:
+    post:
+      tags: [Auth]
+      operationId: resendVerification
+      summary: Renvoyer l'email de vérification (utilisateur connecté)
+      description: |
+        Renvoie le lien de vérification à l'utilisateur authentifié. Réponse
+        toujours 204 (ne révèle pas l'état de vérification).
+      responses:
+        '204':
+          description: Demande prise en compte (email renvoyé si nécessaire)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: refreshToken
+      summary: Renouveler l'access token via le refresh token (cookie)
+      description: |
+        Échange le refresh token (cookie httpOnly `talentious_refresh`, envoyé
+        automatiquement) contre un nouvel access token. Rotation du refresh
+        token à chaque appel ; la réutilisation d'un token déjà échangé révoque
+        toute la famille (détection de vol).
+      security: []
+      responses:
+        '200':
+          description: Nouvel access token (et refresh token renouvelé en cookie)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '401':
+          description: Refresh token absent, invalide, expiré ou révoqué
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      summary: Se déconnecter (révoque le refresh token)
+      description: |
+        Révoque le refresh token courant côté serveur et efface le cookie.
+        Idempotent : réussit même sans session active.
+      responses:
+        '204':
+          description: Déconnecté (refresh token révoqué, cookie effacé)
+
+  /auth/password/forgot:
+    post:
+      tags: [Auth]
+      operationId: forgotPassword
+      summary: Demander un email de réinitialisation de mot de passe
+      description: |
+        Envoie un lien de réinitialisation à l'adresse fournie. Réponse
+        toujours 204 (enumeration-safe : ne révèle pas si l'email existe).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '204':
+          description: Demande prise en compte (email envoyé si le compte existe)
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/password/reset:
+    post:
+      tags: [Auth]
+      operationId: resetPassword
+      summary: Réinitialiser le mot de passe via le token du lien
+      description: |
+        Définit un nouveau mot de passe à partir du token du lien de
+        réinitialisation. Révoque toutes les sessions existantes.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token:
+                  type: string
+                new_password:
+                  type: string
+                  minLength: 8
+      responses:
+        '204':
+          description: Mot de passe réinitialisé, sessions révoquées
+        '400':
+          description: Lien invalide ou expiré
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /auth/verify-email/resend:
     post:
       tags: [Auth]
