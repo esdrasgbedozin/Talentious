@@ -143,8 +143,10 @@ jobs:
         # run #39 (2026-10-22) a échoué sur « server closed the connection
         # unexpectedly » — proxy lancé mais pas prêt (DET-CI-DBPROD). Un port
         # TCP ouvert ne prouve rien (le proxy ouvre son port AVANT de joindre
-        # l'instance) : on sonde son endpoint /readiness (--health-check), qui
-        # ne répond 200 qu'une fois l'instance réellement joignable.
+        # l'instance) : on sonde son endpoint /readiness (--health-check) —
+        # proxy démarré et connexions initialisées. Ce n'est pas la preuve
+        # qu'une requête SQL aboutit : le cas restant est absorbé par le retry
+        # sur erreur de connexion du step suivant.
         run: |
           curl -sSLo cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.13.0/cloud-sql-proxy.linux.amd64
           # SHA-256 officiel (notes de release GitHub v2.13.0, contre-vérifié

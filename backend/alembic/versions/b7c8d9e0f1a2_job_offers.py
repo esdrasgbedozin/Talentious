@@ -46,7 +46,7 @@ def upgrade() -> None:
             "user_id", "text_hash", name="uq_job_offers_user_text_hash"
         ),
         sa.CheckConstraint(
-            "length(text_hash) = 64", name="ck_job_offers_text_hash_len"
+            "text_hash ~ '^[0-9a-f]{64}$'", name="ck_job_offers_text_hash_sha256"
         ),
     )
     # Pas d'index séparé sur user_id : l'index UNIQUE (user_id, text_hash) a

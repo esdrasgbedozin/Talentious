@@ -86,15 +86,17 @@ class TestJobOfferModel:
         assert [row[0] for row in restantes] == [survivant.id]
 
     async def test_hash_mal_forme_refuse_par_la_base(self, test_db):
-        # Le CHECK length=64 attrape un hash tronqué/mal calculé AVANT qu'il
-        # ne fragmente le cache (le hash doit venir d'un helper unique).
+        # Le CHECK `^[0-9a-f]{64}$` attrape un hash tronqué OU non hexadécimal
+        # AVANT qu'il ne fragmente le cache (le hash doit venir d'un helper
+        # unique, minuscule — sha256 hexdigest).
         user = _user("hash-casse@test.fr")
         test_db.add(user)
         await test_db.flush()
-        test_db.add(JobOffer(user_id=user.id, raw_text="X", text_hash="abc"))
-        with pytest.raises(IntegrityError):
-            await test_db.flush()
-        await test_db.rollback()
+        for mauvais in ("abc", "Z" * 64, "A" * 64):
+            test_db.add(JobOffer(user_id=user.id, raw_text="X", text_hash=mauvais))
+            with pytest.raises(IntegrityError):
+                await test_db.flush()
+            await test_db.rollback()
 
 
 class TestMigrationJobOffers:
@@ -123,7 +125,7 @@ class TestMigrationJobOffers:
             }
             assert ("user_id", "text_hash") in uniques
             checks = {c["name"] for c in insp.get_check_constraints("job_offers")}
-            assert "ck_job_offers_text_hash_len" in checks
+            assert "ck_job_offers_text_hash_sha256" in checks
             fks = insp.get_foreign_keys("job_offers")
             user_fk = next(fk for fk in fks if fk["referred_table"] == "users")
             assert user_fk["options"].get("ondelete") == "CASCADE"

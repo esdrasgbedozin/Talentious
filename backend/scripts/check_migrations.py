@@ -74,8 +74,16 @@ def _check_disposable_url(raw: str | None) -> str:
             "la garde d'hôte local."
         )
     if url.host not in _LOCAL_HOSTS:
+        # Un '@' BRUT dans le mot de passe fait atterrir sa fin dans url.host
+        # (make_url coupe au premier '@') : ne JAMAIS reproduire un tel hôte
+        # dans le message — il partirait dans les logs CI.
+        shown = (
+            "invalide (contient « @ » — mot de passe non URL-encodé ?)"
+            if url.host and "@" in url.host
+            else f"« {url.host} »"
+        )
         raise UnsafeTargetError(
-            f"hôte « {url.host} » refusé : seuls les hôtes locaux "
+            f"hôte {shown} refusé : seuls les hôtes locaux "
             f"({', '.join(sorted(_LOCAL_HOSTS))}) sont acceptés — ce cycle est "
             "destructeur et réservé aux bases jetables."
         )

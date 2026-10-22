@@ -66,9 +66,16 @@ config gcloud globale (SA du MCP, qui n'a pas accès aux secrets). Le secret ne
 transite que par la mémoire du process — jamais affiché, jamais dans
 l'historique (seul le texte littéral de la commande y entre).
 
+La procédure entière tient dans un SOUS-SHELL `( … )` : le `trap EXIT` y coupe
+le proxy dès la fin du bloc — sans sous-shell, la prod resterait joignable sur
+127.0.0.1:5433 tant que le terminal vit.
+
 ```bash
+(
+set -e
 cloud-sql-proxy --port 5433 talentious-project:europe-west9:talentious-db-prod &
 trap 'kill %1' EXIT
+for i in $(seq 1 15); do (exec 3<>/dev/tcp/127.0.0.1/5433) 2>/dev/null && break; sleep 1; done
 DATABASE_URL="$(CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT='' gcloud secrets versions access latest --secret=DATABASE_URL)" python3 - <<'EOF'
 import os, psycopg2
 raw = os.environ.pop("DATABASE_URL").strip().split("?", 1)[0]
@@ -83,6 +90,7 @@ cur.execute("SELECT version_num FROM alembic_version")
 print("révision :", cur.fetchone()[0])
 conn.close()
 EOF
+)
 ```
 
 Attendu : la révision = `alembic heads` du commit déployé.
@@ -95,12 +103,16 @@ réel : la tester une fois À FROID (reste M1) avant d'en avoir besoin en
 incident.
 
 ```bash
+(
+set -e
 cloud-sql-proxy --port 5433 talentious-project:europe-west9:talentious-db-prod &
-trap 'kill %1' EXIT
+trap 'kill %1' EXIT   # sous-shell : le proxy meurt à la fin du bloc, succès ou échec
+for i in $(seq 1 15); do (exec 3<>/dev/tcp/127.0.0.1/5433) 2>/dev/null && break; sleep 1; done
 # Même transformation d'URL que ci-dessus (requête retirée, hôte du proxy).
 DATABASE_URL="$(CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT='' gcloud secrets versions access latest --secret=DATABASE_URL \
   | python3 -c "import sys; u=sys.stdin.read().strip().split('?',1)[0]; s,r=u.split('://',1); n,_,d=r.partition('/'); print(f'{s}://{n.rpartition(chr(64))[0]}@127.0.0.1:5433/{d}')")" \
   bash -c 'cd backend && alembic upgrade head'
+)
 ```
 
 ## Rollback

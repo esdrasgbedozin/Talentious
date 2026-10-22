@@ -87,11 +87,14 @@ class TestGardeFousURL:
         # make_url (le MÊME parseur que celui qui se connecte) coupe au PREMIER
         # '@' : un mot de passe contenant un '@' BRUT donne un hôte farfelu
         # (`ss@localhost`) → refus, direction sûre. La forme correcte est
-        # l'URL-encodage (`%40`), qui passe.
-        with pytest.raises(UnsafeTargetError, match="refusé"):
+        # l'URL-encodage (`%40`), qui passe. Et le message de refus ne doit pas
+        # reproduire cet « hôte » : il contient la FIN du mot de passe.
+        with pytest.raises(UnsafeTargetError, match="refusé") as exc_info:
             _check_disposable_url(
-                "postgresql+asyncpg://u:p@ss@localhost:5432/migcheck_x"
+                "postgresql+asyncpg://u:fin-secrete@ss@localhost:5432/migcheck_x"
             )
+        assert "fin-secrete" not in str(exc_info.value)
+        assert "ss@localhost" not in str(exc_info.value)
         _check_disposable_url("postgresql+asyncpg://u:p%40ss@localhost:5432/migcheck_x")
 
 

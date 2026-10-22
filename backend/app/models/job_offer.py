@@ -40,7 +40,9 @@ class JobOffer(Base):
     # user_id en colonne de tête — il sert les recherches et le CASCADE.
     __table_args__ = (
         UniqueConstraint("user_id", "text_hash", name="uq_job_offers_user_text_hash"),
-        CheckConstraint("length(text_hash) = 64", name="ck_job_offers_text_hash_len"),
+        CheckConstraint(
+            "text_hash ~ '^[0-9a-f]{64}$'", name="ck_job_offers_text_hash_sha256"
+        ),
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
