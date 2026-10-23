@@ -19,7 +19,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -151,10 +151,30 @@ class CVDetailResponse(BaseModel):
 
 
 class UpdateCVRequest(BaseModel):
-    """Request model for updating CV"""
+    """Request model for updating CV — contenu ET enveloppe, INDÉPENDANTS
+    (M1-T14, contrat : tous optionnels, au moins un fourni ; PUT à sémantique
+    partielle, écart V1 assumé)."""
 
     cv_name: Optional[str] = Field(None, min_length=1, max_length=255)
     cv_data_json: Optional[dict] = None
+    template_id: Optional[str] = Field(None, min_length=1, max_length=64)
+    theme: Optional[CVThemeContract] = None
+    language: Optional[DocumentLanguageContract] = None
+
+    @model_validator(mode="after")
+    def _au_moins_un_champ(self) -> "UpdateCVRequest":
+        if all(
+            value is None
+            for value in (
+                self.cv_name,
+                self.cv_data_json,
+                self.template_id,
+                self.theme,
+                self.language,
+            )
+        ):
+            raise ValueError("au moins un champ doit être fourni")
+        return self
 
 
 # ==================== HELPER FUNCTIONS ====================
@@ -199,6 +219,77 @@ def _deny_if(decision: Decision) -> None:
         ),
         type_=decision.reason.value,
     )
+
+
+# Gating d'enveloppe partagé entre POST /cv/generate (M1-T12) et PUT /cv/{id}
+# (M1-T14) : pour chaque ressource, EXISTENCE d'abord (422 — jamais un 402
+# trompeur sur un id inconnu, ADR-GATING déc. 6), gating ensuite (402 typé).
+
+
+async def _resolve_and_gate_template(db, subject, template_id: str) -> CVTemplate:
+    template = (
+        (await db.execute(select(CVTemplate).where(CVTemplate.id == template_id)))
+        .scalars()
+        .first()
+    )
+    if template is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Template inconnu : {template_id}",
+        )
+    _deny_if(can_use_template(subject, is_free=template.is_free))
+    return template
+
+
+async def _resolve_and_gate_theme(
+    db, subject, theme: CVThemeContract
+) -> tuple[dict, Optional[str], bool]:
+    """→ (tokens validés, provenance, is_premium). Structure + lisibilité
+    (M1-T09, 422), puis provenance : un preset MODIFIÉ est un thème
+    personnalisé (contrat) — custom ou preset premium ⇒ gating 402."""
+    try:
+        validated_tokens = validate_theme_tokens(theme.tokens.model_dump())
+    except ThemeValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        )
+    tokens = validated_tokens.model_dump()
+    preset_id = None  # sans provenance : personnalisé
+    preset_is_free = None  # personnalisé = premium
+    if theme.id is not None:
+        preset = (
+            (await db.execute(select(CVTheme).where(CVTheme.id == theme.id)))
+            .scalars()
+            .first()
+        )
+        if preset is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Preset de thème inconnu : {theme.id}",
+            )
+        if tokens == preset.tokens:
+            preset_is_free = preset.is_free
+            preset_id = preset.id
+    _deny_if(can_use_theme(subject, preset_is_free=preset_is_free))
+    return tokens, preset_id, preset_is_free is not True
+
+
+def _gate_language(subject, language: DocumentLanguageContract) -> None:
+    """Gating (402 typé) PUIS drapeau R6 — un user gratuit reçoit l'upsell
+    honnête, un user outillé reçoit le 422 explicite tant que la génération
+    EN n'existe pas (M7-T11)."""
+    if language is DocumentLanguageContract.fr:
+        return
+    _deny_if(can_use_language(subject, DocumentLanguage(language.value)))
+    if not settings.target_language_en_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "target_language 'en' est désactivé pour l'instant "
+                "(drapeau serveur, livraison M7-T11)."
+            ),
+        )
 
 
 def _theme_snapshot(cv: GeneratedCV, preset_name: Optional[str]) -> CVThemeContract:
@@ -326,65 +417,23 @@ async def generate_cv(
             detail="User profile not found. Please create your profile first.",
         )
 
-    # 3. Gating entitlements (M1-T12) : pour CHAQUE ressource, existence
-    # d'abord (422 — jamais un 402 trompeur sur un id inconnu, ADR-GATING
-    # déc. 6), gating ensuite (402 TYPÉ du contrat).
+    # 3. Gating entitlements (M1-T12) — helpers partagés avec PUT (M1-T14).
     subject = await subject_for(db, current_user)
 
     # Template (null explicite = défaut gratuit — contrat, revue pt 8).
-    requested_template_id = request.template_id or DEFAULT_TEMPLATE_ID
-    template = (
-        (
-            await db.execute(
-                select(CVTemplate).where(CVTemplate.id == requested_template_id)
-            )
-        )
-        .scalars()
-        .first()
+    template = await _resolve_and_gate_template(
+        db, subject, request.template_id or DEFAULT_TEMPLATE_ID
     )
-    if template is None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Template inconnu : {requested_template_id}",
-        )
-    _deny_if(can_use_template(subject, is_free=template.is_free))
 
-    # Thème inline (optionnel) : structure + lisibilité (M1-T09), puis
-    # provenance — un preset MODIFIÉ est un thème personnalisé (contrat).
-    # On capture au passage l'enveloppe EFFECTIVE (tokens + provenance) que
-    # le worker persistera (M1-T13).
+    # Thème inline (optionnel) : enveloppe EFFECTIVE (tokens + provenance)
+    # que le worker persistera (M1-T13).
     theme_is_premium = False
     if request.theme is not None:
-        try:
-            validated_tokens = validate_theme_tokens(request.theme.tokens.model_dump())
-        except ThemeValidationError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=str(exc),
-            )
-        effective_tokens = validated_tokens.model_dump()
-        effective_preset_id = None  # sans provenance : personnalisé
-        preset_is_free = None  # personnalisé = premium
-        if request.theme.id is not None:
-            preset = (
-                (
-                    await db.execute(
-                        select(CVTheme).where(CVTheme.id == request.theme.id)
-                    )
-                )
-                .scalars()
-                .first()
-            )
-            if preset is None:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=f"Preset de thème inconnu : {request.theme.id}",
-                )
-            if effective_tokens == preset.tokens:
-                preset_is_free = preset.is_free
-                effective_preset_id = preset.id
-        _deny_if(can_use_theme(subject, preset_is_free=preset_is_free))
-        theme_is_premium = preset_is_free is not True
+        (
+            effective_tokens,
+            effective_preset_id,
+            theme_is_premium,
+        ) = await _resolve_and_gate_theme(db, subject, request.theme)
     else:
         # Thème omis : le preset PAR DÉFAUT du template s'applique (contrat) ;
         # repli anthracite (D2) si le template n'en référence aucun.
@@ -415,21 +464,8 @@ async def generate_cv(
             effective_tokens = ANTHRACITE_TOKENS
             effective_preset_id = None
 
-    # Langue : gating (402 typé) PUIS drapeau R6 — un user gratuit reçoit
-    # l'upsell honnête, un user outillé reçoit le 422 explicite tant que
-    # la génération EN n'existe pas (M7-T11).
-    if request.target_language is not DocumentLanguageContract.fr:
-        _deny_if(
-            can_use_language(subject, DocumentLanguage(request.target_language.value))
-        )
-        if not settings.target_language_en_enabled:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=(
-                    "target_language 'en' est désactivé pour l'instant "
-                    "(drapeau serveur, livraison M7-T11)."
-                ),
-            )
+    # Langue : gating 402 typé puis drapeau R6 (helper partagé).
+    _gate_language(subject, request.target_language)
 
     # 4. Idempotency: at most one active (queued/running) job per (user,
     # job_type) — contract `JobType` (M1-T06): an active export or letter job
@@ -749,11 +785,23 @@ async def update_cv(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Update CV name or cv_data
+    Met à jour nom, contenu (`cv_data_json`) et/ou ENVELOPPE (`template_id`,
+    `theme`, `language`) — sémantique PARTIELLE, champs indépendants
+    (M1-T14) : modifier l'un ne modifie jamais l'autre. Tout est validé et
+    gaté AVANT la première mutation (aucune écriture partielle, commit
+    unique). Les capacités d'enveloppe suivent le plan du PROPRIÉTAIRE du
+    document (un admin édite en support, il ne « donne » pas de premium).
+    Cliquet monotone : introduire une capacité premium pose
+    created_under_pass=true, jamais l'inverse (ADR-GATING déc. 8).
 
     Raises:
         HTTPException(404): CV not found
         HTTPException(403): CV belongs to another user
+        ProblemException(402): édition d'un doc créé sous Pass sans Pass
+            actif (D1), ou capacité premium introduite sans droit (types
+            RFC 7807 du contrat)
+        HTTPException(422): corps vide, contenu invalide, template/preset
+            inconnu, thème illisible, langue désactivée (drapeau R6)
     """
     result = await db.execute(select(GeneratedCV).where(GeneratedCV.id == cv_id))
     cv = result.scalars().first()
@@ -786,25 +834,76 @@ async def update_cv(
             ),
         )
 
-    # Update fields
-    if request.cv_name is not None:
-        cv.cv_name = request.cv_name
+    # Sujet du PROPRIÉTAIRE pour les capacités d'enveloppe (revue M1-T14
+    # pt 1) : un admin édite en SUPPORT (bypass du gate D1 ci-dessus,
+    # assumé à l'ADR-GATING), mais les capacités premium suivent le PLAN DU
+    # PROPRIÉTAIRE — sinon l'admin poserait du premium sur le document d'un
+    # user gratuit et le verrouillerait (cliquet) sans issue pour lui.
+    if cv.user_id == current_user.id:
+        envelope_subject = subject
+    else:
+        owner = await db.get(User, cv.user_id)
+        envelope_subject = await subject_for(db, owner)
+
+    # ÉDITION (M1-T14) — « tout valider/gater, PUIS muter » (revue pt 5) :
+    # chaque champ est indépendant (sémantique partielle), un 402/422 sur
+    # n'importe lequel ne laisse AUCUNE écriture partielle.
+    # 1) Validations et gating, sans mutation.
+    coerced_content = None
     if request.cv_data_json is not None:
-        # Même ceinture de sécurité que la génération : le contenu édité est aussi
-        # l'entrée directe du rendu HTML serveur V2 (export-service). On coerce en
-        # liste blanche PUIS on valide le schéma canonique ; un contenu dangereux ou
-        # inexploitable est refusé (422) plutôt que stocké brut (faille XSS/SSRF).
-        # Contrairement à la génération, l'identité N'est PAS ancrée sur le profil :
-        # ici c'est le propriétaire authentifié qui édite ses propres données.
+        # Même ceinture de sécurité que la génération : le contenu édité est
+        # aussi l'entrée directe du rendu HTML serveur V2 (export-service).
+        # Coercition en liste blanche PUIS validation du schéma canonique ;
+        # un contenu dangereux ou inexploitable est refusé (422) plutôt que
+        # stocké brut (faille XSS/SSRF). Contrairement à la génération,
+        # l'identité N'est PAS ancrée sur le profil : ici c'est le
+        # propriétaire authentifié qui édite ses propres données.
         try:
-            coerced, _ = coerce_cv_content(request.cv_data_json)
-            GeneratedCVData.model_validate(coerced)
+            coerced_content, _ = coerce_cv_content(request.cv_data_json)
+            GeneratedCVData.model_validate(coerced_content)
         except (CVContentCoercionError, ValidationError):
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Le contenu du CV est invalide ou n'a pas pu être validé.",
             )
-        cv.cv_data_json = coerced
+    new_template = None
+    if request.template_id is not None:
+        new_template = await _resolve_and_gate_template(
+            db, envelope_subject, request.template_id
+        )
+    new_theme = None
+    if request.theme is not None:
+        new_theme = await _resolve_and_gate_theme(db, envelope_subject, request.theme)
+    if request.language is not None:
+        _gate_language(envelope_subject, request.language)
+
+    # 2) Mutations (plus aucune levée possible à partir d'ici).
+    premium_introduced = False
+    if new_template is not None:
+        cv.template_id = new_template.id
+        premium_introduced = premium_introduced or not new_template.is_free
+    if new_theme is not None:
+        tokens, preset_id, theme_is_premium = new_theme
+        # Règle T05 (a) : theme_json et theme_preset_id s'écrivent TOUJOURS
+        # ensemble. Sur un UPDATE, l'affectation explicite de None émet bien
+        # SET NULL (le piège server_default de M1-T11 ne concerne que
+        # l'INSERT qui OMET la colonne) — prouvé en SQL par les tests.
+        cv.theme_json = dict(tokens)
+        cv.theme_preset_id = preset_id
+        premium_introduced = premium_introduced or theme_is_premium
+    if request.language is not None:
+        cv.language = DocumentLanguage(request.language.value)
+        premium_introduced = premium_introduced or (
+            request.language is not DocumentLanguageContract.fr
+        )
+    if premium_introduced and not cv.created_under_pass:
+        # CLIQUET MONOTONE (ADR-GATING déc. 8) : introduire une capacité
+        # premium verrouille le document — jamais l'inverse.
+        cv.created_under_pass = True
+    if request.cv_name is not None:
+        cv.cv_name = request.cv_name
+    if coerced_content is not None:
+        cv.cv_data_json = coerced_content
 
     cv.updated_at = datetime.now(timezone.utc)
 
@@ -812,8 +911,6 @@ async def update_cv(
     await db.refresh(cv)
 
     # Même forme de réponse que GET /cv/{id} (helper partagé — M1-T11).
-    # L'ÉDITION de l'enveloppe via PUT (template/thème/langue + 402 typés)
-    # arrive avec M1-T12+ — ici on ne fait que SERVIR.
     return await _detail_response(db, current_user, cv)
 
 

@@ -77,6 +77,12 @@ anti-ressentiment D1).
 7. **L'admin n'est jamais concerné par le gating** (contrat `PassRequired`),
    mais reste soumis à l'authentification.
 
+7bis. **En édition du document d'AUTRUI (support), les capacités d'enveloppe
+   suivent le plan du PROPRIÉTAIRE** (revue M1-T14) : le bypass admin ne vaut
+   que pour `can_edit` (débloquer/corriger un document) — un admin ne peut
+   pas poser une capacité premium sur le document d'un user gratuit (le
+   cliquet le verrouillerait sans issue pour son propriétaire).
+
 8. **`created_under_pass` est un CLIQUET MONOTONE** (revue data M1-T13) : posé
    à la création = « capacité premium consommée » (sens « entièrement
    gratuit » du contrat `is_editable`, PAS « un Pass était actif ») ; toute
