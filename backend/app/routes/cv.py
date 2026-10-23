@@ -26,9 +26,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.database import get_db, get_session_factory
 from app.generated.models import GeneratedCVData
+from app.generated.models import CVTemplate as CVTemplateContract
+from app.generated.models import CVTheme as CVThemeContract
 from app.models import (
     CareerPass,
     CVJob,
+    CVTemplate,
+    CVTheme,
     GeneratedCV,
     JobStatus,
     JobType,
@@ -329,6 +333,56 @@ async def stream_cv_job(
             yield 'event: error\ndata: {"status": "error"}\n\n'
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+# Chemins LITTÉRAUX déclarés avant la route paramétrée "/{cv_id}" (contrat :
+# « Chemin littéral : prioritaire ») — FastAPI matche dans l'ordre
+# d'enregistrement, les déplacer après l'avalerait en 422 "invalid uuid".
+
+
+@router.get("/templates", response_model=list[CVTemplateContract])
+async def list_cv_templates(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Catalogue des Templates (M1-T10) — DATA-DRIVEN depuis le registre
+    `cv_templates` (seedé par migrations), jamais une liste en dur. Tous les
+    templates sont listés, gratuits comme premium (l'aperçu est libre ; c'est
+    la GÉNÉRATION/ÉDITION premium qui répond 402 — gating M1-T12)."""
+    result = await db.execute(select(CVTemplate).order_by(CVTemplate.id))
+    return [
+        CVTemplateContract(
+            id=template.id,
+            name=template.name,
+            sector=template.sector.value,
+            is_free=template.is_free,
+            description=template.description,
+            preview_url=template.preview_url,
+            default_theme_id=template.default_theme_id,
+        )
+        for template in result.scalars().all()
+    ]
+
+
+@router.get("/themes", response_model=list[CVThemeContract])
+async def list_cv_themes(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Catalogue des presets de Thème CV (M1-T10) — registre `cv_themes`
+    (système, immuable, géré par migrations). Un preset est un POINT DE
+    DÉPART : le client renvoie le thème choisi INLINE, le serveur le
+    snapshote (jamais de référence mutable — ADR-THEME-DECOUPLED)."""
+    result = await db.execute(select(CVTheme).order_by(CVTheme.id))
+    return [
+        CVThemeContract(
+            id=theme.id,
+            name=theme.name,
+            tokens=theme.tokens,
+            is_free=theme.is_free,
+        )
+        for theme in result.scalars().all()
+    ]
 
 
 @router.get("", response_model=list[CVListItem])
