@@ -28,6 +28,7 @@ from app.database import get_db, get_session_factory
 from app.generated.models import GeneratedCVData
 from app.generated.models import CVTemplate as CVTemplateContract
 from app.generated.models import CVTheme as CVThemeContract
+from app.generated.models import DocumentLanguage as DocumentLanguageContract
 from app.models import (
     CareerPass,
     CVJob,
@@ -40,8 +41,10 @@ from app.models import (
     UserProfile,
     UserRole,
 )
+from app.models.generated_cv import ANTHRACITE_TOKENS
 from app.routes.auth import get_current_active_user
 from app.services.cv_content_coercion import CVContentCoercionError, coerce_cv_content
+from app.services.entitlements import can_edit, subject_for
 from app.services.cv_worker import run_cv_generation
 
 logger = logging.getLogger(__name__)
@@ -84,24 +87,32 @@ class CVJobStatus(BaseModel):
 
 
 class CVListItem(BaseModel):
-    """CV list item for GET /cv"""
+    """CV list item for GET /cv — porte l'ENVELOPPE du document (M1-T11)."""
 
     id: UUID
     cv_name: str
     template_id: str
+    theme: CVThemeContract
+    language: DocumentLanguageContract
+    job_offer_id: Optional[UUID] = None
     created_at: datetime
     updated_at: datetime
 
 
 class CVDetailResponse(BaseModel):
-    """Detailed CV response for GET /cv/{cv_id}"""
+    """Detailed CV response for GET /cv/{cv_id} — enveloppe + is_editable
+    CALCULÉ à la lecture, jamais persisté (D1, M1-T11)."""
 
     id: UUID
     cv_name: str
     template_id: str
+    theme: CVThemeContract
+    language: DocumentLanguageContract
+    job_offer_id: Optional[UUID] = None
     job_offer_context: Optional[str]
     cv_data_json: dict
     gcs_pdf_url: Optional[str]
+    is_editable: bool
     created_at: datetime
     updated_at: datetime
 
@@ -114,6 +125,72 @@ class UpdateCVRequest(BaseModel):
 
 
 # ==================== HELPER FUNCTIONS ====================
+
+
+# Nom conventionnel d'un thème sans provenance (le front s'appuie sur
+# `theme.id is None` pour l'i18n — la langue du DOCUMENT n'est pas celle de
+# l'interface).
+CUSTOM_THEME_NAME = "Personnalisé"
+
+
+def _theme_snapshot(cv: GeneratedCV, preset_name: Optional[str]) -> CVThemeContract:
+    """Enveloppe → objet `CVTheme` du contrat : les TOKENS snapshotés font
+    foi, `id` n'est que la provenance (NULL = thème personnalisé — T05) ; le
+    nom vient du registre pour un preset (immuable, joint à la lecture).
+    `is_free` est réservé aux presets du catalogue (readOnly), omis sur un
+    document.
+
+    Un `theme_json` stocké corrompu (la base ne garantit que « objet JSON »)
+    DÉGRADE vers le défaut anthracite au lieu de rendre 500 toute la liste —
+    même doctrine que le rendu (le point de rejet est à l'ÉCRITURE,
+    ADR-THEME-DECOUPLED ; revue M1-T11). La provenance est retirée (plus
+    garantie) et l'incident loggé sans les tokens (charge potentiellement
+    hostile)."""
+    try:
+        return CVThemeContract(
+            id=cv.theme_preset_id,
+            name=preset_name or CUSTOM_THEME_NAME,
+            tokens=cv.theme_json,
+        )
+    except ValidationError:
+        logger.error(
+            "theme_json corrompu servi en repli anthracite",
+            extra={"cv_id": str(cv.id)},
+        )
+        return CVThemeContract(
+            id=None, name=CUSTOM_THEME_NAME, tokens=ANTHRACITE_TOKENS
+        )
+
+
+async def _detail_response(
+    db: AsyncSession, current_user: User, cv: GeneratedCV
+) -> CVDetailResponse:
+    """Forme unique de la réponse détail (GET et PUT — revue M1-T11 pt 3) :
+    nom du preset depuis le registre, `is_editable` CALCULÉ (jamais
+    persisté)."""
+    preset_name = None
+    if cv.theme_preset_id is not None:
+        preset_name = (
+            await db.execute(
+                select(CVTheme.name).where(CVTheme.id == cv.theme_preset_id)
+            )
+        ).scalar_one_or_none()
+    subject = await subject_for(db, current_user)
+    editable = can_edit(subject, created_under_pass=cv.created_under_pass)
+    return CVDetailResponse(
+        id=cv.id,
+        cv_name=cv.cv_name,
+        template_id=cv.template_id,
+        theme=_theme_snapshot(cv, preset_name),
+        language=DocumentLanguageContract(cv.language.value),
+        job_offer_id=cv.offer_id,
+        job_offer_context=cv.job_offer_context,
+        cv_data_json=cv.cv_data_json,
+        gcs_pdf_url=cv.gcs_pdf_url,
+        is_editable=editable.allowed,
+        created_at=cv.created_at,
+        updated_at=cv.updated_at,
+    )
 
 
 def _is_active_job_conflict(exc: IntegrityError) -> bool:
@@ -396,22 +473,27 @@ async def list_cvs(
     Returns:
         List of CV summaries (without full cv_data to reduce payload size)
     """
+    # Jointure sur le registre pour le NOM du preset (une requête, pas de
+    # N+1) ; outerjoin : un thème custom n'a pas de provenance (T05).
     result = await db.execute(
-        select(GeneratedCV)
+        select(GeneratedCV, CVTheme.name)
+        .outerjoin(CVTheme, GeneratedCV.theme_preset_id == CVTheme.id)
         .where(GeneratedCV.user_id == current_user.id)
         .order_by(GeneratedCV.created_at.desc())
     )
-    cvs = result.scalars().all()
 
     return [
         CVListItem(
             id=cv.id,
             cv_name=cv.cv_name,
             template_id=cv.template_id,
+            theme=_theme_snapshot(cv, preset_name),
+            language=DocumentLanguageContract(cv.language.value),
+            job_offer_id=cv.offer_id,
             created_at=cv.created_at,
             updated_at=cv.updated_at,
         )
-        for cv in cvs
+        for cv, preset_name in result.all()
     ]
 
 
@@ -440,23 +522,15 @@ async def get_cv(
             detail=f"CV with ID {cv_id} not found",
         )
 
-    # Authorization check
+    # Authorization check (403 contrat V1 — harmonisation 404 anti-IDOR
+    # tracée pour la matrice M9-T11, ADR-GATING).
     if cv.user_id != current_user.id and current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to access this CV",
         )
 
-    return CVDetailResponse(
-        id=cv.id,
-        cv_name=cv.cv_name,
-        template_id=cv.template_id,
-        job_offer_context=cv.job_offer_context,
-        cv_data_json=cv.cv_data_json,
-        gcs_pdf_url=cv.gcs_pdf_url,
-        created_at=cv.created_at,
-        updated_at=cv.updated_at,
-    )
+    return await _detail_response(db, current_user, cv)
 
 
 @router.put("/{cv_id}", response_model=CVDetailResponse)
@@ -482,11 +556,26 @@ async def update_cv(
             detail=f"CV with ID {cv_id} not found",
         )
 
-    # Authorization check
+    # Authorization check (ownership D'ABORD, gating ENSUITE — ADR-GATING).
     if cv.user_id != current_user.id and current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to update this CV",
+        )
+
+    # Gating D1 (revue M1-T11 pt 2) : l'ÉCRITURE suit la même règle que
+    # is_editable — un document créé sous Pass ne se modifie pas sans Pass
+    # actif. Cohérence : le PUT ne peut pas réussir là où la réponse dirait
+    # « verrouillé ».
+    subject = await subject_for(db, current_user)
+    if not can_edit(subject, created_under_pass=cv.created_under_pass).allowed:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=(
+                "Ce document a été créé avec un Pass : son édition requiert "
+                "un Pass actif (la lecture et le téléchargement restent "
+                "libres)."
+            ),
         )
 
     # Update fields
@@ -514,16 +603,10 @@ async def update_cv(
     await db.commit()
     await db.refresh(cv)
 
-    return CVDetailResponse(
-        id=cv.id,
-        cv_name=cv.cv_name,
-        template_id=cv.template_id,
-        job_offer_context=cv.job_offer_context,
-        cv_data_json=cv.cv_data_json,
-        gcs_pdf_url=cv.gcs_pdf_url,
-        created_at=cv.created_at,
-        updated_at=cv.updated_at,
-    )
+    # Même forme de réponse que GET /cv/{id} (helper partagé — M1-T11).
+    # L'ÉDITION de l'enveloppe via PUT (template/thème/langue + 402 typés)
+    # arrive avec M1-T12+ — ici on ne fait que SERVIR.
+    return await _detail_response(db, current_user, cv)
 
 
 @router.delete("/{cv_id}", status_code=status.HTTP_204_NO_CONTENT)

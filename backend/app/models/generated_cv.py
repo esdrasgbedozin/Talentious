@@ -3,6 +3,7 @@ GeneratedCV model for storing AI-generated CVs.
 """
 
 import enum
+import json
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy import (
@@ -36,16 +37,21 @@ class DocumentLanguage(str, enum.Enum):
     EN = "en"
 
 
-# Snapshot anthracite posé en server_default (M1-T05) : même valeur que le
-# seed de cv_themes (migration d9e0f1a2b3c4) — l'alignement avec theme.ts est
-# prouvé par test (tests/test_cv_themes.py + test_generated_cvs_envelope.py).
-_ANTHRACITE_SNAPSHOT_SQL = text(
-    "'{"
-    '"color_accent": "#2D3748", "color_text": "#1A202C", '
-    '"color_muted": "#4A5568", "color_background": "#FFFFFF", '
-    '"font_heading": "Inter", "font_body": "Inter"'
-    "}'::jsonb"
-)
+# Snapshot anthracite — SOURCE UNIQUE côté app (M1-T11) : sert de
+# server_default (ci-dessous) ET de repli de lecture quand un theme_json
+# stocké est corrompu (routes/cv.py). Même valeur que le seed de cv_themes
+# (migration d9e0f1a2b3c4, snapshot gelé) — l'alignement avec theme.ts est
+# prouvé par test (tests/test_cv_themes.py + test_cv_envelope_read.py).
+ANTHRACITE_TOKENS = {
+    "color_accent": "#2D3748",
+    "color_text": "#1A202C",
+    "color_muted": "#4A5568",
+    "color_background": "#FFFFFF",
+    "font_heading": "Inter",
+    "font_body": "Inter",
+}
+
+_ANTHRACITE_SNAPSHOT_SQL = text(f"'{json.dumps(ANTHRACITE_TOKENS)}'::jsonb")
 
 
 class GeneratedCV(Base):
