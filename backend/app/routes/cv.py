@@ -45,6 +45,7 @@ from app.core.problem import ProblemException
 from app.models.generated_cv import ANTHRACITE_TOKENS, DocumentLanguage
 from app.routes.auth import get_current_active_user
 from app.services.cv_content_coercion import CVContentCoercionError, coerce_cv_content
+from app.services.jobs import get_owned_job
 from app.services.entitlements import (
     Decision,
     DenialReason,
@@ -578,23 +579,16 @@ async def generate_cv(
     return GenerateCVJobAccepted(job_id=job.id, status=job.status)
 
 
-async def _get_owned_job(
+async def _get_owned_cv_generation_job(
     cv_job_id: UUID, current_user: User, db: AsyncSession
 ) -> CVJob:
-    """Fetch a job, enforcing ownership (or admin)."""
-    result = await db.execute(select(CVJob).where(CVJob.id == cv_job_id))
-    job = result.scalars().first()
-    if job is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job {cv_job_id} not found",
-        )
-    if job.user_id != current_user.id and current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to access this job",
-        )
-    return job
+    """Alias V1 (polling + SSE) : ownership via le service PARTAGÉ (règle
+    unique — revue M1-T15 pt 2), restreint aux jobs `cv_generation`
+    (contrat : un job d'un autre type répond 404 sur les endpoints
+    dépréciés, SSE compris)."""
+    return await get_owned_job(
+        db, cv_job_id, current_user, job_types=(JobType.CV_GENERATION,)
+    )
 
 
 @router.get("/jobs/{cv_job_id}", response_model=CVJobStatus)
@@ -603,8 +597,12 @@ async def get_cv_job(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Poll the status of an asynchronous CV generation job."""
-    job = await _get_owned_job(cv_job_id, current_user, db)
+    """Poll the status of an asynchronous CV generation job.
+
+    Alias DÉPRÉCIÉ (contrat) : réservé aux jobs `cv_generation` — un job
+    d'un autre type répond 404 (M1-T15) ; préférer `GET /jobs/{job_id}`.
+    """
+    job = await _get_owned_cv_generation_job(cv_job_id, current_user, db)
     return CVJobStatus(
         job_id=job.id,
         status=job.status,
@@ -622,8 +620,9 @@ async def stream_cv_job(
     session_factory: async_sessionmaker = Depends(get_session_factory),
 ):
     """Server-Sent Events stream of a job's progress until it reaches a terminal state."""
-    # Ownership check up-front (raises 403/404) before opening the stream.
-    await _get_owned_job(cv_job_id, current_user, db)
+    # Ownership + filtre cv_generation (contrat : SSE réservé à ce type —
+    # revue M1-T15 pt 1) AVANT d'ouvrir le flux.
+    await _get_owned_cv_generation_job(cv_job_id, current_user, db)
 
     async def event_generator():
         terminal = {JobStatus.SUCCEEDED, JobStatus.FAILED}
