@@ -65,31 +65,46 @@ Il n'y a donc RIEN à faire à la main dans le cas nominal.
 
 ## Vérifier l'état de la prod (lecture seule) [TOI]
 
+**Prérequis (constaté au test à froid 2026-10-23)** :
+`source backend/.venv-py312/bin/activate` — le `python3` système n'a ni
+`psycopg2` ni `alembic`. Vaut pour CE bloc et pour l'application manuelle.
+
 Le secret `DATABASE_URL` est en forme « socket Cloud Run »
 (`…@/talentious?host=/cloudsql/…`) : il faut retirer la requête et insérer
-l'hôte du proxy. `CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT=''` neutralise,
-pour cette commande seulement, l'impersonation lecture-seule posée dans la
-config gcloud globale (SA du MCP, qui n'a pas accès aux secrets). Le secret ne
-transite que par la mémoire du process — jamais affiché, jamais dans
+l'hôte du proxy. **Règles de découpage** (test à froid 2026-10-23) : isoler
+les identifiants au **dernier `@` EN PREMIER**, avant tout découpage sur `?`
+ou `/` — l'ancien mot de passe contenait des `#`/`?` bruts et tout autre ordre
+tronquait au milieu du mot de passe. Depuis la rotation du 2026-10-23
+(secret v2), le mot de passe de `talentious-app` est **URL-safe alphanumérique**
+et doit le RESTER à toute rotation future (`openssl rand -base64 48 | tr -dc
+'A-Za-z0-9' | head -c 64`). `CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT=''`
+neutralise, pour cette commande seulement, l'impersonation lecture-seule posée
+dans la config gcloud globale (SA du MCP, qui n'a pas accès aux secrets). Le
+secret ne transite que par la mémoire du process — jamais affiché, jamais dans
 l'historique (seul le texte littéral de la commande y entre).
 
 La procédure entière tient dans un SOUS-SHELL `( … )` : le `trap EXIT` y coupe
 le proxy dès la fin du bloc — sans sous-shell, la prod resterait joignable sur
-127.0.0.1:5433 tant que le terminal vit.
+127.0.0.1:5433 tant que le terminal vit. Le trap vise `$PROXY_PID`, **jamais
+`%1`** : un sous-shell non interactif n'a pas de job control, `kill %1` y
+échoue en silence et laisse un proxy orphelin (constaté deux fois au test à
+froid). Après le bloc, vérifier : `lsof -i :5433` ne doit rien rendre.
 
 ```bash
 (
 set -e
 cloud-sql-proxy --port 5433 talentious-project:europe-west9:talentious-db-prod &
-trap 'kill %1' EXIT
+PROXY_PID=$!
+trap 'kill $PROXY_PID' EXIT   # $! et pas %1 : pas de job control en sous-shell
 for i in $(seq 1 15); do (exec 3<>/dev/tcp/127.0.0.1/5433) 2>/dev/null && break; sleep 1; done
 DATABASE_URL="$(CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT='' gcloud secrets versions access latest --secret=DATABASE_URL)" python3 - <<'EOF'
 import os, psycopg2
-raw = os.environ.pop("DATABASE_URL").strip().split("?", 1)[0]
-scheme_rest = raw.split("://", 1)[1]
-netloc, _, dbname = scheme_rest.partition("/")
-creds = netloc.rpartition("@")[0]  # DERNIER '@' : mdp à caractères spéciaux ok
-conn = psycopg2.connect(f"postgresql://{creds}@127.0.0.1:5433/{dbname}")
+raw = os.environ.pop("DATABASE_URL").strip()
+rest = raw.split("://", 1)[1]
+creds, _, hostpart = rest.rpartition("@")  # DERNIER '@' D'ABORD — avant tout '?' ou '/'
+user, _, pwd = creds.partition(":")
+dbname = hostpart.split("?", 1)[0].rpartition("/")[2]
+conn = psycopg2.connect(host="127.0.0.1", port=5433, dbname=dbname, user=user, password=pwd)
 cur = conn.cursor()
 cur.execute("SELECT current_database()")
 print("base connectée :", cur.fetchone()[0])  # DET-CI-DBPROD : toujours l'imprimer
@@ -105,19 +120,22 @@ Attendu : la révision = `alembic heads` du commit déployé.
 ## Application manuelle (secours uniquement) [TOI]
 
 Uniquement si le job `migrate` est en échec persistant ET que le correctif ne
-peut pas passer par un push sur `main`. ⚠️ Procédure jamais encore déroulée en
-réel : la tester une fois À FROID (reste M1) avant d'en avoir besoin en
-incident.
+peut pas passer par un push sur `main`. Testée à froid le 2026-10-23 depuis
+`main` (tête `a6e7f8a9b0c1`) : no-op propre, aucun `Running upgrade` — c'est ce
+test qui a révélé les défauts venv / trap / découpage corrigés dans ce runbook.
+Prérequis venv : voir le bloc lecture seule.
 
 ```bash
 (
 set -e
 cloud-sql-proxy --port 5433 talentious-project:europe-west9:talentious-db-prod &
-trap 'kill %1' EXIT   # sous-shell : le proxy meurt à la fin du bloc, succès ou échec
+PROXY_PID=$!
+trap 'kill $PROXY_PID' EXIT   # sous-shell : le proxy meurt à la fin du bloc, succès ou échec
 for i in $(seq 1 15); do (exec 3<>/dev/tcp/127.0.0.1/5433) 2>/dev/null && break; sleep 1; done
-# Même transformation d'URL que ci-dessus (requête retirée, hôte du proxy).
+# Même transformation d'URL que ci-dessus : dernier '@' D'ABORD, puis requête
+# retirée, hôte du proxy inséré, identifiants ré-encodés pour l'URL alembic.
 DATABASE_URL="$(CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT='' gcloud secrets versions access latest --secret=DATABASE_URL \
-  | python3 -c "import sys; u=sys.stdin.read().strip().split('?',1)[0]; s,r=u.split('://',1); n,_,d=r.partition('/'); print(f'{s}://{n.rpartition(chr(64))[0]}@127.0.0.1:5433/{d}')")" \
+  | python3 -c "import sys; from urllib.parse import quote; u=sys.stdin.read().strip(); s,r=u.split('://',1); c,_,h=r.rpartition('@'); usr,_,pwd=c.partition(':'); d=h.split('?',1)[0].rpartition('/')[2]; print(s+'://'+quote(usr,safe='')+':'+quote(pwd,safe='')+'@127.0.0.1:5433/'+d)")" \
   bash -c 'cd backend && alembic upgrade head'
 )
 ```
@@ -159,3 +177,6 @@ DATABASE_URL="$(CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT='' gcloud secrets vers
 |---|---|---|---|
 | 2026-10-22 (#39) | `server closed the connection unexpectedly` au migrate | proxy lancé mais pas prêt (`sleep 5`) | attente de disponibilité + 1 retry |
 | 2026-10-22 (#40/#41) | `database "talentious_app" does not exist` | nom de base LOCAL transposé en prod | tableau de vérité ci-dessus ; les contrôles impriment la base connectée |
+| 2026-10-23 (test à froid) | `ModuleNotFoundError: psycopg2` | `python3` système au lieu du venv backend | prérequis `source backend/.venv-py312/bin/activate` |
+| 2026-10-23 (test à froid) | proxy orphelin sur 5433 (`bind: address already in use` au bloc suivant) | `trap 'kill %1'` muet en sous-shell sans job control | `PROXY_PID=$!` + `trap 'kill $PROXY_PID' EXIT` ; vérifier `lsof -i :5433` après chaque bloc |
+| 2026-10-23 (test à froid) | `fe_sendauth: no password supplied` (mdp tronqué au parsing) | mdp du secret avec `#`/`?` bruts + découpage `?`/`/` avant le dernier `@` | rotation mdp URL-safe (secret v2) ; découpe au dernier `@` EN PREMIER dans les deux blocs |
