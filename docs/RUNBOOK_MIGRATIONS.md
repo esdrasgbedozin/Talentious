@@ -124,6 +124,13 @@ DATABASE_URL="$(CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT='' gcloud secrets vers
   sauvegardes automatiques Cloud SQL (PITR), puis redéployer l'image N-1.
 - Dans les deux cas : point d'arrêt humain AVANT d'agir.
 
+## Migrations notables
+
+- `c8d9e0f1a2b3` (M1-T03) : bascule DÉFINITIVEMENT les `template_id` legacy
+  (`modern_v1`…) vers `modern_sobre` — réversible en schéma, pas en valeurs
+  (le rendu ne change pas : même alias que le registre front). Les valeurs
+  réécrites sont tracées dans la sortie du job `migrate`.
+
 ## Incidents connus
 
 | Date | Symptôme | Cause | Parade en place |

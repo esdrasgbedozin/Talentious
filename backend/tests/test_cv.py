@@ -169,7 +169,7 @@ class TestCVOwnership:
         cv = GeneratedCV(
             user_id=owner_id,
             cv_name="owned",
-            template_id="modern_v1",
+            template_id="modern_sobre",
             job_offer_context="ctx",
             cv_data_json={"summary": "x"},
         )
@@ -289,7 +289,8 @@ class TestWorker:
             cv = await check.get(GeneratedCV, refreshed.cv_id)
             assert cv is not None
             # PAH-M0 : les nouveaux CV sont estampillés du template V2 canonique
-            # `modern_sobre` (l'alias `modern_v1` du registre reste pour le stock).
+            # `modern_sobre`. (Depuis M1-T03 la FK interdit tout autre stamp ;
+            # l'alias `modern_v1` du registre front ne sert plus qu'en défense.)
             assert cv.template_id == "modern_sobre"
             # Le contenu stocké est le GeneratedCVData coercé (enveloppe canonique).
             assert cv.cv_data_json["summary"] == "optimized"
@@ -522,7 +523,7 @@ class TestUpdateCVCoercion:
         cv = GeneratedCV(
             user_id=owner_id,
             cv_name="à éditer",
-            template_id="modern_v1",
+            template_id="modern_sobre",
             job_offer_context="ctx",
             cv_data_json={"summary": "initial"},
         )

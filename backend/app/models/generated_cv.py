@@ -42,7 +42,13 @@ class GeneratedCV(Base):
         index=True,
     )
     cv_name = Column(String(255), nullable=False)
-    template_id = Column(String(100), nullable=False)
+    # FK depuis M1-T03 : la validité du stamp est garantie par la BASE (les
+    # valeurs V1 ont été backfillées vers modern_sobre dans la migration).
+    template_id = Column(
+        String(100),
+        ForeignKey("cv_templates.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     job_offer_context = Column(Text, nullable=True)
     cv_data_json = Column(JSONB, nullable=False)
     gcs_pdf_url = Column(String(500), nullable=True)

@@ -46,6 +46,23 @@ async def test_db_engine():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+        # Seed minimal du registre des templates (M1-T03) : la FK
+        # generated_cvs.template_id exige que le stamp existe — les fixtures
+        # créent leurs CV avec le template gratuit, comme la prod backfillée.
+        from sqlalchemy import text as _text
+
+        # Mêmes valeurs que le seed de la migration c8d9e0f1a2b3 (dupliqué à
+        # dessein : une migration est un instantané figé, elle n'importe pas
+        # le code applicatif).
+        await conn.execute(
+            _text(
+                "INSERT INTO cv_templates "
+                "(id, name, sector, is_free, description, preview_url, default_theme_id) "
+                "VALUES ('modern_sobre', 'Moderne sobre', 'modern', true, "
+                "'Mise en page sobre et neutre, adaptée à tous les secteurs.', "
+                "'https://talentious.app/templates/modern_sobre.png', 'anthracite')"
+            )
+        )
 
     yield engine
 
