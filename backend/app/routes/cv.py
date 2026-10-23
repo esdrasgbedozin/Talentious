@@ -57,7 +57,11 @@ from app.services.entitlements import (
     subject_for,
 )
 from app.services.theme_validation import ThemeValidationError, validate_theme_tokens
-from app.services.cv_worker import run_cv_generation
+from app.services.cv_worker import (
+    DEFAULT_TEMPLATE_ID,
+    CVEnvelope,
+    run_cv_generation,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +86,7 @@ class GenerateCVRequest(BaseModel):
     )
     # Nullable comme au contrat généré : null explicite = défaut (revue pt 8).
     template_id: Optional[str] = Field(
-        "modern_sobre",
+        DEFAULT_TEMPLATE_ID,
         min_length=1,
         max_length=64,
         description="Template du document (défaut : le template gratuit)",
@@ -328,7 +332,7 @@ async def generate_cv(
     subject = await subject_for(db, current_user)
 
     # Template (null explicite = défaut gratuit — contrat, revue pt 8).
-    requested_template_id = request.template_id or "modern_sobre"
+    requested_template_id = request.template_id or DEFAULT_TEMPLATE_ID
     template = (
         (
             await db.execute(
@@ -347,6 +351,9 @@ async def generate_cv(
 
     # Thème inline (optionnel) : structure + lisibilité (M1-T09), puis
     # provenance — un preset MODIFIÉ est un thème personnalisé (contrat).
+    # On capture au passage l'enveloppe EFFECTIVE (tokens + provenance) que
+    # le worker persistera (M1-T13).
+    theme_is_premium = False
     if request.theme is not None:
         try:
             validated_tokens = validate_theme_tokens(request.theme.tokens.model_dump())
@@ -355,7 +362,9 @@ async def generate_cv(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=str(exc),
             )
-        preset_is_free = None  # sans provenance : personnalisé (premium)
+        effective_tokens = validated_tokens.model_dump()
+        effective_preset_id = None  # sans provenance : personnalisé
+        preset_is_free = None  # personnalisé = premium
         if request.theme.id is not None:
             preset = (
                 (
@@ -371,9 +380,40 @@ async def generate_cv(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail=f"Preset de thème inconnu : {request.theme.id}",
                 )
-            if validated_tokens.model_dump() == preset.tokens:
+            if effective_tokens == preset.tokens:
                 preset_is_free = preset.is_free
+                effective_preset_id = preset.id
         _deny_if(can_use_theme(subject, preset_is_free=preset_is_free))
+        theme_is_premium = preset_is_free is not True
+    else:
+        # Thème omis : le preset PAR DÉFAUT du template s'applique (contrat) ;
+        # repli anthracite (D2) si le template n'en référence aucun.
+        default_preset_id = template.default_theme_id or "anthracite"
+        default_preset = await db.get(CVTheme, default_preset_id)
+        if default_preset is not None and not default_preset.is_free:
+            # Défaut PREMIUM hérité (revue data M1-T13 pt 1) : jamais servi
+            # en douce. Un sujet outillé le reçoit (capacité consommée,
+            # flaguée) ; un sujet gratuit retombe sur anthracite — on ne
+            # bloque pas un parcours V1 nu pour un défaut qu'il n'a pas
+            # demandé (pas de 402 ici, contrairement au thème EXPLICITE).
+            if subject.is_admin or subject.has_active_pass:
+                theme_is_premium = True
+            else:
+                default_preset = await db.get(CVTheme, "anthracite")
+        if default_preset is not None:
+            effective_tokens = default_preset.tokens
+            effective_preset_id = default_preset.id
+        else:
+            # Défense en profondeur INATTEIGNABLE par construction (les FK
+            # RESTRICT garantissent l'existence des presets référencés) :
+            # provenance NULL assumée — le document s'affichera
+            # « Personnalisé » (revue pt 2), état exceptionnel loggé.
+            logger.error(
+                "preset par défaut introuvable, repli anthracite",
+                extra={"preset_id": default_preset_id},
+            )
+            effective_tokens = ANTHRACITE_TOKENS
+            effective_preset_id = None
 
     # Langue : gating (402 typé) PUIS drapeau R6 — un user gratuit reçoit
     # l'upsell honnête, un user outillé reçoit le 422 explicite tant que
@@ -470,6 +510,24 @@ async def generate_cv(
         )
     await db.refresh(job)
 
+    # Enveloppe EFFECTIVE, validée et gatée ci-dessus, persistée par le
+    # worker (M1-T13). created_under_pass = capacité premium CONSOMMÉE
+    # (sens « entièrement gratuit » du contrat is_editable, D1) — pas
+    # simplement « un Pass était actif ».
+    envelope = CVEnvelope(
+        template_id=template.id,
+        # Copie défensive (revue data M1-T13 pt 6) : effective_tokens peut
+        # être l'objet VIVANT du registre ORM ou la constante globale — une
+        # mutation future les corromprait silencieusement.
+        theme_json=dict(effective_tokens),
+        theme_preset_id=effective_preset_id,
+        language=DocumentLanguage(request.target_language.value),
+        created_under_pass=(
+            (not template.is_free)
+            or theme_is_premium
+            or request.target_language is not DocumentLanguageContract.fr
+        ),
+    )
     background_tasks.add_task(
         run_cv_generation,
         session_factory,
@@ -477,6 +535,7 @@ async def generate_cv(
         current_user.id,
         request.cv_name,
         request.offer_text,
+        envelope,
     )
 
     response.headers["Location"] = f"/cv/jobs/{job.id}"

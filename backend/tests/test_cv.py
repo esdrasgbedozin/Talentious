@@ -6,13 +6,14 @@ idempotency, RFC 7807 errors, and the worker passing the canonical {hard, soft} 
 structure to the writer agent WITHOUT any runtime transformation.
 """
 
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from sqlalchemy import select
 
 from app.models import CVJob, GeneratedCV, JobStatus, UserProfile
+from app.models.generated_cv import DocumentLanguage
+from app.services import cv_worker
+from tests.test_cv_themes import _ANTHRACITE_TOKENS
 
 VALID_OFFER = (
     "We are hiring a senior backend engineer with strong Python and FastAPI skills. "
@@ -203,6 +204,18 @@ class TestCVOwnership:
 # ----------------------------------------------------------------------------
 
 
+# Enveloppe gratuite par défaut pour les tests worker (M1-T13) : ces tests
+# vérifient le pipeline (skills, coercition, erreurs), pas l'enveloppe —
+# couverte par tests/test_worker_envelope.py.
+_FREE_ENVELOPE = cv_worker.CVEnvelope(
+    template_id=cv_worker.DEFAULT_TEMPLATE_ID,
+    theme_json=dict(_ANTHRACITE_TOKENS),
+    theme_preset_id="anthracite",
+    language=DocumentLanguage.FR,
+    created_under_pass=False,
+)
+
+
 def _fake_analysis():
     analysis = MagicMock()
     analysis.to_dict.return_value = {
@@ -273,7 +286,7 @@ class TestWorker:
         monkeypatch.setattr(cv_worker.writer_client, "generate_cv", fake_generate_cv)
 
         await cv_worker.run_cv_generation(
-            session_factory, job.id, test_user.id, "CV", VALID_OFFER
+            session_factory, job.id, test_user.id, "CV", VALID_OFFER, _FREE_ENVELOPE
         )
 
         # Skills reached the writer as the canonical {hard, soft} dict — NOT a list.
@@ -320,7 +333,7 @@ class TestWorker:
         )
 
         await cv_worker.run_cv_generation(
-            session_factory, job.id, test_user.id, "CV", VALID_OFFER
+            session_factory, job.id, test_user.id, "CV", VALID_OFFER, _FREE_ENVELOPE
         )
 
         async with session_factory() as check:
@@ -353,7 +366,7 @@ class TestWorker:
         uid = user.id
 
         await cv_worker.run_cv_generation(
-            session_factory, job.id, uid, "CV", VALID_OFFER
+            session_factory, job.id, uid, "CV", VALID_OFFER, _FREE_ENVELOPE
         )
 
         async with session_factory() as check:
@@ -422,7 +435,7 @@ class TestWorkerContentCoercion:
         job = await self._queue_job(test_db, test_user.id)
 
         await cv_worker.run_cv_generation(
-            session_factory, job.id, test_user.id, "CV", VALID_OFFER
+            session_factory, job.id, test_user.id, "CV", VALID_OFFER, _FREE_ENVELOPE
         )
 
         async with session_factory() as check:
@@ -452,7 +465,7 @@ class TestWorkerContentCoercion:
         job = await self._queue_job(test_db, test_user.id)
 
         await cv_worker.run_cv_generation(
-            session_factory, job.id, test_user.id, "CV", VALID_OFFER
+            session_factory, job.id, test_user.id, "CV", VALID_OFFER, _FREE_ENVELOPE
         )
 
         async with session_factory() as check:
@@ -505,7 +518,7 @@ class TestWorkerContentCoercion:
         job = await self._queue_job(test_db, uid)
 
         await cv_worker.run_cv_generation(
-            session_factory, job.id, uid, "CV", VALID_OFFER
+            session_factory, job.id, uid, "CV", VALID_OFFER, _FREE_ENVELOPE
         )
 
         async with session_factory() as check:

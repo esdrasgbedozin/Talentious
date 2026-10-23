@@ -77,6 +77,16 @@ anti-ressentiment D1).
 7. **L'admin n'est jamais concerné par le gating** (contrat `PassRequired`),
    mais reste soumis à l'authentification.
 
+8. **`created_under_pass` est un CLIQUET MONOTONE** (revue data M1-T13) : posé
+   à la création = « capacité premium consommée » (sens « entièrement
+   gratuit » du contrat `is_editable`, PAS « un Pass était actif ») ; toute
+   ÉDITION future qui introduit une capacité premium (template/thème/langue —
+   M1-T14) doit être gatée ET faire passer le flag à `true`, jamais l'inverse
+   — sinon « créer gratuit puis éditer en premium » contourne le modèle.
+   Limite assumée : le flag et la gratuité d'un preset sont figés À LA
+   REQUÊTE — un `is_free` de registre modifié ensuite ne réécrit pas les
+   documents existants (cohérent avec le snapshot).
+
 ## Reste à faire (finalisation M9-T11)
 
 - Câbler le service aux routes au fil des capacités (M2-T17 export, M6 lettre,
