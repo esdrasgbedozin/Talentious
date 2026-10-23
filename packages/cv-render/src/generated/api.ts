@@ -3234,6 +3234,30 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            /**
+             * @description Plafond journalier de générations atteint (utilisateur SANS Pass actif :
+             *     frein de coût IA, calculé sur les jobs `cv_generation` des dernières 24 h,
+             *     quel que soit le sort des documents produits — supprimer un CV ne recharge
+             *     pas le compteur). Les porteurs de Pass et les admins ne sont pas concernés ;
+             *     le plafond GLOBAL (kill-switch applicatif, `ai-daily-cap`) arrive à M6-T03.
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "https://talentious.fr/errors/generation-daily-cap",
+                     *       "title": "Too Many Requests",
+                     *       "status": 429,
+                     *       "detail": "Daily free generation limit reached. Try again tomorrow or activate a Career Pass.",
+                     *       "instance": "/v1/cv/generate"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getCVJobStatus: {

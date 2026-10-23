@@ -26,18 +26,20 @@ VALID_OFFER = (
 
 
 class TestGenerateAccess:
-    async def test_generate_without_career_pass_returns_402(self, client, auth_headers):
-        """A non-admin user without an active CareerPass is blocked (RFC 7807 402)."""
+    async def test_generate_is_freemium_since_m1t12(
+        self, client, auth_headers, monkeypatch
+    ):
+        """CHANGEMENT DE MODÈLE (M1-T12, Bible §4.3) : la génération ne
+        requiert plus de Pass — la 1re variante d'un user gratuit part en
+        202. Le quota (402 variant-limit-reached) et les capacités premium
+        typées sont testés dans tests/test_generate_envelope.py."""
+        monkeypatch.setattr("app.routes.cv.run_cv_generation", AsyncMock())
         response = await client.post(
             "/cv/generate",
             headers=auth_headers,
             json={"cv_name": "My CV", "offer_text": VALID_OFFER},
         )
-        assert response.status_code == 402
-        assert response.headers["content-type"].startswith("application/problem+json")
-        body = response.json()
-        assert body["status"] == 402
-        assert "detail" in body
+        assert response.status_code == 202
 
     async def test_generate_requires_auth(self, client):
         response = await client.post(

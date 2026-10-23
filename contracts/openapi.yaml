@@ -798,6 +798,23 @@ paths:
                 status: 409
                 detail: "A CV generation job is already running for your account. Please wait for it to complete."
                 instance: "/v1/cv/generate"
+        '429':
+          description: |
+            Plafond journalier de générations atteint (utilisateur SANS Pass actif :
+            frein de coût IA, calculé sur les jobs `cv_generation` des dernières 24 h,
+            quel que soit le sort des documents produits — supprimer un CV ne recharge
+            pas le compteur). Les porteurs de Pass et les admins ne sont pas concernés ;
+            le plafond GLOBAL (kill-switch applicatif, `ai-daily-cap`) arrive à M6-T03.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: "https://talentious.fr/errors/generation-daily-cap"
+                title: "Too Many Requests"
+                status: 429
+                detail: "Daily free generation limit reached. Try again tomorrow or activate a Career Pass."
+                instance: "/v1/cv/generate"
         '422':
           description: |
             Erreur de validation du corps de la requête : champ invalide, `template_id`

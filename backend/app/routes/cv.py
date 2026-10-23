@@ -6,7 +6,7 @@ Orchestrates the full AI pipeline: Analyzer → Writer
 import asyncio
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -20,7 +20,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -30,7 +30,6 @@ from app.generated.models import CVTemplate as CVTemplateContract
 from app.generated.models import CVTheme as CVThemeContract
 from app.generated.models import DocumentLanguage as DocumentLanguageContract
 from app.models import (
-    CareerPass,
     CVJob,
     CVTemplate,
     CVTheme,
@@ -41,10 +40,23 @@ from app.models import (
     UserProfile,
     UserRole,
 )
-from app.models.generated_cv import ANTHRACITE_TOKENS
+from app.config import settings
+from app.core.problem import ProblemException
+from app.models.generated_cv import ANTHRACITE_TOKENS, DocumentLanguage
 from app.routes.auth import get_current_active_user
 from app.services.cv_content_coercion import CVContentCoercionError, coerce_cv_content
-from app.services.entitlements import can_edit, subject_for
+from app.services.entitlements import (
+    Decision,
+    DenialReason,
+    can_create_variant,
+    can_edit,
+    can_use_language,
+    can_use_template,
+    can_use_theme,
+    count_variants,
+    subject_for,
+)
+from app.services.theme_validation import ThemeValidationError, validate_theme_tokens
 from app.services.cv_worker import run_cv_generation
 
 logger = logging.getLogger(__name__)
@@ -56,7 +68,8 @@ router = APIRouter(prefix="/cv", tags=["CV Generation"])
 
 
 class GenerateCVRequest(BaseModel):
-    """Request model for CV generation"""
+    """Request model for CV generation — enveloppe optionnelle (M1-T12) :
+    la requête V1 nue (cv_name + offer_text) reste valide."""
 
     cv_name: str = Field(
         ..., min_length=1, max_length=255, description="Name for the generated CV"
@@ -66,6 +79,22 @@ class GenerateCVRequest(BaseModel):
         min_length=50,
         max_length=200000,
         description="Job offer text (50 to 200,000 characters)",
+    )
+    # Nullable comme au contrat généré : null explicite = défaut (revue pt 8).
+    template_id: Optional[str] = Field(
+        "modern_sobre",
+        min_length=1,
+        max_length=64,
+        description="Template du document (défaut : le template gratuit)",
+    )
+    theme: Optional[CVThemeContract] = Field(
+        None,
+        description="Thème CV inline (preset tel quel ou modifié) ; omis = "
+        "thème par défaut du template",
+    )
+    target_language: DocumentLanguageContract = Field(
+        DocumentLanguageContract.fr,
+        description="Langue du document (en = premium, drapeau R6)",
     )
 
 
@@ -131,6 +160,41 @@ class UpdateCVRequest(BaseModel):
 # `theme.id is None` pour l'i18n — la langue du DOCUMENT n'est pas celle de
 # l'interface).
 CUSTOM_THEME_NAME = "Personnalisé"
+
+# Détails humains des refus typés (le `type` RFC 7807 vient du DenialReason).
+_DENIAL_DETAILS = {
+    DenialReason.CAREER_PASS_REQUIRED: (
+        "An active Career Pass is required for this feature."
+    ),
+    DenialReason.PREMIUM_TEMPLATE_REQUIRED: (
+        "This template is premium: an active Career Pass is required."
+    ),
+    DenialReason.PREMIUM_THEME_REQUIRED: (
+        "Custom or premium themes require an active Career Pass."
+    ),
+    DenialReason.PREMIUM_LANGUAGE_REQUIRED: (
+        "Generating a document in English requires an active Career Pass."
+    ),
+    DenialReason.VARIANT_LIMIT_REACHED: (
+        "The free tier allows a single CV variant. Your existing documents "
+        "remain readable and downloadable."
+    ),
+}
+
+
+def _deny_if(decision: Decision) -> None:
+    """Transporte un refus d'entitlements en réponse RFC 7807 TYPÉE (M1-T12) :
+    le `type` du Problem est l'URL exacte du contrat, le statut vient du
+    motif (401 anonyme / 402 premium)."""
+    if decision.allowed:
+        return
+    raise ProblemException(
+        decision.reason.http_status,
+        detail=_DENIAL_DETAILS.get(
+            decision.reason, "This capability requires an active Career Pass."
+        ),
+        type_=decision.reason.value,
+    )
 
 
 def _theme_snapshot(cv: GeneratedCV, preset_name: Optional[str]) -> CVThemeContract:
@@ -202,40 +266,8 @@ def _is_active_job_conflict(exc: IntegrityError) -> bool:
     return "uq_cv_jobs_one_active_per_user_type" in str(exc.orig)
 
 
-async def check_career_pass_or_admin(current_user: User, db: AsyncSession) -> None:
-    """
-    Verify user has an active CareerPass or is admin.
-
-    Raises:
-        HTTPException(402): If user has no active pass and is not admin
-    """
-    # Admins bypass CareerPass check
-    if current_user.role == UserRole.ADMIN:
-        logger.info(f"Admin user {current_user.email} bypassing CareerPass check")
-        return
-
-    # Query for active CareerPass
-    result = await db.execute(
-        select(CareerPass)
-        .where(CareerPass.user_id == current_user.id)
-        .where(CareerPass.valid_until > datetime.now(timezone.utc))
-        .order_by(CareerPass.valid_until.desc())
-    )
-    active_pass = result.scalars().first()
-
-    if not active_pass:
-        logger.warning(
-            f"User {current_user.email} attempted CV generation without active CareerPass"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail="Active CareerPass required. Please purchase a pass to generate CVs.",
-        )
-
-    logger.info(
-        f"User {current_user.email} has active {active_pass.pass_type} "
-        f"(valid until {active_pass.valid_until})"
-    )
+# (M1-T12) check_career_pass_or_admin supprimé : la génération est freemium,
+# le gating passe par app/services/entitlements (subject_for + décisions).
 
 
 # ==================== ENDPOINTS ====================
@@ -257,18 +289,28 @@ async def generate_cv(
     """
     🎯 **ORCHESTRATION ENDPOINT** — accepte une génération de CV (asynchrone).
 
-    Vérifie l'accès (CareerPass ou admin) et l'existence du profil, garantit qu'une
-    seule génération est active par utilisateur (idempotence), crée un `CVJob` en
-    statut `queued` puis lance le pipeline IA en tâche de fond. Retourne `202` avec
-    le `job_id` ; le client suit l'avancement via `GET /cv/jobs/{job_id}`.
+    FREEMIUM (M1-T12) : vérifie le profil puis le gating entitlements —
+    existence des ressources (422), capacités premium en 402 TYPÉS du contrat
+    (template/thème/langue), quota d'1 variante gratuite par COUNT — garantit
+    qu'une seule génération est active par (user, type) (idempotence), crée
+    un `CVJob` `queued` puis lance le pipeline IA en tâche de fond. Retourne
+    `202` avec le `job_id`. L'enveloppe validée est PERSISTÉE par le worker à
+    M1-T13 (hors périmètre ici).
 
     Raises:
-        HTTPException(402): pas de CareerPass actif (non-admin)
+        ProblemException(402): capacité premium sans Pass actif (type RFC
+            7807 du contrat : premium-template/theme/language-required,
+            variant-limit-reached)
+        ProblemException(429): plafond journalier de lancements atteint
+            (non-Pass, generation-daily-cap)
         HTTPException(404): profil utilisateur absent
+        HTTPException(422): template/preset inconnu, thème invalide, langue
+            désactivée par drapeau (R6)
         HTTPException(409): une génération est déjà en cours pour cet utilisateur
     """
-    # 1. Access control (CareerPass or admin) — raises 402 if not allowed.
-    await check_career_pass_or_admin(current_user, db)
+    # 1. (M1-T12) La génération est FREEMIUM (Bible §4.3) : le « Pass
+    # obligatoire » V1 est remplacé par le gating entitlements ci-dessous
+    # (quota d'1 variante gratuite + capacités premium en 402 TYPÉS).
 
     # 2. The user must have a profile to generate from.
     result = await db.execute(
@@ -280,7 +322,76 @@ async def generate_cv(
             detail="User profile not found. Please create your profile first.",
         )
 
-    # 3. Idempotency: at most one active (queued/running) job per (user,
+    # 3. Gating entitlements (M1-T12) : pour CHAQUE ressource, existence
+    # d'abord (422 — jamais un 402 trompeur sur un id inconnu, ADR-GATING
+    # déc. 6), gating ensuite (402 TYPÉ du contrat).
+    subject = await subject_for(db, current_user)
+
+    # Template (null explicite = défaut gratuit — contrat, revue pt 8).
+    requested_template_id = request.template_id or "modern_sobre"
+    template = (
+        (
+            await db.execute(
+                select(CVTemplate).where(CVTemplate.id == requested_template_id)
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if template is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Template inconnu : {requested_template_id}",
+        )
+    _deny_if(can_use_template(subject, is_free=template.is_free))
+
+    # Thème inline (optionnel) : structure + lisibilité (M1-T09), puis
+    # provenance — un preset MODIFIÉ est un thème personnalisé (contrat).
+    if request.theme is not None:
+        try:
+            validated_tokens = validate_theme_tokens(request.theme.tokens.model_dump())
+        except ThemeValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            )
+        preset_is_free = None  # sans provenance : personnalisé (premium)
+        if request.theme.id is not None:
+            preset = (
+                (
+                    await db.execute(
+                        select(CVTheme).where(CVTheme.id == request.theme.id)
+                    )
+                )
+                .scalars()
+                .first()
+            )
+            if preset is None:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Preset de thème inconnu : {request.theme.id}",
+                )
+            if validated_tokens.model_dump() == preset.tokens:
+                preset_is_free = preset.is_free
+        _deny_if(can_use_theme(subject, preset_is_free=preset_is_free))
+
+    # Langue : gating (402 typé) PUIS drapeau R6 — un user gratuit reçoit
+    # l'upsell honnête, un user outillé reçoit le 422 explicite tant que
+    # la génération EN n'existe pas (M7-T11).
+    if request.target_language is not DocumentLanguageContract.fr:
+        _deny_if(
+            can_use_language(subject, DocumentLanguage(request.target_language.value))
+        )
+        if not settings.target_language_en_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "target_language 'en' est désactivé pour l'instant "
+                    "(drapeau serveur, livraison M7-T11)."
+                ),
+            )
+
+    # 4. Idempotency: at most one active (queued/running) job per (user,
     # job_type) — contract `JobType` (M1-T06): an active export or letter job
     # must NOT block a CV generation. Fast-path pre-check for a friendly 409...
     active = await db.execute(
@@ -294,6 +405,44 @@ async def generate_cv(
             status_code=status.HTTP_409_CONFLICT,
             detail="A CV generation is already in progress. Please wait for it to finish.",
         )
+
+    # Quota : la gratuité autorise UNE variante (COUNT à la demande).
+    # APRÈS le contrôle « job actif » (revue sécu M1-T12 pt 2) : le worker
+    # écrit le CV et clôt le job dans le MÊME commit — « aucun job actif »
+    # garantit donc que tout CV d'une génération précédente est déjà visible
+    # au COUNT (ferme la fenêtre quota lu avant la fin du job A).
+    _deny_if(
+        can_create_variant(
+            subject, variant_count=await count_variants(db, current_user.id)
+        )
+    )
+
+    # Frein de coût IA (revue sécu M1-T12 pt 1) : le quota de variantes est
+    # un quota de STOCK — générer/supprimer/regénérer le contourne, et chaque
+    # lancement coûte deux appels Vertex. Plafond de LANCEMENTS par 24 h pour
+    # les non-Pass, compté en base sur les jobs (multi-instance, insensible
+    # aux suppressions). 429 typé au contrat (generation-daily-cap).
+    if not (subject.is_admin or subject.has_active_pass):
+        attempts = (
+            await db.execute(
+                select(func.count())
+                .select_from(CVJob)
+                .where(CVJob.user_id == current_user.id)
+                .where(CVJob.job_type == JobType.CV_GENERATION)
+                .where(
+                    CVJob.created_at >= datetime.now(timezone.utc) - timedelta(hours=24)
+                )
+            )
+        ).scalar_one()
+        if attempts >= settings.free_daily_generation_cap:
+            raise ProblemException(
+                status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=(
+                    "Daily free generation limit reached. Try again tomorrow "
+                    "or activate a Career Pass."
+                ),
+                type_="https://talentious.fr/errors/generation-daily-cap",
+            )
 
     # 4. Create the job and schedule the background pipeline. The partial unique
     # index (uq_cv_jobs_one_active_per_user_type) is the real guard against a

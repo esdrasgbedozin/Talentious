@@ -58,6 +58,17 @@ class Settings(BaseSettings):
     # vérifier l'audience des jetons d'identité. Vide = /auth/google refuse tout.
     google_oauth_client_id: str = ""
 
+    # Drapeau R6 (M1-T12) : `target_language=en` est au contrat avant son
+    # implémentation (M7-T11) — tant que false, la route répond 422 explicite
+    # (jamais un échec sale en aval), même avec Pass actif.
+    target_language_en_enabled: bool = False
+
+    # Frein de coût IA (M1-T12, revue sécu pt 1) : plafond de LANCEMENTS de
+    # génération par 24 h pour un utilisateur SANS Pass actif — compté en base
+    # sur les jobs cv_generation (robuste multi-instance ; supprimer un CV ne
+    # recharge pas le compteur). Le kill-switch GLOBAL arrive à M6-T03.
+    free_daily_generation_cap: int = 5
+
     # CORS
     cors_origins: Annotated[list[str], NoDecode] = [
         "http://localhost:3000",
