@@ -504,20 +504,26 @@ class ImportJobStatus(BaseModel):
     )
 
 
+class HighlightedSkill1(RootModel[str]):
+    root: str = Field(..., max_length=100)
+
+
 class SelectedExperience(BaseModel):
-    id: str
-    title: str
-    company: str
+    id: str = Field(..., max_length=64)
+    title: str = Field(..., max_length=255)
+    company: str = Field(..., max_length=255)
     start_date: str = Field(..., pattern='^\\d{4}-\\d{2}$')
     end_date: str | None = Field(None, pattern='^\\d{4}-\\d{2}$')
-    location: str | None = None
+    location: str | None = Field(None, max_length=255)
     description: str = Field(
         ...,
         description="Description réécrite avec verbes d'action et mots-clés de l'offre",
+        max_length=5000,
     )
-    highlighted_skills: list[str] = Field(
+    highlighted_skills: list[HighlightedSkill1] = Field(
         ...,
         description="Compétences démontrées dans cette expérience, pertinentes pour l'offre",
+        max_length=30,
     )
 
 
@@ -537,10 +543,11 @@ class Importance(StrEnum):
 
 
 class HighlightedSkill(BaseModel):
-    name: str
+    name: str = Field(..., max_length=100)
     level: str | None = Field(
         None,
         description="Niveau de maîtrise inféré par l'agent (ex. Expert, Intermédiaire)",
+        max_length=100,
     )
     category: Category
     importance: Importance = Field(
@@ -555,24 +562,28 @@ class SelectedEducation(BaseModel):
 
     """
 
-    id: str
-    degree: str
-    institution: str
+    id: str = Field(..., max_length=64)
+    degree: str = Field(..., max_length=255)
+    institution: str = Field(..., max_length=255)
     end_date: str | None = Field(
         None,
         description="Date d'obtention du diplôme, format YYYY-MM. Optionnelle.\nRemplace `graduation_date: str` (requis dans l'ancienne version agent).\n",
         pattern='^\\d{4}-\\d{2}$',
     )
-    description: str | None = None
+    description: str | None = Field(None, max_length=2000)
+
+
+class RelevantSkill(RootModel[str]):
+    root: str = Field(..., max_length=100)
 
 
 class SelectedProject(BaseModel):
-    id: str
-    name: str
-    description: str
-    url: str | None = None
+    id: str = Field(..., max_length=64)
+    name: str = Field(..., max_length=255)
+    description: str = Field(..., max_length=3000)
+    url: str | None = Field(None, max_length=500)
     completion_date: str | None = Field(None, pattern='^\\d{4}-\\d{2}$')
-    relevant_skills: list[str]
+    relevant_skills: list[RelevantSkill] = Field(..., max_length=30)
 
 
 class SelectedCertification(BaseModel):
@@ -582,15 +593,15 @@ class SelectedCertification(BaseModel):
 
     """
 
-    id: str
-    name: str
-    issuer: str
+    id: str = Field(..., max_length=64)
+    name: str = Field(..., max_length=255)
+    issuer: str = Field(..., max_length=255)
     issue_date: str | None = Field(
         None,
         description="Date d'obtention. Optionnelle.\nRemplace `issue_date: str` (requis dans l'ancienne version agent).\n",
         pattern='^\\d{4}-\\d{2}$',
     )
-    url: str | None = None
+    url: str | None = Field(None, max_length=500)
 
 
 class DocumentLanguage(StrEnum):
@@ -1423,18 +1434,22 @@ class GeneratedCVData(BaseModel):
     summary: str = Field(
         ...,
         description="Résumé professionnel réécrit et optimisé pour l'offre (50-120 mots)",
+        max_length=2000,
     )
     selected_experiences: list[SelectedExperience] = Field(
         ...,
         description='Expériences sélectionnées et réécrites (3-5 les plus pertinentes)',
+        max_length=30,
     )
     highlighted_skills: list[HighlightedSkill] = Field(
-        ..., description="Compétences priorisées pour l'offre (8-15)"
+        ..., description="Compétences priorisées pour l'offre (8-15)", max_length=30
     )
-    selected_educations: list[SelectedEducation]
-    selected_projects: list[SelectedProject] | None = Field([], validate_default=True)
+    selected_educations: list[SelectedEducation] = Field(..., max_length=30)
+    selected_projects: list[SelectedProject] | None = Field(
+        [], max_length=30, validate_default=True
+    )
     selected_certifications: list[SelectedCertification] | None = Field(
-        [], validate_default=True
+        [], max_length=30, validate_default=True
     )
     optimization_notes: str | None = Field(
         None,

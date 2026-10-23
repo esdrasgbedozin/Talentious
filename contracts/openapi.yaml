@@ -2851,9 +2851,11 @@ components:
           $ref: '#/components/schemas/PersonalInfo'
         summary:
           type: string
+          maxLength: 2000
           description: Résumé professionnel réécrit et optimisé pour l'offre (50-120 mots)
         selected_experiences:
           type: array
+          maxItems: 30
           items:
             $ref: '#/components/schemas/SelectedExperience'
           description: Expériences sélectionnées et réécrites (3-5 les plus pertinentes)
@@ -2861,18 +2863,22 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/HighlightedSkill'
+          maxItems: 30
           description: Compétences priorisées pour l'offre (8-15)
         selected_educations:
           type: array
+          maxItems: 30
           items:
             $ref: '#/components/schemas/SelectedEducation'
         selected_projects:
           type: array
+          maxItems: 30
           items:
             $ref: '#/components/schemas/SelectedProject'
           default: []
         selected_certifications:
           type: array
+          maxItems: 30
           items:
             $ref: '#/components/schemas/SelectedCertification'
           default: []
@@ -2896,10 +2902,13 @@ components:
       properties:
         id:
           type: string
+          maxLength: 64
         title:
           type: string
+          maxLength: 255
         company:
           type: string
+          maxLength: 255
         start_date:
           type: string
           pattern: '^\d{4}-\d{2}$'
@@ -2910,13 +2919,17 @@ components:
         location:
           type: string
           nullable: true
+          maxLength: 255
         description:
           type: string
+          maxLength: 5000
           description: Description réécrite avec verbes d'action et mots-clés de l'offre
         highlighted_skills:
           type: array
+          maxItems: 30
           items:
             type: string
+            maxLength: 100
           description: Compétences démontrées dans cette expérience, pertinentes pour l'offre
 
     HighlightedSkill:
@@ -2928,9 +2941,11 @@ components:
       properties:
         name:
           type: string
+          maxLength: 100
         level:
           type: string
           nullable: true
+          maxLength: 100
           description: Niveau de maîtrise inféré par l'agent (ex. Expert, Intermédiaire)
         category:
           type: string
@@ -2952,10 +2967,13 @@ components:
       properties:
         id:
           type: string
+          maxLength: 64
         degree:
           type: string
+          maxLength: 255
         institution:
           type: string
+          maxLength: 255
         end_date:
           type: string
           nullable: true
@@ -2966,6 +2984,7 @@ components:
         description:
           type: string
           nullable: true
+          maxLength: 2000
 
     SelectedProject:
       type: object
@@ -2977,21 +2996,27 @@ components:
       properties:
         id:
           type: string
+          maxLength: 64
         name:
           type: string
+          maxLength: 255
         description:
           type: string
+          maxLength: 3000
         url:
           type: string
           nullable: true
+          maxLength: 500
         completion_date:
           type: string
           nullable: true
           pattern: '^\d{4}-\d{2}$'
         relevant_skills:
           type: array
+          maxItems: 30
           items:
             type: string
+            maxLength: 100
 
     SelectedCertification:
       type: object
@@ -3005,10 +3030,13 @@ components:
       properties:
         id:
           type: string
+          maxLength: 64
         name:
           type: string
+          maxLength: 255
         issuer:
           type: string
+          maxLength: 255
         issue_date:
           type: string
           nullable: true
@@ -3019,6 +3047,7 @@ components:
         url:
           type: string
           nullable: true
+          maxLength: 500
 
     # =========================================================================
     # V2 — Templates, Thèmes CV, langue du document
