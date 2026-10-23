@@ -147,6 +147,11 @@ DATABASE_URL="$(CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT='' gcloud secrets vers
   valeurs d'enveloppe écrites APRÈS la migration (liens d'offre, lignées,
   thèmes personnalisés) seraient perdues — relire la docstring avant de
   downgrader.
+- `f1a2b3c4d5e6` (M1-T06) : `cv_jobs.job_type` (backfill `cv_generation` par
+  `server_default`) + unicité « un actif par (user, job_type) » (ADR-JOBS).
+  ⚠️ Downgrade : ÉCHOUE volontairement si un utilisateur a plusieurs jobs
+  actifs de types différents (l'ancien index « un actif par user » serait
+  violé) — résoudre ces jobs d'abord, jamais de suppression silencieuse.
 
 ## Incidents connus
 

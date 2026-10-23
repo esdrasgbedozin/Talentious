@@ -31,6 +31,7 @@ from app.models import (
     CVJob,
     GeneratedCV,
     JobStatus,
+    JobType,
     User,
     UserProfile,
     UserRole,
@@ -111,6 +112,15 @@ class UpdateCVRequest(BaseModel):
 # ==================== HELPER FUNCTIONS ====================
 
 
+def _is_active_job_conflict(exc: IntegrityError) -> bool:
+    """True si l'IntegrityError vient de l'index partiel d'unicité d'un job
+    actif par (user, job_type) — la course entre deux lancements concurrents
+    du même type. Toute autre cause doit remonter telle quelle (revue data
+    M1-T06). À factoriser en helper partagé quand les routes lettre/export/
+    relecture arriveront (M2-T16, M6-T10, M7-T04)."""
+    return "uq_cv_jobs_one_active_per_user_type" in str(exc.orig)
+
+
 async def check_career_pass_or_admin(current_user: User, db: AsyncSession) -> None:
     """
     Verify user has an active CareerPass or is admin.
@@ -189,11 +199,13 @@ async def generate_cv(
             detail="User profile not found. Please create your profile first.",
         )
 
-    # 3. Idempotency: at most one active (queued/running) job per user.
-    # Fast-path pre-check for a friendly 409...
+    # 3. Idempotency: at most one active (queued/running) job per (user,
+    # job_type) — contract `JobType` (M1-T06): an active export or letter job
+    # must NOT block a CV generation. Fast-path pre-check for a friendly 409...
     active = await db.execute(
         select(CVJob)
         .where(CVJob.user_id == current_user.id)
+        .where(CVJob.job_type == JobType.CV_GENERATION)
         .where(CVJob.status.in_([JobStatus.QUEUED, JobStatus.RUNNING]))
     )
     if active.scalars().first() is not None:
@@ -203,19 +215,25 @@ async def generate_cv(
         )
 
     # 4. Create the job and schedule the background pipeline. The partial unique
-    # index (uq_cv_jobs_one_active_per_user) is the real guard against a race
-    # between two concurrent requests — catch its violation and return 409.
+    # index (uq_cv_jobs_one_active_per_user_type) is the real guard against a
+    # race between two concurrent requests — catch its violation and return 409.
     job = CVJob(
         user_id=current_user.id,
         cv_name=request.cv_name,
         status=JobStatus.QUEUED,
+        job_type=JobType.CV_GENERATION,
         progress_pct=0,
     )
     db.add(job)
     try:
         await db.commit()
-    except IntegrityError:
+    except IntegrityError as exc:
         await db.rollback()
+        # Only the active-slot unique index means "already in progress" — any
+        # other integrity violation (FK on a deleted user, NOT NULL…) must
+        # surface as the server error it is, not masquerade as a 409.
+        if not _is_active_job_conflict(exc):
+            raise
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="A CV generation is already in progress. Please wait for it to finish.",
