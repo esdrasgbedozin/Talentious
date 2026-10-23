@@ -1,0 +1,42 @@
+# =============================================================================
+# Jumeau NO-OP du check `migrations` (ci-build.yml).
+#
+# Pourquoi : `migrations` est un required status check sur `main`, mais
+# ci-build.yml est filtré par `paths:` — une PR hors périmètre (docs,
+# Terraform…) ne le déclencherait jamais et resterait bloquée sur
+# « Expected — Waiting for status ». Ce workflow se déclenche sur les chemins
+# INVERSES (`paths-ignore`, MÊME liste que le `paths:` de ci-build.yml — les
+# deux listes doivent rester le MIROIR EXACT l'une de l'autre) et pose un
+# check `migrations` vert immédiat.
+#
+# Cas mixte (PR touchant docs + backend) : les DEUX workflows se déclenchent ;
+# le no-op finit en secondes, le vrai job en minutes — GitHub retient le
+# check run le plus récent, donc le verdict RÉEL l'emporte. Ne jamais
+# relancer le no-op seul après un échec du vrai job.
+# =============================================================================
+
+name: CI Build (PR) — no-op
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "backend/**"
+      - "frontend/**"
+      - "agents/**"
+      - "packages/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".dockerignore"
+      - "**/*.dockerignore"
+      - ".github/workflows/ci-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: echo "PR hors périmètre backend/build — check 'migrations' satisfait (no-op)"

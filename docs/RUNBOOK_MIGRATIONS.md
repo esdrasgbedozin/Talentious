@@ -77,7 +77,15 @@ ou `/` — l'ancien mot de passe contenait des `#`/`?` bruts et tout autre ordre
 tronquait au milieu du mot de passe. Depuis la rotation du 2026-10-23
 (secret v2), le mot de passe de `talentious-app` est **URL-safe alphanumérique**
 et doit le RESTER à toute rotation future (`openssl rand -base64 48 | tr -dc
-'A-Za-z0-9' | head -c 64`). `CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT=''`
+'A-Za-z0-9' | head -c 64`). ⚠️ **Le mot de passe vit à TROIS endroits** — toute
+rotation doit mettre à jour les trois, dans cet ordre : (1) l'utilisateur
+Cloud SQL (`gcloud sql users set-password`), (2) le secret GCP `DATABASE_URL`
+(nouvelle version) + nouvelle révision des services Cloud Run, (3) le secret
+**GitHub Actions** `CLOUD_SQL_DB_PASSWORD`, utilisé par le job `migrate` de
+`deploy-prod.yml` — oublié à la rotation du 2026-10-23, le migrate du merge M1
+a échoué en `password authentication failed` (fail-safe OK, rollout bloqué,
+zéro impact). Mise à jour sans affichage :
+`gcloud secrets versions access latest --secret=DATABASE_URL | python3 -c "…extraire le mdp…" | gh secret set CLOUD_SQL_DB_PASSWORD`. `CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT=''`
 neutralise, pour cette commande seulement, l'impersonation lecture-seule posée
 dans la config gcloud globale (SA du MCP, qui n'a pas accès aux secrets). Le
 secret ne transite que par la mémoire du process — jamais affiché, jamais dans
@@ -180,3 +188,4 @@ DATABASE_URL="$(CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT='' gcloud secrets vers
 | 2026-10-23 (test à froid) | `ModuleNotFoundError: psycopg2` | `python3` système au lieu du venv backend | prérequis `source backend/.venv-py312/bin/activate` |
 | 2026-10-23 (test à froid) | proxy orphelin sur 5433 (`bind: address already in use` au bloc suivant) | `trap 'kill %1'` muet en sous-shell sans job control | `PROXY_PID=$!` + `trap 'kill $PROXY_PID' EXIT` ; vérifier `lsof -i :5433` après chaque bloc |
 | 2026-10-23 (test à froid) | `fe_sendauth: no password supplied` (mdp tronqué au parsing) | mdp du secret avec `#`/`?` bruts + découpage `?`/`/` avant le dernier `@` | rotation mdp URL-safe (secret v2) ; découpe au dernier `@` EN PREMIER dans les deux blocs |
+| 2026-10-23 (merge M1) | `password authentication failed for user "talentious-app"` au migrate | rotation du mdp sans mise à jour du secret GitHub `CLOUD_SQL_DB_PASSWORD` (duplication) | checklist « trois endroits » ci-dessus ; fail-safe vérifié en réel (échec à la connexion, zéro état partiel, rollout bloqué) |
