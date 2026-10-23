@@ -43,6 +43,13 @@ Il n'y a donc RIEN à faire à la main dans le cas nominal.
   `sa.Enum` (le `drop_table` ne les droppe pas ; bug réel corrigé dans la
   migration initiale `5d94399568e5`). Un downgrade avec perte de données
   assumée se documente dans la docstring de la migration.
+- **Ajouter une valeur à un ENUM existant** (`ALTER TYPE … ADD VALUE`, ex.
+  une 3e langue sur `documentlanguage`) n'est PAS réversible : Postgres ne
+  retire pas une valeur d'un ENUM. Le downgrade d'une telle migration doit
+  l'assumer en docstring (ou recréer le type — coûteux). Un type ENUM partagé
+  entre tables (`documentlanguage` : CV puis lettres) se crée avec
+  `checkfirst=True` et ne se droppe que par la PREMIÈRE migration qui l'a
+  créé.
 - Valider en local avant la PR :
   `DATABASE_URL=postgresql+asyncpg://talentious:talentious@localhost:5432/migcheck_local python scripts/check_migrations.py`
   Le script exécute un `downgrade base` : il REFUSE tout hôte non local, toute
@@ -134,6 +141,12 @@ DATABASE_URL="$(CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT='' gcloud secrets vers
   registre » si un `cv_templates.default_theme_id` référence un preset
   inconnu — c'est un bug de seed à corriger dans une migration, PAS un cas de
   backfill (les deux tables sont des registres gérés par migrations).
+- `e0f1a2b3c4d5` (M1-T05) : enveloppe de la Variante sur `generated_cvs` —
+  backfill par `server_default` (metadata-only, AUCUN UPDATE, `cv_data_json`
+  intact par construction). ⚠️ Downgrade : le stock V1 ne perd rien, mais les
+  valeurs d'enveloppe écrites APRÈS la migration (liens d'offre, lignées,
+  thèmes personnalisés) seraient perdues — relire la docstring avant de
+  downgrader.
 
 ## Incidents connus
 

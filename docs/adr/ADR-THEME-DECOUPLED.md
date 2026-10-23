@@ -85,9 +85,10 @@ validé strictement côté serveur (couleurs `#RRGGBB`, polices dans l'enum
   `d9e0f1a2b3c4` crée la table des presets système (seed `anthracite`
   gratuit, tokens IDENTIQUES à `DEFAULT_CV_THEME_TOKENS` — alignement testé,
   toute dérive d'une des deux sources casse la suite) et pose la FK
-  `cv_templates.default_theme_id → cv_themes.id` en RESTRICT. Les documents
-  n'y font JAMAIS référence (le snapshot reste la règle) : seule la valeur
-  par défaut d'un template pointe vers un preset. Les presets sont immuables
+  `cv_templates.default_theme_id → cv_themes.id` en RESTRICT. Le RENDU ne
+  résout JAMAIS un thème par référence (le snapshot `theme_json` fait foi —
+  M1-T05 : `generated_cvs.theme_preset_id` n'est que la PROVENANCE du preset,
+  FK d'intégrité RESTRICT, NULL = thème personnalisé). Les presets sont immuables
   et gérés par migrations — modifier un preset existant altérerait le sens de
   `CVTheme.id` sur les documents qui le citent à titre informatif ; on AJOUTE
   un preset, on n'en modifie pas.
