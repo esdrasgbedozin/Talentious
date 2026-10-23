@@ -51,9 +51,20 @@ async def test_db_engine():
         # créent leurs CV avec le template gratuit, comme la prod backfillée.
         from sqlalchemy import text as _text
 
-        # Mêmes valeurs que le seed de la migration c8d9e0f1a2b3 (dupliqué à
-        # dessein : une migration est un instantané figé, elle n'importe pas
-        # le code applicatif).
+        # Mêmes valeurs que les seeds des migrations c8d9e0f1a2b3 / d9e0f1a2b3c4
+        # (dupliqué à dessein : une migration est un instantané figé, elle
+        # n'importe pas le code applicatif). Le thème d'abord : la FK
+        # cv_templates.default_theme_id (M1-T04) exige qu'anthracite existe.
+        await conn.execute(
+            _text(
+                "INSERT INTO cv_themes (id, name, tokens, is_free) VALUES "
+                "('anthracite', 'Anthracite', '{"
+                '"color_accent": "#2D3748", "color_text": "#1A202C", '
+                '"color_muted": "#4A5568", "color_background": "#FFFFFF", '
+                '"font_heading": "Inter", "font_body": "Inter"'
+                "}', true)"
+            )
+        )
         await conn.execute(
             _text(
                 "INSERT INTO cv_templates "

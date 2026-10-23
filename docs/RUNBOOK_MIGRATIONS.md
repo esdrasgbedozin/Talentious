@@ -130,6 +130,10 @@ DATABASE_URL="$(CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT='' gcloud secrets vers
   (`modern_v1`…) vers `modern_sobre` — réversible en schéma, pas en valeurs
   (le rendu ne change pas : même alias que le registre front). Les valeurs
   réécrites sont tracées dans la sortie du job `migrate`.
+- `d9e0f1a2b3c4` (M1-T04) : échoue volontairement avec « thèmes hors
+  registre » si un `cv_templates.default_theme_id` référence un preset
+  inconnu — c'est un bug de seed à corriger dans une migration, PAS un cas de
+  backfill (les deux tables sont des registres gérés par migrations).
 
 ## Incidents connus
 

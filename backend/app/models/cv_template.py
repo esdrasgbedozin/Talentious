@@ -11,7 +11,7 @@ un template hors registre. Lignes seedées par migration, immuables en pratique
 
 import enum
 
-from sqlalchemy import Boolean, Column, Enum, String, Text, false
+from sqlalchemy import Boolean, Column, Enum, ForeignKey, String, Text, false
 
 from app.database import Base
 
@@ -44,10 +44,17 @@ class CVTemplate(Base):
     is_free = Column(Boolean, nullable=False, server_default=false(), default=False)
     description = Column(Text, nullable=False)
     preview_url = Column(String(500), nullable=False)
-    # Preset de thème appliqué par défaut (`CVTheme.id`). Simple chaîne ici :
-    # la table `cv_themes` arrive en M1-T04 (ordre FK de l'archi §4), qui
-    # pourra poser la FK.
-    default_theme_id = Column(String(100), nullable=True)
+    # Preset de thème appliqué par défaut. FK depuis M1-T04 : un preset
+    # référencé ne peut pas être supprimé (RESTRICT) — les presets système
+    # sont immuables, gérés par migrations. L'écart de longueur avec
+    # cv_themes.id (String(64)) est VOULU : hérité de T03, Postgres accepte la
+    # FK et toute valeur référencée est de fait ≤ 64 — le resserrer serait un
+    # ALTER TYPE pour un gain nul (revue data M1-T04).
+    default_theme_id = Column(
+        String(100),
+        ForeignKey("cv_themes.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
 
     def __repr__(self) -> str:
         return f"<CVTemplate(id={self.id}, is_free={self.is_free})>"

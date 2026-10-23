@@ -81,6 +81,16 @@ validé strictement côté serveur (couleurs `#RRGGBB`, polices dans l'enum
   avec des thèmes différents peuvent coexister dans une même page (galerie).
 - Un thème stocké corrompu dégrade vers le défaut anthracite au rendu (jamais
   d'échec ni d'injection) ; le serveur reste le point de rejet (422).
+- **M1-T04 (2026-10-23) : registre serveur `cv_themes`.** La migration
+  `d9e0f1a2b3c4` crée la table des presets système (seed `anthracite`
+  gratuit, tokens IDENTIQUES à `DEFAULT_CV_THEME_TOKENS` — alignement testé,
+  toute dérive d'une des deux sources casse la suite) et pose la FK
+  `cv_templates.default_theme_id → cv_themes.id` en RESTRICT. Les documents
+  n'y font JAMAIS référence (le snapshot reste la règle) : seule la valeur
+  par défaut d'un template pointe vers un preset. Les presets sont immuables
+  et gérés par migrations — modifier un preset existant altérerait le sens de
+  `CVTheme.id` sur les documents qui le citent à titre informatif ; on AJOUTE
+  un preset, on n'en modifie pas.
 
 ## Alternatives écartées
 
