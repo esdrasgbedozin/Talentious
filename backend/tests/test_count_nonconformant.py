@@ -23,7 +23,7 @@ async def _add_cv(test_db, user_id, cv_data_json):
     cv = GeneratedCV(
         user_id=user_id,
         cv_name="x",
-        template_id="modern_v1",
+        template_id="modern_sobre",
         job_offer_context="ctx",
         cv_data_json=cv_data_json,
     )

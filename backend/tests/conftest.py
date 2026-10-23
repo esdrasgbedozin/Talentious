@@ -2,6 +2,9 @@
 Pytest configuration and fixtures for testing.
 """
 
+import uuid
+
+import psycopg2
 import pytest
 from typing import AsyncGenerator
 from httpx import AsyncClient, ASGITransport
@@ -43,6 +46,34 @@ async def test_db_engine():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+        # Seed minimal du registre des templates (M1-T03) : la FK
+        # generated_cvs.template_id exige que le stamp existe — les fixtures
+        # créent leurs CV avec le template gratuit, comme la prod backfillée.
+        from sqlalchemy import text as _text
+
+        # Mêmes valeurs que les seeds des migrations c8d9e0f1a2b3 / d9e0f1a2b3c4
+        # (dupliqué à dessein : une migration est un instantané figé, elle
+        # n'importe pas le code applicatif). Le thème d'abord : la FK
+        # cv_templates.default_theme_id (M1-T04) exige qu'anthracite existe.
+        await conn.execute(
+            _text(
+                "INSERT INTO cv_themes (id, name, tokens, is_free) VALUES "
+                "('anthracite', 'Anthracite', '{"
+                '"color_accent": "#2D3748", "color_text": "#1A202C", '
+                '"color_muted": "#4A5568", "color_background": "#FFFFFF", '
+                '"font_heading": "Inter", "font_body": "Inter"'
+                "}', true)"
+            )
+        )
+        await conn.execute(
+            _text(
+                "INSERT INTO cv_templates "
+                "(id, name, sector, is_free, description, preview_url, default_theme_id) "
+                "VALUES ('modern_sobre', 'Moderne sobre', 'modern', true, "
+                "'Mise en page sobre et neutre, adaptée à tous les secteurs.', "
+                "'https://talentious.app/templates/modern_sobre.png', 'anthracite')"
+            )
+        )
 
     yield engine
 
@@ -204,3 +235,39 @@ async def admin_headers(client: AsyncClient, admin_user: User) -> dict:
     assert response.status_code == 200
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+# --- Base JETABLE pour les tests de migrations (M1-T01/M1-T02) ---------------
+# Créée vierge sur le serveur de TEST_DATABASE_URL, détruite après le test :
+# les cycles Alembic (upgrade/downgrade) ne touchent jamais `talentious_test`.
+# NB : le défaut de TEST_DATABASE_URL vise `@db/` (service compose, exécution
+# DANS le conteneur) — en local hors conteneur, exporter la variable vers
+# `@localhost:5432/talentious_test`, comme pour le reste de la suite.
+
+
+def sync_db_url(url: str) -> str:
+    """URL psycopg2 (driver sync) depuis une URL asyncpg."""
+    return url.replace("postgresql+asyncpg://", "postgresql://")
+
+
+@pytest.fixture()
+def disposable_db_url():
+    """Base jetable nommée `migcheck_<hex>` (motif exigé par check_migrations)."""
+    name = f"migcheck_{uuid.uuid4().hex[:12]}"
+    admin = psycopg2.connect(sync_db_url(TEST_DATABASE_URL))
+    admin.autocommit = True
+    try:
+        with admin.cursor() as cur:
+            cur.execute(f'CREATE DATABASE "{name}"')
+        base, _, _ = TEST_DATABASE_URL.rpartition("/")
+        yield f"{base}/{name}"
+        with admin.cursor() as cur:
+            # Déloger toute connexion restante avant la destruction.
+            cur.execute(
+                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                "WHERE datname = %s AND pid <> pg_backend_pid()",
+                (name,),
+            )
+            cur.execute(f'DROP DATABASE "{name}"')
+    finally:
+        admin.close()

@@ -21,6 +21,26 @@ logger = logging.getLogger(__name__)
 
 PROBLEM_MEDIA_TYPE = "application/problem+json"
 
+
+class ProblemException(StarletteHTTPException):
+    """HTTPException qui porte un `type` RFC 7807 spécifique (M1-T12).
+
+    Les refus premium du contrat (réponse `PassRequired`) exigent un `type`
+    précis (`premium-template-required`, `variant-limit-reached`…) que les
+    routes transportent tel quel — le handler ci-dessous le rend."""
+
+    def __init__(
+        self,
+        status_code: int,
+        detail: Optional[str] = None,
+        *,
+        type_: str = "about:blank",
+        headers: Optional[dict[str, str]] = None,
+    ) -> None:
+        super().__init__(status_code=status_code, detail=detail, headers=headers)
+        self.type_ = type_
+
+
 # Human-readable titles per status code (RFC 7807 `title`).
 _TITLES = {
     400: "Bad Request",
@@ -76,6 +96,7 @@ async def http_exception_handler(
     return problem_response(
         exc.status_code,
         detail=detail,
+        type_=getattr(exc, "type_", "about:blank"),
         instance=str(request.url.path),
         headers=getattr(exc, "headers", None),
     )

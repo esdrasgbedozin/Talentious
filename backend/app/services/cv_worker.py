@@ -14,14 +14,16 @@ truth — see contracts/openapi.yaml).
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from uuid import UUID
 
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import null, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.generated.models import GeneratedCVData
 from app.models import CVJob, GeneratedCV, JobStatus, UserProfile
+from app.models.generated_cv import DocumentLanguage
 from app.services.analyzer_client import analyzer_client
 from app.services.cv_content_coercion import (
     CVContentCoercionError,
@@ -36,6 +38,25 @@ logger = logging.getLogger(__name__)
 # (`modern_sobre`) ; `modern_v1` ne subsiste que comme ALIAS de lecture pour le
 # stock existant (packages/cv-render, registre des templates).
 DEFAULT_TEMPLATE_ID = "modern_sobre"
+
+
+@dataclass(frozen=True)
+class CVEnvelope:
+    """Enveloppe VALIDÉE et GATÉE par la route (M1-T12), persistée par le
+    worker (M1-T13) : la forme du document, jamais mêlée au contenu.
+
+    `created_under_pass` est VRAI si la génération a consommé une capacité
+    premium (template premium, thème custom/preset premium, langue EN) — le
+    sens « document entièrement gratuit » du contrat `is_editable`, PAS
+    simplement « un Pass était actif » : un porteur de Pass qui génère un
+    document 100 % gratuit garde un document éditable à vie (D1)."""
+
+    template_id: str
+    theme_json: dict
+    theme_preset_id: str | None
+    language: DocumentLanguage
+    created_under_pass: bool
+
 
 # Safe, client-facing failure messages. The raw exception is logged server-side
 # (exc_info=True) but NEVER stored in job.error_message, which is returned to the
@@ -76,6 +97,7 @@ async def run_cv_generation(
     user_id: UUID,
     cv_name: str,
     offer_text: str,
+    envelope: CVEnvelope,
 ) -> None:
     """Run the full CV generation pipeline for a queued job and update its status.
 
@@ -158,9 +180,21 @@ async def run_cv_generation(
             new_cv = GeneratedCV(
                 user_id=user_id,
                 cv_name=cv_name,
-                template_id=DEFAULT_TEMPLATE_ID,
+                template_id=envelope.template_id,
                 job_offer_context=offer_text,
                 cv_data_json=cv_data,
+                theme_json=envelope.theme_json,
+                # Piège ORM (découvert M1-T11) : un None EXPLICITE est AVALÉ
+                # sur une colonne à server_default (l'INSERT omet la colonne
+                # et la base poserait 'anthracite' — provenance FAUSSE pour
+                # un thème custom). null() force réellement NULL.
+                theme_preset_id=(
+                    envelope.theme_preset_id
+                    if envelope.theme_preset_id is not None
+                    else null()
+                ),
+                language=envelope.language,
+                created_under_pass=envelope.created_under_pass,
             )
             db.add(new_cv)
             await db.flush()

@@ -38,7 +38,7 @@ class TestAdminUsers:
             GeneratedCV(
                 user_id=test_user.id,
                 cv_name="CV test",
-                template_id="moderne",
+                template_id="modern_sobre",
                 cv_data_json={},
             )
         )

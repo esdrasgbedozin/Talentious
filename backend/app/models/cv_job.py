@@ -42,18 +42,30 @@ class JobStatus(str, enum.Enum):
     FAILED = "failed"
 
 
+class JobType(str, enum.Enum):
+    """Nature du traitement asynchrone — enum du contrat `JobType` (M1-T06,
+    ADR-JOBS). L'unicité d'un job actif s'applique PAR couple (user, type)."""
+
+    CV_GENERATION = "cv_generation"
+    LETTER_GENERATION = "letter_generation"
+    EXPORT = "export"
+    REVIEW = "review"
+
+
 class CVJob(Base):
-    """A single asynchronous CV generation job for a user."""
+    """A single asynchronous job (generation, letter, export, review) for a user."""
 
     __tablename__ = "cv_jobs"
 
-    # At most one active (queued/running) job per user — the real guard against a
-    # race between two concurrent POST /cv/generate (the route pre-check is only a
-    # fast path). Postgres partial unique index.
+    # At most one active (queued/running) job per (user, job_type) — the real
+    # guard against a race between two concurrent launches of the same type
+    # (the route pre-check is only a fast path). Partial unique index; an
+    # export in progress must not block a letter (contract `JobType`).
     __table_args__ = (
         Index(
-            "uq_cv_jobs_one_active_per_user",
+            "uq_cv_jobs_one_active_per_user_type",
             "user_id",
+            "job_type",
             unique=True,
             postgresql_where=text("status IN ('queued', 'running')"),
         ),
@@ -71,6 +83,19 @@ class CVJob(Base):
         nullable=False,
         default=JobStatus.QUEUED,
         index=True,
+    )
+    # server_default : rétro-compat rollout (le code N-1 insère sans job_type
+    # pendant le déploiement) + backfill du stock V1, qui n'est QUE de la
+    # génération de CV. Même doctrine que l'enveloppe T05.
+    job_type = Column(
+        Enum(
+            JobType,
+            name="jobtype",  # explicite : doit matcher la migration
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=False,
+        server_default=JobType.CV_GENERATION.value,
+        default=JobType.CV_GENERATION,
     )
     progress_pct = Column(Integer, nullable=True)
     cv_id = Column(
@@ -92,5 +117,5 @@ class CVJob(Base):
 
     @property
     def is_active(self) -> bool:
-        """A job that is still occupying the single-active-generation slot."""
+        """A job still occupying its user's active slot for its job_type."""
         return self.status in (JobStatus.QUEUED, JobStatus.RUNNING)

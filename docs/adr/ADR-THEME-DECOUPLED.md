@@ -81,6 +81,33 @@ validé strictement côté serveur (couleurs `#RRGGBB`, polices dans l'enum
   avec des thèmes différents peuvent coexister dans une même page (galerie).
 - Un thème stocké corrompu dégrade vers le défaut anthracite au rendu (jamais
   d'échec ni d'injection) ; le serveur reste le point de rejet (422).
+- **M1-T04 (2026-10-23) : registre serveur `cv_themes`.** La migration
+  `d9e0f1a2b3c4` crée la table des presets système (seed `anthracite`
+  gratuit, tokens IDENTIQUES à `DEFAULT_CV_THEME_TOKENS` — alignement testé,
+  toute dérive d'une des deux sources casse la suite) et pose la FK
+  `cv_templates.default_theme_id → cv_themes.id` en RESTRICT. Le RENDU ne
+  résout JAMAIS un thème par référence (le snapshot `theme_json` fait foi —
+  M1-T05 : `generated_cvs.theme_preset_id` n'est que la PROVENANCE du preset,
+  FK d'intégrité RESTRICT, NULL = thème personnalisé). Les presets sont immuables
+  et gérés par migrations — modifier un preset existant altérerait le sens de
+  `CVTheme.id` sur les documents qui le citent à titre informatif ; on AJOUTE
+  un preset, on n'en modifie pas.
+- **M1-T09 (2026-10-23) : le point de rejet serveur est implémenté**
+  (`app/services/theme_validation.py`). La structure (hex `#RRGGBB`, police
+  dans la liste blanche, aucun champ en trop) est déléguée au modèle GÉNÉRÉ du
+  contrat — jamais réimplémentée. Le « seuil fixé côté serveur » du contrat
+  est acté : contraste WCAG 2.x AA **>= 4.5 sur le fond pour les TROIS
+  couleurs de premier plan** (`color_text`, `color_muted`, `color_accent`).
+  L'accent n'a PAS droit au seuil « texte large » de 3.0 (revue M1-T09) : le
+  renderer pose les titres de sections en 13 px gras, sous les 18.66 px gras
+  du texte large WCAG — si le rendu agrandit un jour les titres >= 14 pt
+  gras, redescendre l'accent à 3.0 par amendement ici. Toutes les violations
+  remontent en une fois (422 `validation-error`, erreurs par CHAMP). Les cas
+  de référence sont partagés avec l'éditeur front dans
+  `fixtures/theme-validation/cases.json` (M3-T10), contrat par `error_fields`
+  (indépendant de la langue des messages) : un thème accepté côté serveur
+  l'est côté éditeur, et réciproquement. Le serveur est plus STRICT que le
+  rendu (pas de trim des hex), jamais l'inverse.
 
 ## Alternatives écartées
 

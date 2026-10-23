@@ -1,0 +1,194 @@
+{
+  "_comment": "Cas de validation de thème CV partagés backend (M1-T09, tests/test_theme_validation.py) / frontend éditeur (M3-T10). Chaque cas : tokens bruts, valid (attendu), error_fields (champs en erreur attendus si invalide — contrat indépendant de la langue des messages). Seuil serveur : contraste >= 4.5 sur fond pour color_text, color_muted ET color_accent (les titres sont rendus à 13 px gras : pas du « texte large » WCAG).",
+  "cases": [
+    {
+      "name": "anthracite_defaut",
+      "valid": true,
+      "tokens": {
+        "color_accent": "#2D3748",
+        "color_text": "#1A202C",
+        "color_muted": "#4A5568",
+        "color_background": "#FFFFFF",
+        "font_heading": "Inter",
+        "font_body": "Inter"
+      }
+    },
+    {
+      "name": "serif_sombre_valide",
+      "valid": true,
+      "tokens": {
+        "color_accent": "#D69E2E",
+        "color_text": "#F7FAFC",
+        "color_muted": "#CBD5E0",
+        "color_background": "#1A202C",
+        "font_heading": "Lora",
+        "font_body": "Source Sans 3"
+      }
+    },
+    {
+      "name": "hex_nom_de_couleur",
+      "valid": false,
+      "tokens": {
+        "color_accent": "#2D3748",
+        "color_text": "red",
+        "color_muted": "#4A5568",
+        "color_background": "#FFFFFF",
+        "font_heading": "Inter",
+        "font_body": "Inter"
+      },
+      "error_fields": [
+        "color_text"
+      ]
+    },
+    {
+      "name": "hex_trop_court",
+      "valid": false,
+      "tokens": {
+        "color_accent": "#2D374",
+        "color_text": "#1A202C",
+        "color_muted": "#4A5568",
+        "color_background": "#FFFFFF",
+        "font_heading": "Inter",
+        "font_body": "Inter"
+      },
+      "error_fields": [
+        "color_accent"
+      ]
+    },
+    {
+      "name": "hex_injection_css",
+      "valid": false,
+      "tokens": {
+        "color_accent": "#2D3748",
+        "color_text": "#1A202C",
+        "color_muted": "#4A5568",
+        "color_background": "#FFFFFF; background: url(//evil)",
+        "font_heading": "Inter",
+        "font_body": "Inter"
+      },
+      "error_fields": [
+        "color_background"
+      ]
+    },
+    {
+      "name": "police_hors_liste",
+      "valid": false,
+      "tokens": {
+        "color_accent": "#2D3748",
+        "color_text": "#1A202C",
+        "color_muted": "#4A5568",
+        "color_background": "#FFFFFF",
+        "font_heading": "Inter",
+        "font_body": "Comic Sans MS"
+      },
+      "error_fields": [
+        "font_body"
+      ]
+    },
+    {
+      "name": "police_pile_forgee",
+      "valid": false,
+      "tokens": {
+        "color_accent": "#2D3748",
+        "color_text": "#1A202C",
+        "color_muted": "#4A5568",
+        "color_background": "#FFFFFF",
+        "font_heading": "Inter, 'Evil Font'",
+        "font_body": "Inter"
+      },
+      "error_fields": [
+        "font_heading"
+      ]
+    },
+    {
+      "name": "propriete_en_trop",
+      "valid": false,
+      "tokens": {
+        "color_accent": "#2D3748",
+        "color_text": "#1A202C",
+        "color_muted": "#4A5568",
+        "color_background": "#FFFFFF",
+        "font_heading": "Inter",
+        "font_body": "Inter",
+        "custom_css": "body { display: none }"
+      },
+      "error_fields": [
+        "custom_css"
+      ]
+    },
+    {
+      "name": "champ_manquant",
+      "valid": false,
+      "tokens": {
+        "color_accent": "#2D3748",
+        "color_text": "#1A202C",
+        "color_background": "#FFFFFF",
+        "font_heading": "Inter",
+        "font_body": "Inter"
+      },
+      "error_fields": [
+        "color_muted"
+      ]
+    },
+    {
+      "name": "texte_illisible_sur_fond",
+      "valid": false,
+      "tokens": {
+        "color_accent": "#2D3748",
+        "color_text": "#CCCCCC",
+        "color_muted": "#4A5568",
+        "color_background": "#FFFFFF",
+        "font_heading": "Inter",
+        "font_body": "Inter"
+      },
+      "error_fields": [
+        "color_text"
+      ]
+    },
+    {
+      "name": "attenue_illisible_sur_fond",
+      "valid": false,
+      "tokens": {
+        "color_accent": "#2D3748",
+        "color_text": "#1A202C",
+        "color_muted": "#E2E8F0",
+        "color_background": "#FFFFFF",
+        "font_heading": "Inter",
+        "font_body": "Inter"
+      },
+      "error_fields": [
+        "color_muted"
+      ]
+    },
+    {
+      "name": "accent_illisible_sur_fond",
+      "valid": false,
+      "tokens": {
+        "color_accent": "#C4C9D4",
+        "color_text": "#1A202C",
+        "color_muted": "#4A5568",
+        "color_background": "#FFFFFF",
+        "font_heading": "Inter",
+        "font_body": "Inter"
+      },
+      "error_fields": [
+        "color_accent"
+      ]
+    },
+    {
+      "name": "fond_sombre_texte_sombre",
+      "valid": false,
+      "tokens": {
+        "color_accent": "#F7FAFC",
+        "color_text": "#2D3748",
+        "color_muted": "#CBD5E0",
+        "color_background": "#1A202C",
+        "font_heading": "Inter",
+        "font_body": "Inter"
+      },
+      "error_fields": [
+        "color_text"
+      ]
+    }
+  ]
+}

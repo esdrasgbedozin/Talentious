@@ -6,13 +6,14 @@ idempotency, RFC 7807 errors, and the worker passing the canonical {hard, soft} 
 structure to the writer agent WITHOUT any runtime transformation.
 """
 
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from sqlalchemy import select
 
 from app.models import CVJob, GeneratedCV, JobStatus, UserProfile
+from app.models.generated_cv import DocumentLanguage
+from app.services import cv_worker
+from tests.test_cv_themes import _ANTHRACITE_TOKENS
 
 VALID_OFFER = (
     "We are hiring a senior backend engineer with strong Python and FastAPI skills. "
@@ -26,18 +27,20 @@ VALID_OFFER = (
 
 
 class TestGenerateAccess:
-    async def test_generate_without_career_pass_returns_402(self, client, auth_headers):
-        """A non-admin user without an active CareerPass is blocked (RFC 7807 402)."""
+    async def test_generate_is_freemium_since_m1t12(
+        self, client, auth_headers, monkeypatch
+    ):
+        """CHANGEMENT DE MODÈLE (M1-T12, Bible §4.3) : la génération ne
+        requiert plus de Pass — la 1re variante d'un user gratuit part en
+        202. Le quota (402 variant-limit-reached) et les capacités premium
+        typées sont testés dans tests/test_generate_envelope.py."""
+        monkeypatch.setattr("app.routes.cv.run_cv_generation", AsyncMock())
         response = await client.post(
             "/cv/generate",
             headers=auth_headers,
             json={"cv_name": "My CV", "offer_text": VALID_OFFER},
         )
-        assert response.status_code == 402
-        assert response.headers["content-type"].startswith("application/problem+json")
-        body = response.json()
-        assert body["status"] == 402
-        assert "detail" in body
+        assert response.status_code == 202
 
     async def test_generate_requires_auth(self, client):
         response = await client.post(
@@ -169,7 +172,7 @@ class TestCVOwnership:
         cv = GeneratedCV(
             user_id=owner_id,
             cv_name="owned",
-            template_id="modern_v1",
+            template_id="modern_sobre",
             job_offer_context="ctx",
             cv_data_json={"summary": "x"},
         )
@@ -199,6 +202,18 @@ class TestCVOwnership:
 # ----------------------------------------------------------------------------
 # Worker unit tests (services/cv_worker.run_cv_generation)
 # ----------------------------------------------------------------------------
+
+
+# Enveloppe gratuite par défaut pour les tests worker (M1-T13) : ces tests
+# vérifient le pipeline (skills, coercition, erreurs), pas l'enveloppe —
+# couverte par tests/test_worker_envelope.py.
+_FREE_ENVELOPE = cv_worker.CVEnvelope(
+    template_id=cv_worker.DEFAULT_TEMPLATE_ID,
+    theme_json=dict(_ANTHRACITE_TOKENS),
+    theme_preset_id="anthracite",
+    language=DocumentLanguage.FR,
+    created_under_pass=False,
+)
 
 
 def _fake_analysis():
@@ -271,7 +286,7 @@ class TestWorker:
         monkeypatch.setattr(cv_worker.writer_client, "generate_cv", fake_generate_cv)
 
         await cv_worker.run_cv_generation(
-            session_factory, job.id, test_user.id, "CV", VALID_OFFER
+            session_factory, job.id, test_user.id, "CV", VALID_OFFER, _FREE_ENVELOPE
         )
 
         # Skills reached the writer as the canonical {hard, soft} dict — NOT a list.
@@ -289,7 +304,8 @@ class TestWorker:
             cv = await check.get(GeneratedCV, refreshed.cv_id)
             assert cv is not None
             # PAH-M0 : les nouveaux CV sont estampillés du template V2 canonique
-            # `modern_sobre` (l'alias `modern_v1` du registre reste pour le stock).
+            # `modern_sobre`. (Depuis M1-T03 la FK interdit tout autre stamp ;
+            # l'alias `modern_v1` du registre front ne sert plus qu'en défense.)
             assert cv.template_id == "modern_sobre"
             # Le contenu stocké est le GeneratedCVData coercé (enveloppe canonique).
             assert cv.cv_data_json["summary"] == "optimized"
@@ -317,7 +333,7 @@ class TestWorker:
         )
 
         await cv_worker.run_cv_generation(
-            session_factory, job.id, test_user.id, "CV", VALID_OFFER
+            session_factory, job.id, test_user.id, "CV", VALID_OFFER, _FREE_ENVELOPE
         )
 
         async with session_factory() as check:
@@ -350,7 +366,7 @@ class TestWorker:
         uid = user.id
 
         await cv_worker.run_cv_generation(
-            session_factory, job.id, uid, "CV", VALID_OFFER
+            session_factory, job.id, uid, "CV", VALID_OFFER, _FREE_ENVELOPE
         )
 
         async with session_factory() as check:
@@ -419,7 +435,7 @@ class TestWorkerContentCoercion:
         job = await self._queue_job(test_db, test_user.id)
 
         await cv_worker.run_cv_generation(
-            session_factory, job.id, test_user.id, "CV", VALID_OFFER
+            session_factory, job.id, test_user.id, "CV", VALID_OFFER, _FREE_ENVELOPE
         )
 
         async with session_factory() as check:
@@ -449,7 +465,7 @@ class TestWorkerContentCoercion:
         job = await self._queue_job(test_db, test_user.id)
 
         await cv_worker.run_cv_generation(
-            session_factory, job.id, test_user.id, "CV", VALID_OFFER
+            session_factory, job.id, test_user.id, "CV", VALID_OFFER, _FREE_ENVELOPE
         )
 
         async with session_factory() as check:
@@ -502,7 +518,7 @@ class TestWorkerContentCoercion:
         job = await self._queue_job(test_db, uid)
 
         await cv_worker.run_cv_generation(
-            session_factory, job.id, uid, "CV", VALID_OFFER
+            session_factory, job.id, uid, "CV", VALID_OFFER, _FREE_ENVELOPE
         )
 
         async with session_factory() as check:
@@ -522,7 +538,7 @@ class TestUpdateCVCoercion:
         cv = GeneratedCV(
             user_id=owner_id,
             cv_name="à éditer",
-            template_id="modern_v1",
+            template_id="modern_sobre",
             job_offer_context="ctx",
             cv_data_json={"summary": "initial"},
         )

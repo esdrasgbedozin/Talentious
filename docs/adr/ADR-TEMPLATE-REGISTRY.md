@@ -52,11 +52,30 @@ divergence casserait « aperçu = PDF ».
    l'alias ne sert plus que le stock existant et reste tant que des
    documents `modern_v1` existent en base.
 
+   **M1-T03 (2026-10-23) : le stock est basculé en base.** La migration
+   `c8d9e0f1a2b3` crée le registre serveur `cv_templates` (seed
+   `modern_sobre`, gratuit), backfille tout `template_id` hors registre vers
+   `modern_sobre` (valeurs réécrites tracées dans la sortie du migrate),
+   puis pose la FK `generated_cvs.template_id → cv_templates.id` en
+   RESTRICT, via le pattern `NOT VALID → backfill → VALIDATE` (aucune
+   fenêtre de course, verrous courts). Cette migration est **réversible en
+   schéma, pas en valeurs** : le downgrade retire FK et table mais ne
+   restaure pas les stamps d'origine — perte assumée, le rendu est
+   identique par construction (même cible que l'alias). L'alias front ne
+   sert plus qu'en défense (enveloppe corrompue à l'exécution).
+
 5. **Ajouter un template = 3 gestes** : le composant dans
    `src/templates/`, son entrée dans `TEMPLATES`, son entrée au catalogue
    serveur (`GET /cv/templates`, source des métadonnées `is_free`/aperçus —
    le registre ne porte AUCUNE métadonnée produit, seulement le rendu). Les
    sentinelles de découplage (T09) scannent récursivement `src/templates/`.
+   Deux exigences pour la migration de seed du 2e template (revue M1-T10) :
+   (a) le catalogue est servi trié par `id` (alphabétique) — si un ordre
+   ÉDITORIAL est voulu, ajouter une colonne `sort_order` à ce moment-là ;
+   (b) valider chaque ligne seedée contre le modèle généré du contrat dans
+   le test de cycle de la migration — une ligne de registre malformée ferait
+   répondre 500 à tout le catalogue (les routes construisent les réponses
+   avec les modèles stricts du contrat).
 
 ## Alternatives écartées
 

@@ -19,7 +19,7 @@ from app.core.problem import (
     validation_exception_handler,
 )
 from app.core.rate_limit import limiter, rate_limit_handler
-from app.routes import account, admin, auth, billing, profile, cv
+from app.routes import account, admin, auth, billing, cv, jobs, profile
 
 # Logs structurés JSON dès l'import du module (uvicorn importe `app`).
 configure_logging(settings.log_level)
@@ -84,6 +84,7 @@ app.add_exception_handler(Exception, unhandled_exception_handler)
 app.include_router(auth.router)
 app.include_router(profile.router)
 app.include_router(cv.router)  # Phase 3.5: CV Generation Orchestration
+app.include_router(jobs.router)  # M1-T15: suivi asynchrone générique (tous job_type)
 app.include_router(billing.router)  # M3: Stripe Checkout + webhook
 app.include_router(account.router)  # RGPD Art. 17: account erasure
 app.include_router(admin.router)  # M8-T02: vue admin (lecture seule)

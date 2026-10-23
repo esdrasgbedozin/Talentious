@@ -41,7 +41,10 @@ database_url = os.getenv(
 )
 # For Alembic, use psycopg2 instead of asyncpg
 database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
-config.set_main_option("sqlalchemy.url", database_url)
+# Le ConfigParser d'Alembic interpole les '%' : un mot de passe URL-encodé
+# (ex. '%40' pour '@') casserait en « invalid interpolation syntax » sans cet
+# échappement (recommandation Alembic : doubler les '%').
+config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

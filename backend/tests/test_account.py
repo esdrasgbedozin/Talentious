@@ -46,7 +46,7 @@ class TestDeleteAccount:
             GeneratedCV(
                 user_id=test_user.id,
                 cv_name="Mon CV",
-                template_id="default",
+                template_id="modern_sobre",
                 cv_data_json={},
             )
         )

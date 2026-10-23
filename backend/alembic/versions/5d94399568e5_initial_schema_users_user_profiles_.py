@@ -77,4 +77,10 @@ def downgrade() -> None:
     op.drop_table('career_passes')
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
+    # Les types ENUM créés implicitement par sa.Enum à l'upgrade ne sont PAS
+    # droppés par drop_table : sans ces drops, un cycle down->up rejoue
+    # `CREATE TYPE userrole` sur un type existant et échoue (attrapé par le
+    # vérificateur up/down/up de M1-T01).
+    postgresql.ENUM(name='userrole').drop(op.get_bind(), checkfirst=True)
+    postgresql.ENUM(name='passtype').drop(op.get_bind(), checkfirst=True)
     # ### end Alembic commands ###
