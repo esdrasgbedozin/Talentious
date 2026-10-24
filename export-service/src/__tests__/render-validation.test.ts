@@ -55,6 +55,21 @@ describe("POST /render/pdf — payload valide", () => {
     expect(res.statusCode).toBe(501);
     expect(res.headers["content-type"]).toContain("application/problem+json");
   });
+
+  it("artefact CSS illisible ⇒ 500 problem+json générique, chemin jamais reflété", async () => {
+    const { resetCvCssCacheForTests } = await import("../render/css.js");
+    resetCvCssCacheForTests();
+    process.env.CV_RENDER_CSS_PATH = "/chemin/inexistant/cv.css";
+    try {
+      const res = await postRender(validPayload());
+      expect(res.statusCode).toBe(500);
+      expect(res.headers["content-type"]).toContain("application/problem+json");
+      expect(res.body).not.toContain("inexistant");
+    } finally {
+      delete process.env.CV_RENDER_CSS_PATH;
+      resetCvCssCacheForTests();
+    }
+  });
 });
 
 describe("POST /render/pdf — champs inconnus refusés (jamais retirés en silence)", () => {

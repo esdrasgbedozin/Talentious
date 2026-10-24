@@ -8,6 +8,15 @@ import tseslint from "typescript-eslint";
 const eslintConfig = defineConfig([
   eslintJs.configs.recommended,
   ...tseslint.configs.recommended,
+  // Scripts d'outillage (.mjs, M2-T03/T04) : exécutés par Node hors tsc.
+  // Globals déclarés À LA MAIN (revue T04) : le paquet `globals` n'est une
+  // dépendance déclarée nulle part dans le monorepo — ne pas dépendre du hoisting.
+  {
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: { process: "readonly", console: "readonly", URL: "readonly" },
+    },
+  },
   globalIgnores(["node_modules/**", "dist/**"]),
 ]);
 

@@ -27,4 +27,18 @@ describe("invariant d'épinglage Playwright", () => {
     // Version EXACTE exigée (pas de ^ ni ~) et égale au tag de l'image.
     expect(pkg.dependencies["playwright-core"]).toBe(fromRunner![1]);
   });
+
+  it("react/cv-render restent en devDependencies : bundlés au build, JAMAIS au runtime (ADR-RENDER-SECURITY d5)", () => {
+    // Le stage deps installe --omit=dev : tout ce qui est ici en dependencies
+    // atterrit dans l'image. La promesse « zéro react/source du package au
+    // runtime » tient tant que ces paquets ne glissent pas en prod.
+    const pkg = JSON.parse(readFileSync(join(serviceRoot, "package.json"), "utf8")) as {
+      dependencies: Record<string, string>;
+    };
+    for (const banned of ["react", "react-dom", "@talentious/cv-render", "esbuild"]) {
+      expect(pkg.dependencies, `${banned} doit rester en devDependencies`).not.toHaveProperty(
+        banned,
+      );
+    }
+  });
 });

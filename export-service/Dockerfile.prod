@@ -30,15 +30,22 @@ COPY package.json package-lock.json ./
 COPY export-service/package.json ./export-service/
 RUN npm ci --workspace export-service --omit=dev --ignore-scripts --no-audit --no-fund
 
-# ---- builder : deps complètes (tsc) + compilation vers dist/ ----
+# ---- builder : deps complètes + bundle esbuild vers dist/ (M2-T04) ----
+# @talentious/cv-render est consommé EN SOURCE (SSR) : le builder installe les
+# DEUX workspaces (tailwind CLI du package pour build:css), construit le CSS
+# puis bundle l'app + le package + react dans dist/server.js — le runner ne
+# reçoit AUCUNE source React ni node_modules de dev.
 FROM node:24-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205 AS builder
 WORKDIR /app
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 COPY package.json package-lock.json ./
 COPY export-service/package.json ./export-service/
-RUN npm ci --workspace export-service --ignore-scripts --no-audit --no-fund
+COPY packages/cv-render/package.json ./packages/cv-render/
+RUN npm ci --workspace export-service --workspace packages/cv-render --ignore-scripts --no-audit --no-fund
+COPY packages/cv-render ./packages/cv-render
 COPY export-service ./export-service
-RUN npm run build --workspace export-service
+RUN npm run build:css --workspace @talentious/cv-render \
+ && npm run build --workspace export-service
 
 # ---- runner : image officielle Playwright ÉPINGLÉE (Chromium + deps système) ----
 FROM mcr.microsoft.com/playwright:v1.64.1-noble@sha256:47b510dd9230bf0b9bfc9b20102241e577ea7a99334ab4c3ca19f19770e9b8ea AS runner
@@ -57,9 +64,14 @@ RUN rm -rf /ms-playwright/firefox-* /ms-playwright/webkit-*
 # uniquement (M2-T09).
 COPY --from=deps /app ./
 COPY --from=builder /app/export-service/dist ./export-service/dist
+# CSS du package (build M0-T14) : embarqué dans chaque document rendu —
+# résolu par css.ts à côté du bundle (dist/assets/cv.css).
+COPY --from=builder /app/packages/cv-render/dist/cv.css ./export-service/dist/assets/cv.css
 # Non-root : uid NUMÉRIQUE (= pwuser 1001:1001 de l'image Playwright, vérifié)
 # pour que « runAsNonRoot » soit vérifiable sans résolution de nom.
 # Le sandbox Chromium sous non-root est traité à M2-T09.
 USER 1001:1001
 EXPOSE 8080
-CMD ["node", "export-service/dist/server.js"]
+# --enable-source-maps : stack traces sur les sources (map SANS sourcesContent
+# — aucun code source embarqué, ADR-RENDER-SECURITY décision 5).
+CMD ["node", "--enable-source-maps", "export-service/dist/server.js"]

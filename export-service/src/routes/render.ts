@@ -11,18 +11,36 @@
  */
 import type { FastifyInstance } from "fastify";
 
+import type { components } from "../generated/api.js";
 import renderPayloadSchema from "../generated/render-payload.schema.json" with { type: "json" };
 import { sendProblem } from "../problem.js";
+import { loadCvCss } from "../render/css.js";
+import { buildCvDocumentHtml } from "../render/document.js";
+
+type RenderPdfRequest = components["schemas"]["RenderPdfRequest"];
 
 export function registerRenderRoutes(app: FastifyInstance): void {
   app.post(
     "/render/pdf",
     { schema: { body: renderPayloadSchema } },
-    // TODO(M2-T06) : remplacer par le rendu réel — retirer aussi le titre 501
-    // de problem.ts et le test « 501 provisoire » (hors contrat, assumé).
-    async (request, reply) =>
-      sendProblem(request, reply, 501, {
+    async (request, reply) => {
+      const body = request.body as RenderPdfRequest;
+      // Le document HTML complet (SSR + CSP, M2-T04) est construit à chaque
+      // requête valide : SSR et CSS sont exercés en conditions réelles dès
+      // maintenant (un défaut d'artefact = 500 immédiat, pas à M2-T06).
+      buildCvDocumentHtml({
+        cvContent: body.cv_content,
+        templateId: body.template_id,
+        theme: body.theme,
+        language: body.language,
+        css: loadCvCss(),
+      });
+      // TODO(M2-T06) : passer ce document à Chromium (setContent + page.pdf)
+      // — retirer alors le titre 501 de problem.ts et le test « 501
+      // provisoire » (hors contrat, assumé).
+      return sendProblem(request, reply, 501, {
         detail: "Rendu PDF non implémenté (M2-T06).",
-      }),
+      });
+    },
   );
 }

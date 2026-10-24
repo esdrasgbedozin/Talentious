@@ -8,12 +8,15 @@
 !package.json
 !package-lock.json
 !export-service
+# M2-T04 : @talentious/cv-render consommé EN SOURCE (SSR) + build:css dans le
+# stage builder. Seul le package partagé est ré-inclus, pas un éventuel futur
+# voisin de packages/.
+!packages/cv-render
 
-# M2-T04 ajoutera : !packages  (consommation de @talentious/cv-render en source)
-
-# Ré-exclusions dans ce qui est ré-inclus : rien de généré ni de local ne doit
-# atteindre le contexte (un dist/ de l'hôte survivrait à tsc, qui ne nettoie
-# pas outDir).
+# Ré-exclusions dans ce qui est ré-inclus : rien de généré, de local ni de
+# sensible ne doit atteindre le contexte — la protection « liste blanche » ne
+# vaut plus À L'INTÉRIEUR des dossiers ré-inclus (revue T04). Le build esbuild
+# vide dist/ lui-même, ceinture et bretelles ici.
 **/node_modules
 **/dist
 **/coverage
@@ -23,3 +26,6 @@
 **/.npmrc
 **/*.log
 **/tsconfig.tsbuildinfo
+**/*.pem
+**/*.key
+**/*credentials*
