@@ -41,13 +41,23 @@ export interface BuildAppOptions {
   /** Timeout de REQUÊTE Fastify (revue T11, S2) : couvre lecture du corps et
    * normalisation, au-dessus de l'échéance de rendu. 0 = désactivé (tests). */
   requestTimeoutMs?: number;
+  /** Flux de sortie des logs (M2-T12, tests) : active le logger JSON pino
+   * vers ce flux — les tests prouvent « zéro contenu de CV dans les logs ». */
+  loggerStream?: NodeJS.WritableStream;
 }
 
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const app = Fastify({
-    logger: options.logger ?? false,
+    logger: options.loggerStream
+      ? { level: "info", stream: options.loggerStream }
+      : (options.logger ?? false),
     bodyLimit: BODY_LIMIT_BYTES,
     requestTimeout: options.requestTimeoutMs ?? 0,
+    // request_id PROPAGÉ (M2-T12) : l'id de corrélation du backend appelant
+    // (x-request-id) traverse tel quel — généré sinon. Label `request_id`
+    // dans chaque ligne de log.
+    requestIdHeader: "x-request-id",
+    requestIdLogLabel: "request_id",
     ajv: {
       // Validation STRICTE à la frontière (M2-T03) : le payload vient in fine
       // de l'utilisateur. Les défauts Fastify (coerceTypes, removeAdditional)
@@ -77,6 +87,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.removeContentTypeParser("text/plain");
 
   if (options.pdfRenderer) app.decorate("pdfRenderer", options.pdfRenderer);
+
+  // L'id de corrélation revient aussi à l'APPELANT (backend) : il peut
+  // joindre ses logs aux nôtres sur request_id (M2-T12).
+  app.addHook("onSend", async (request, reply) => {
+    reply.header("x-request-id", request.id);
+  });
 
   registerProblemHandlers(app);
   // /healthz reflète l'état du NAVIGATEUR (revue T06, C1) : browser mort ⇒
