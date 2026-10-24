@@ -1,0 +1,41 @@
+{
+  "name": "@talentious/export-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Service de rendu PDF déterministe (ADR-PDF-RENDER, Option B : payload injecté, aucune navigation). 6e service Cloud Run, privé (OIDC). Consomme @talentious/cv-render pour l'invariant « aperçu = PDF ».",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src scripts",
+    "build": "node scripts/build.mjs",
+    "start": "node --enable-source-maps dist/server.js"
+  },
+  "dependencies": {
+    "ajv-formats": "^3.0.1",
+    "fastify": "^5.2.1",
+    "pdf-lib": "1.17.1",
+    "playwright-core": "1.64.1"
+  },
+  "devDependencies": {
+    "@apidevtools/swagger-parser": "^12.0.0",
+    "@eslint/js": "^9",
+    "@napi-rs/canvas": "1.0.13",
+    "@talentious/cv-render": "*",
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "esbuild": "0.28.2",
+    "eslint": "^9",
+    "openapi-typescript": "7.13.0",
+    "pdfjs-dist": "6.4.299",
+    "pixelmatch": "8.0.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "typescript": "^5",
+    "typescript-eslint": "^8.26.0",
+    "vitest": "^3.0.8"
+  }
+}

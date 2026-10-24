@@ -1,0 +1,31 @@
+# .dockerignore DÉDIÉ au build export-service (BuildKit lit
+# `<dockerfile>.dockerignore` en priorité sur le .dockerignore racine).
+# LISTE BLANCHE, comme frontend/Dockerfile.prod.dockerignore (revue M2-T02) :
+# on ignore TOUT, on ré-inclut le strict nécessaire — le démon Docker ne voit
+# jamais backend/, agents/, docs/, contrats, ni aucun fichier sensible que la
+# liste noire racine ne citerait pas (.npmrc, *.pem, clés SA…).
+*
+!package.json
+!package-lock.json
+!export-service
+# M2-T04 : @talentious/cv-render consommé EN SOURCE (SSR) + build:css dans le
+# stage builder. Seul le package partagé est ré-inclus, pas un éventuel futur
+# voisin de packages/.
+!packages/cv-render
+
+# Ré-exclusions dans ce qui est ré-inclus : rien de généré, de local ni de
+# sensible ne doit atteindre le contexte — la protection « liste blanche » ne
+# vaut plus À L'INTÉRIEUR des dossiers ré-inclus (revue T04). Le build esbuild
+# vide dist/ lui-même, ceinture et bretelles ici.
+**/node_modules
+**/dist
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+**/.npmrc
+**/*.log
+**/tsconfig.tsbuildinfo
+**/*.pem
+**/*.key
+**/*credentials*

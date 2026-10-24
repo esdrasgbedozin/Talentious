@@ -5,6 +5,7 @@
   "description": "Monorepo Talentious — workspaces npm (frontend + packages partagés). Le backend (FastAPI) et les agents Python vivent hors de ces workspaces.",
   "workspaces": [
     "frontend",
-    "packages/*"
+    "packages/*",
+    "export-service"
   ]
 }

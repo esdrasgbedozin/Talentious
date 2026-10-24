@@ -16,6 +16,7 @@ on:
       - 'backend/app/generated/**'
       - 'frontend/src/generated/**'
       - 'packages/cv-render/src/generated/**'
+      - 'export-service/src/generated/**'
       - '.github/workflows/contracts-types.yml'
   pull_request:
     paths:
@@ -23,7 +24,12 @@ on:
       - 'backend/app/generated/**'
       - 'frontend/src/generated/**'
       - 'packages/cv-render/src/generated/**'
+      - 'export-service/src/generated/**'
       - '.github/workflows/contracts-types.yml'
+
+# Moindre privilège : le job ne fait que lire le dépôt (revue M2-T03).
+permissions:
+  contents: read
 
 jobs:
   lint-and-verify:
@@ -44,7 +50,9 @@ jobs:
           node-version: '22'
 
       - name: Lint OpenAPI contract
-        run: npx --yes @redocly/cli@latest lint contracts/openapi.yaml contracts/agents/*.yaml
+        # Version épinglée : @latest exécuterait du code flottant et expose le
+        # lint à une dérive de comportement (revue M2-T03).
+        run: npx --yes @redocly/cli@2.71.0 lint contracts/openapi.yaml contracts/agents/*.yaml
 
       - name: Install type generators
         run: |
@@ -75,9 +83,18 @@ jobs:
         run: |
           npx --yes openapi-typescript contracts/openapi.yaml -o packages/cv-render/src/generated/api.ts
 
+      - name: Regenerate export-service types & validation schema
+        # openapi-typescript vient du lockfile (devDependency exacte du
+        # workspace), pas d'un npx flottant : le zéro-diff dépend de la
+        # version du générateur.
+        run: |
+          npm ci --workspace export-service --ignore-scripts --no-audit --no-fund
+          npm exec --workspace export-service -- openapi-typescript ../contracts/agents/export-service.openapi.yaml -o src/generated/api.ts
+          node export-service/scripts/generate-render-schema.mjs
+
       - name: Fail if generated types are out of date
         run: |
-          if ! git diff --exit-code backend/app/generated frontend/src/generated packages/cv-render/src/generated; then
+          if ! git diff --exit-code backend/app/generated frontend/src/generated packages/cv-render/src/generated export-service/src/generated; then
             echo "::error::Les types générés ne sont pas à jour. Lance 'make generate-types' et committe le résultat."
             exit 1
           fi

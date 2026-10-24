@@ -1,0 +1,77 @@
+# syntax=docker/dockerfile:1
+# =============================================================================
+# Image de PRODUCTION de l'export-service (Cloud Run, privé) — M2-T02.
+# Build : `docker build -f export-service/Dockerfile.prod .` (CONTEXTE RACINE,
+# comme frontend/Dockerfile.prod — le nom .prod suit cette convention).
+# Construite en CONTEXTE RACINE du monorepo (workspaces npm), comme
+# frontend/Dockerfile.prod : le build doit voir le lockfile unique racine
+# (et, dès M2-T04, le package partagé packages/cv-render).
+#
+# INVARIANT D'ÉPINGLAGE (ADR-PDF-RENDER) : le tag de l'image Playwright et la
+# version npm `playwright-core` (export-service/package.json) sont la MÊME
+# version exacte — le protocole CDP n'est garanti qu'à version identique entre
+# la lib et le Chromium embarqué. Toute montée de version change LES DEUX
+# (Dependabot + rebuild mensuel : M2-T23).
+# =============================================================================
+
+# Bases épinglées TAG + DIGEST (digest de la manifest LIST, multi-arch :
+# le poste de dev build en arm64, la CI en amd64). Dependabot docker met à
+# jour tag et digest ensemble (M2-T23). Node 24 = LTS courant, ALIGNÉ sur le
+# Node de l'image Playwright du runtime (Node 20 EOL depuis avril 2026).
+
+# ---- deps : dépendances de PRODUCTION seules (servies au runtime) ----
+FROM node:24-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205 AS deps
+WORKDIR /app
+# Ceinture + bretelles avec --ignore-scripts : si `playwright` remplaçait un
+# jour `playwright-core`, son postinstall ne téléchargerait pas de navigateur
+# dans une couche de build (le Chromium vient de l'image runner, et d'elle seule).
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+COPY package.json package-lock.json ./
+COPY export-service/package.json ./export-service/
+RUN npm ci --workspace export-service --omit=dev --ignore-scripts --no-audit --no-fund
+
+# ---- builder : deps complètes + bundle esbuild vers dist/ (M2-T04) ----
+# @talentious/cv-render est consommé EN SOURCE (SSR) : le builder installe les
+# DEUX workspaces (tailwind CLI du package pour build:css), construit le CSS
+# puis bundle l'app + le package + react dans dist/server.js — le runner ne
+# reçoit AUCUNE source React ni node_modules de dev.
+FROM node:24-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205 AS builder
+WORKDIR /app
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+COPY package.json package-lock.json ./
+COPY export-service/package.json ./export-service/
+COPY packages/cv-render/package.json ./packages/cv-render/
+RUN npm ci --workspace export-service --workspace packages/cv-render --ignore-scripts --no-audit --no-fund
+COPY packages/cv-render ./packages/cv-render
+COPY export-service ./export-service
+RUN npm run build:css --workspace @talentious/cv-render \
+ && npm run build --workspace export-service
+
+# ---- runner : image officielle Playwright ÉPINGLÉE (Chromium + deps système) ----
+FROM mcr.microsoft.com/playwright:v1.64.1-noble@sha256:47b510dd9230bf0b9bfc9b20102241e577ea7a99334ab4c3ca19f19770e9b8ea AS runner
+WORKDIR /app
+ENV NODE_ENV=production \
+    PORT=8080
+# Réduction de surface (revue T02, pt 5) : seul Chromium sert au rendu —
+# Firefox/WebKit retirés de /ms-playwright (vérifié : PLAYWRIGHT_BROWSERS_PATH
+# = /ms-playwright). Ne réduit pas la taille, réduit l'exécutable disponible.
+RUN rm -rf /ms-playwright/firefox-* /ms-playwright/webkit-*
+# Deps prod + manifestes (résolution node) puis le JS compilé.
+# VOLONTAIREMENT possédés par root et lus par pwuser (revue T02, pt 6) : une
+# compromission de Chromium/du serveur ne peut pas réécrire l'application ni
+# node_modules. Pas de --chown ici (contrairement au frontend, cas différent).
+# Les écritures runtime (profil Chromium, PDF temporaires) iront dans /tmp
+# uniquement (M2-T09).
+COPY --from=deps /app ./
+COPY --from=builder /app/export-service/dist ./export-service/dist
+# CSS du package (build M0-T14) : embarqué dans chaque document rendu —
+# résolu par css.ts à côté du bundle (dist/assets/cv.css).
+COPY --from=builder /app/packages/cv-render/dist/cv.css ./export-service/dist/assets/cv.css
+# Non-root : uid NUMÉRIQUE (= pwuser 1001:1001 de l'image Playwright, vérifié)
+# pour que « runAsNonRoot » soit vérifiable sans résolution de nom.
+# Le sandbox Chromium sous non-root est traité à M2-T09.
+USER 1001:1001
+EXPOSE 8080
+# --enable-source-maps : stack traces sur les sources (map SANS sourcesContent
+# — aucun code source embarqué, ADR-RENDER-SECURITY décision 5).
+CMD ["node", "--enable-source-maps", "export-service/dist/server.js"]
