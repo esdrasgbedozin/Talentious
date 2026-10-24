@@ -40,6 +40,10 @@ export interface CreatePdfRendererOptions {
   launchArgs?: string[];
   /** Appelé si le navigateur meurt (crash/OOM) — pour journaliser côté app. */
   onDisconnected?: () => void;
+  /** Appelé pour CHAQUE requête réseau avortée pendant un rendu (M2-T08) :
+   * observabilité de l'egress bloqué. L'appelant ne journalise que le
+   * HOSTNAME (jamais l'URL complète — contrainte logs sans contenu, T12). */
+  onEgressBlocked?: (url: string) => void;
 }
 
 /** LISTE BLANCHE des args Chromium acceptés (revue T06, C2) : un argument
@@ -102,9 +106,14 @@ export async function createPdfRenderer(
       });
       try {
         // Second verrou RÉSEAU, propre au renderer et indépendant de la CSP du
-        // document (revue T06, C4) : toute requête sortante est avortée.
-        // M2-T08 ajoutera l'observabilité (comptage + test au payload piégé).
-        await context.route("**/*", (route) => route.abort());
+        // document (revue T06, C4) : toute requête sortante est avortée, et
+        // chaque tentative est SIGNALÉE (M2-T08 — test au serveur-témoin :
+        // zéro requête reçue ; dernier rempart DET-M0-AC1 pour une URL
+        // d'apparence légitime, 169.254.169.254 compris).
+        await context.route("**/*", (route) => {
+          options.onEgressBlocked?.(route.request().url());
+          return route.abort();
+        });
         const page = await context.newPage();
         // Média PRINT posé AVANT la mesure (revue T06, S5) : une règle @media
         // print du CSS qui change les hauteurs doit être mesurée telle qu'elle

@@ -155,15 +155,20 @@ React : même JS activé, rien ne tournerait).
   déterministe), la variante `data:` charge avec ZÉRO requête réseau.
   M2-T16 industrialise : feuille `@font-face` data: générée par famille,
   seules les familles du thème du document sont embarquées.
-- **Zéro requête réseau** observée sur tout le rendu (spike Q6) — l'egress
-  verrouillé de M2-T08 reste le rempart réglementaire par-dessus.
+- **Zéro requête réseau** observée sur tout le rendu (spike Q6) et VERROUILLÉE
+  (M2-T08) : `context.route` avorte toute requête sortante — dernier rempart
+  DET-M0-AC1 contre une URL http(s) d'apparence légitime (métadonnées GCP
+  169.254.169.254 comprise) — et chaque tentative est signalée (log du
+  HOSTNAME seul, jamais l'URL complète : contrainte logs sans contenu, T12).
+  Prouvé par serveur-témoin : zéro requête reçue pendant le rendu d'un HTML
+  piégé, mutation abort→continue tuée (le témoin reçoit, le test rougit).
+  L'egress INFRA (VPC/Cloud Run) restera un rempart de plus (phase B).
 
 ## Reste à instruire (tickets ordonnancés)
 
 - M2-T06 : contexte Chromium par requête (séquence de la décision 6), échec
   rapide (`__CV_ERROR__` sans objet — remplacé par les erreurs du flux CDP),
   executablePath() au démarrage, test « script injecté ne s'exécute pas ».
-- M2-T08 : egress verrouillé applicatif (dernier rempart URL « légitimes »).
 - M2-T09 : sandbox/compensations Chromium (Cloud Run gen2, /tmp seul).
 - M2-T16 : génération de la feuille de polices data: (contrat polices).
   JUSQU'À T16, les polices sont les replis système de l'image : la hauteur

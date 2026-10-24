@@ -24,6 +24,17 @@ try {
     launchArgs,
     onDisconnected: () =>
       app.log.error("navigateur de rendu déconnecté — /healthz passe à 503 (recyclage)"),
+    // Egress bloqué (M2-T08) : hostname SEUL — jamais l'URL complète, qui
+    // peut porter du contenu de CV (contrainte logs, M2-T12).
+    onEgressBlocked: (url) => {
+      let host = "hôte-illisible";
+      try {
+        host = new URL(url).host;
+      } catch {
+        // garder le placeholder
+      }
+      app.log.warn({ egress_bloque: host }, "requête sortante avortée pendant un rendu");
+    },
   });
   app.decorate("pdfRenderer", pdfRenderer);
   app.addHook("onClose", async () => pdfRenderer.close());
