@@ -14,6 +14,7 @@ import { sendProblem } from "../problem.js";
 import { loadCvCss } from "../render/css.js";
 import { buildCvDocumentHtml } from "../render/document.js";
 import { renderNormalizedPdf } from "../render/metadata.js";
+import { RenderTimeoutError } from "../render/pdf.js";
 import { QueueFullError } from "../render/semaphore.js";
 
 type RenderPdfRequest = components["schemas"]["RenderPdfRequest"];
@@ -45,6 +46,12 @@ export function registerRenderRoutes(app: FastifyInstance): void {
       try {
         pdf = await renderNormalizedPdf(renderer, html);
       } catch (err) {
+        if (err instanceof RenderTimeoutError) {
+          // Échéance globale dépassée (M2-T11) : 504, détail fixe, zéro fuite.
+          return sendProblem(request, reply, 504, {
+            detail: "Le rendu a dépassé le délai imparti.",
+          });
+        }
         if (err instanceof QueueFullError) {
           // Shedding déterministe (M2-T09) : file pleine ⇒ 503 + Retry-After,
           // jamais une attente qui dépasse le timeout de l'appelant.

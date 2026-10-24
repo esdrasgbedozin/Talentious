@@ -29,11 +29,28 @@ import { createSemaphore } from "./semaphore.js";
 
 /** Défauts partagés (server.ts les consomme — une seule source). */
 export const DEFAULT_RENDER_CONCURRENCY = 2;
+/** Échéance GLOBALE d'un rendu, attente en file comprise (M2-T11). */
+export const DEFAULT_RENDER_TIMEOUT_MS = 120_000;
+
+export interface RenderCallOptions {
+  /** Échéance de CET appel (tests/appels particuliers) — défaut : celle du renderer. */
+  timeoutMs?: number;
+}
+
+/** Rendu interrompu à l'échéance : la route traduit en 504 problem+json. */
+export class RenderTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(
+      `Rendu interrompu après ${timeoutMs} ms (échéance globale, file comprise)`,
+    );
+    this.name = "RenderTimeoutError";
+  }
+}
 /** Taille de file par défaut : au-delà, QueueFullError ⇒ 503 Retry-After. */
 export const DEFAULT_MAX_QUEUE = 8;
 
 export interface PdfRenderer {
-  render(html: string): Promise<Buffer>;
+  render(html: string, options?: RenderCallOptions): Promise<Buffer>;
   close(): Promise<void>;
   /** false dès que le navigateur est mort (crash/OOM) : /healthz passe à 503
    * et Cloud Run recycle l'instance — sinon un seul contenu pathologique
@@ -57,6 +74,11 @@ export interface CreatePdfRendererOptions {
   /** Borne de la FILE d'attente (M2-T09) : au-delà, rejet immédiat
    * (QueueFullError ⇒ 503 Retry-After). Défaut : 8. */
   maxQueuedRenders?: number;
+  /** Échéance GLOBALE d'un rendu en ms, ATTENTE EN FILE COMPRISE (M2-T11,
+   * contrat ADR décision 7) : à l'expiration, un waiter est retiré de la
+   * file, un rendu en cours voit son contexte FERMÉ (le permis est toujours
+   * libéré). Défaut : 120 000. */
+  renderTimeoutMs?: number;
 }
 
 /**
@@ -127,6 +149,12 @@ export async function createPdfRenderer(
     options.maxConcurrentRenders ?? DEFAULT_RENDER_CONCURRENCY,
     options.maxQueuedRenders ?? DEFAULT_MAX_QUEUE,
   );
+  // Minimum 1 ms ICI (les tests d'échéance en dépendent) ; l'env de PROD est
+  // borné à ≥ 1 000 ms par intEnv dans server.ts (revue T11, S5).
+  const renderTimeoutMs = options.renderTimeoutMs ?? DEFAULT_RENDER_TIMEOUT_MS;
+  if (!Number.isInteger(renderTimeoutMs) || renderTimeoutMs < 1) {
+    throw new Error(`renderTimeoutMs invalide : ${renderTimeoutMs}`);
+  }
   const browser: Browser = await chromium.launch({ args: launchArgs });
   let healthy = true;
   browser.on("disconnected", () => {
@@ -134,15 +162,45 @@ export async function createPdfRenderer(
     options.onDisconnected?.();
   });
 
-  async function renderOnce(html: string): Promise<Buffer> {
-    const context = await browser.newContext({
-      javaScriptEnabled: false,
-      viewport: A4_VIEWPORT,
-      deviceScaleFactor: 1,
-      serviceWorkers: "block",
-      acceptDownloads: false,
+  async function renderOnce(
+    html: string,
+    signal: AbortSignal,
+    timeoutError: RenderTimeoutError,
+  ): Promise<Buffer> {
+    if (signal.aborted) throw timeoutError;
+    // Timeout À L'INTÉRIEUR de la tâche (contrat T09/T11) : la promesse
+    // d'échéance PERD une course qui couvre TOUT — newContext compris (revue
+    // T11, C2 : un navigateur à moitié mort peut y pendre). Le rejet ne
+    // dépend JAMAIS des erreurs CDP (un appel Playwright sur un contexte en
+    // fermeture peut PENDRE au lieu de rejeter — constaté sur newPage) ; la
+    // fermeture du contexte sert à stopper le travail Chromium. Le permis est
+    // libéré par le finally : jamais un rendu pendu qui garde sa place.
+    let context: Awaited<ReturnType<Browser["newContext"]>> | undefined;
+    const closeContext = () => void context?.close().catch(() => {});
+    let unlisten = () => {};
+    const aborted = new Promise<never>((_, reject) => {
+      const fail = () => {
+        closeContext();
+        reject(timeoutError);
+      };
+      if (signal.aborted) {
+        fail();
+        return;
+      }
+      signal.addEventListener("abort", fail, { once: true });
+      unlisten = () => signal.removeEventListener("abort", fail);
     });
-    try {
+    const work = (async (): Promise<Buffer> => {
+      context = await browser.newContext({
+        javaScriptEnabled: false,
+        viewport: A4_VIEWPORT,
+        deviceScaleFactor: 1,
+        serviceWorkers: "block",
+        acceptDownloads: false,
+      });
+      // Contexte né APRÈS l'échéance : le fail() a déjà couru sans rien à
+      // fermer — on s'arrête là, le finally ferme.
+      if (signal.aborted) throw timeoutError;
       // Second verrou RÉSEAU, propre au renderer et indépendant de la CSP du
       // document (revue T06, C4) : toute requête sortante est avortée, et
       // chaque tentative est SIGNALÉE (M2-T08 — test au serveur-témoin :
@@ -194,16 +252,31 @@ export async function createPdfRenderer(
         );
       }
       return await page.pdf({ format: "A4", printBackground: true });
+    })();
+    try {
+      return await Promise.race([work, aborted]);
+    } catch (err) {
+      // Le perdant de la course peut rejeter PLUS TARD (contexte fermé) :
+      // neutralisé pour ne jamais produire d'unhandled rejection.
+      work.catch(() => {});
+      // Échéance ⇒ erreur TYPÉE (504), jamais le message CDP interne.
+      if (signal.aborted) throw timeoutError;
+      throw err;
     } finally {
-      // close() qui rejette ne doit jamais MASQUER l'erreur d'origine de
-      // page.pdf (revue T06, S3) : avalé, le contexte mort finira avec le
-      // navigateur (health → 503 si c'est lui qui est tombé).
-      await context.close().catch(() => {});
+      unlisten();
+      // close() avalé (jamais masquer l'erreur d'origine — revue T06 S3) ET
+      // BORNÉ à 5 s (revue T11 S4) : un close qui pend ne doit pas retarder
+      // le 504 ni la libération du permis — le contexte orphelin finira avec
+      // le navigateur.
+      await Promise.race([
+        context?.close().catch(() => {}),
+        new Promise((resolve) => setTimeout(resolve, 5_000).unref?.()),
+      ]);
     }
   }
 
   return {
-    render(html: string): Promise<Buffer> {
+    render(html: string, callOptions?: RenderCallOptions): Promise<Buffer> {
       // Échec IMMÉDIAT si le navigateur est mort (revue T09, pt 8) : inutile
       // d'attendre un permis pour échouer — /healthz 503 recycle déjà.
       if (!healthy) {
@@ -211,9 +284,18 @@ export async function createPdfRenderer(
           new Error("Navigateur de rendu indisponible (déconnecté)"),
         );
       }
-      // Borne de concurrence (M2-T09) : au-delà, les rendus ATTENDENT (FIFO)
-      // — jamais un contexte de plus que la limite (OOM navigateur évité).
-      return semaphore.run(() => renderOnce(html));
+      // Échéance GLOBALE (M2-T11) : le chrono part ICI — l'attente en file
+      // compte. À l'expiration : waiter retiré de la file (signal) OU contexte
+      // fermé (rendu en cours). Borne de concurrence : M2-T09.
+      const timeoutMs = callOptions?.timeoutMs ?? renderTimeoutMs;
+      const timeoutError = new RenderTimeoutError(timeoutMs);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(timeoutError), timeoutMs);
+      return semaphore
+        .run(() => renderOnce(html, controller.signal, timeoutError), {
+          signal: controller.signal,
+        })
+        .finally(() => clearTimeout(timer));
     },
 
     async close(): Promise<void> {

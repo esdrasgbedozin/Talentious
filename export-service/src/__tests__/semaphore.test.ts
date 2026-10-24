@@ -116,4 +116,35 @@ describe("createSemaphore", () => {
     // La file s'est vidée : on accepte de nouveau.
     await expect(sem.run(async () => "après")).resolves.toBe("après");
   });
+
+  it("AbortSignal : une attente en file annulée est RETIRÉE — le permis ne lui est jamais donné", async () => {
+    const sem = createSemaphore(1, 4);
+    const gate = deferred();
+    const blocking = sem.run(async () => gate.promise);
+    const ac = new AbortController();
+    let ranAbandoned = false;
+    const abandoned = sem.run(
+      async () => {
+        ranAbandoned = true;
+      },
+      { signal: ac.signal },
+    );
+    const after = sem.run(async () => "servi");
+    ac.abort(new Error("client parti"));
+    await expect(abandoned).rejects.toThrow("client parti");
+    gate.resolve();
+    await blocking;
+    expect(await after).toBe("servi");
+    expect(ranAbandoned).toBe(false);
+  });
+
+  it("AbortSignal DÉJÀ aborté : rejet immédiat, aucun permis consommé", async () => {
+    const sem = createSemaphore(1);
+    const ac = new AbortController();
+    ac.abort(new Error("trop tard"));
+    await expect(
+      sem.run(async () => "x", { signal: ac.signal }),
+    ).rejects.toThrow("trop tard");
+    await expect(sem.run(async () => "ok")).resolves.toBe("ok");
+  });
 });

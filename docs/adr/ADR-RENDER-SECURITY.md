@@ -186,13 +186,18 @@ Politique figée et APPLIQUÉE au démarrage (`validateChromiumLaunch`) :
   ne peut plus provoquer l'OOM du navigateur, et file pleine ⇒ rejet IMMÉDIAT
   en 503 `Retry-After` (shedding déterministe, testé). Prouvé : 4 rendus
   parallèles sur un conteneur read-only ⇒ 4×200, hashs IDENTIQUES.
-  CONTRAT AVEC T11 (revue T09) : le timeout de rendu doit vivre À L'INTÉRIEUR
-  de la tâche (autour de renderOnce, contexte fermé à l'expiration) — un
-  timeout autour de semaphore.run libérerait l'appelant en GARDANT le permis,
-  et deux rendus pendus suffiraient à saturer la borne derrière un /healthz
-  vert ; l'échéance doit être GLOBALE (attente en file comprise). L'annulation
-  d'une requête abandonnée en file (AbortSignal) est aussi du ressort de T11.
-  La concurrency Cloud Run (T19) complète côté infra.
+  CONTRAT T11 HONORÉ : échéance GLOBALE (`RENDER_TIMEOUT_MS`, défaut 120 s,
+  validée-bornée au boot) — le chrono part à l'arrivée de la requête ; en
+  file, le waiter est RETIRÉ (AbortSignal du sémaphore) ; en rendu, une
+  promesse d'échéance PERD la course ET le contexte est fermé — le rejet ne
+  dépend JAMAIS des erreurs CDP (constaté : un appel Playwright sur un
+  contexte en fermeture peut PENDRE au lieu de rejeter), le perdant de la
+  course est neutralisé (zéro unhandled rejection), le permis est toujours
+  libéré. Route : 504 problem+json à détail fixe. CHAÎNE DES TIMEOUTS à
+  respecter au déploiement (T19) : rendu (RENDER_TIMEOUT_MS ≤ 300 s) <
+  requête Fastify (rendu + 30 s, couvre lecture du corps et normalisation)
+  < timeout Cloud Run < timeout de l'appelant backend — sinon le 504 typé
+  ne sort jamais. La concurrency Cloud Run (T19) complète côté infra.
 - limite connue du contrôle uid : un uid non-root doté de capabilities
   élevées (CAP_SYS_ADMIN…) passe — indétectable au boot, c'est le
   securityContext du déploiement qui l'exclut (T19) ;

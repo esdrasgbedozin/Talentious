@@ -8,6 +8,7 @@ import {
   createPdfRenderer,
   DEFAULT_MAX_QUEUE,
   DEFAULT_RENDER_CONCURRENCY,
+  DEFAULT_RENDER_TIMEOUT_MS,
 } from "./render/pdf.js";
 
 const port = Number(process.env.PORT ?? 8080);
@@ -29,7 +30,19 @@ function intEnv(name: string, def: number, min: number, max: number): number {
 // App construite AVANT le try (revue T06, A2) : un échec de démarrage sort en
 // JSON pino dans Cloud Logging, jamais en texte brut — c'est précisément le
 // cas que le fail-fast veut rendre visible.
-const app = buildApp({ logger: true });
+const renderTimeoutMs = intEnv(
+  "RENDER_TIMEOUT_MS",
+  DEFAULT_RENDER_TIMEOUT_MS,
+  1_000,
+  300_000,
+);
+// Chaîne des timeouts (ADR décision 7) : rendu < requête Fastify (+30 s) <
+// timeout Cloud Run < timeout de l'appelant backend — sinon le 504 typé ne
+// sort jamais.
+const app = buildApp({
+  logger: true,
+  requestTimeoutMs: renderTimeoutMs + 30_000,
+});
 
 try {
   // Échecs RAPIDES (revues T02/T04) : artefact CSS absent ou Chromium
@@ -52,6 +65,8 @@ try {
       16,
     ),
     maxQueuedRenders: intEnv("RENDER_QUEUE_MAX", DEFAULT_MAX_QUEUE, 0, 64),
+    // Échéance globale d'un rendu (file comprise), 120 s par défaut (M2-T11).
+    renderTimeoutMs,
     onDisconnected: () =>
       app.log.error(
         "navigateur de rendu déconnecté — /healthz passe à 503 (recyclage)",

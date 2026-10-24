@@ -7,8 +7,15 @@
  * la concurrency Cloud Run (M2-T19) fera le même travail côté infra, les
  * timeouts par rendu sont M2-T11.
  */
+export interface SemaphoreRunOptions {
+  /** Annule l'ATTENTE en file (M2-T11) : le waiter est retiré, le permis ne
+   * lui est jamais donné — une tâche déjà démarrée n'est pas interrompue ici
+   * (c'est le rôle du timeout interne du renderer). */
+  signal?: AbortSignal;
+}
+
 export interface Semaphore {
-  run<T>(task: () => Promise<T>): Promise<T>;
+  run<T>(task: () => Promise<T>, options?: SemaphoreRunOptions): Promise<T>;
 }
 
 /** File pleine : la route traduit en 503 problem+json avec Retry-After. */
@@ -42,7 +49,10 @@ export function createSemaphore(
     if (next) next();
   };
 
-  const acquire = (): Promise<void> => {
+  const acquire = (signal?: AbortSignal): Promise<void> => {
+    if (signal?.aborted) {
+      return Promise.reject(signal.reason ?? new Error("attente annulée"));
+    }
     if (active < limit) {
       active += 1;
       return Promise.resolve();
@@ -50,17 +60,28 @@ export function createSemaphore(
     if (waiting.length >= maxQueue) {
       return Promise.reject(new QueueFullError(limit, maxQueue));
     }
-    return new Promise((resolve) =>
-      waiting.push(() => {
+    return new Promise((resolve, reject) => {
+      const waiter = () => {
+        signal?.removeEventListener("abort", onAbort);
         active += 1;
         resolve();
-      }),
-    );
+      };
+      const onAbort = () => {
+        const index = waiting.indexOf(waiter);
+        if (index !== -1) waiting.splice(index, 1);
+        reject(signal?.reason ?? new Error("attente annulée"));
+      };
+      signal?.addEventListener("abort", onAbort, { once: true });
+      waiting.push(waiter);
+    });
   };
 
   return {
-    async run<T>(task: () => Promise<T>): Promise<T> {
-      await acquire();
+    async run<T>(
+      task: () => Promise<T>,
+      options?: SemaphoreRunOptions,
+    ): Promise<T> {
+      await acquire(options?.signal);
       try {
         return await task();
       } finally {

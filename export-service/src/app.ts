@@ -38,12 +38,16 @@ export interface BuildAppOptions {
   logger?: boolean;
   /** Renderer PDF. Absent ⇒ /render/pdf répond 500 (câblage de démarrage manquant). */
   pdfRenderer?: PdfRenderer;
+  /** Timeout de REQUÊTE Fastify (revue T11, S2) : couvre lecture du corps et
+   * normalisation, au-dessus de l'échéance de rendu. 0 = désactivé (tests). */
+  requestTimeoutMs?: number;
 }
 
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const app = Fastify({
     logger: options.logger ?? false,
     bodyLimit: BODY_LIMIT_BYTES,
+    requestTimeout: options.requestTimeoutMs ?? 0,
     ajv: {
       // Validation STRICTE à la frontière (M2-T03) : le payload vient in fine
       // de l'utilisateur. Les défauts Fastify (coerceTypes, removeAdditional)
