@@ -1,8 +1,9 @@
 # ADR-RENDER-SECURITY — Sécurité du rendu PDF (export-service)
 
-**Statut : EN COURS** — commencé à M2-T04 (document + CSP + échappement).
-Sections à compléter : polices (M2-T05), rendu Chromium (M2-T06), egress
-(M2-T08), sandbox (M2-T09). Voir ADR-PDF-RENDER pour l'architecture du
+**Statut : EN COURS** — commencé à M2-T04 (document + CSP + échappement),
+décision 6 (JS désactivé + fit externe + polices data:) arbitrée par le spike
+M2-T05. Sections à compléter : rendu Chromium (M2-T06), egress (M2-T08),
+sandbox (M2-T09). Voir ADR-PDF-RENDER pour l'architecture du
 service (Option B : `page.setContent`, aucune navigation).
 
 ## Contexte et modèle de menace
@@ -62,8 +63,8 @@ Chaque document embarque en `<meta http-equiv>` :
   `<style>` embarqué = `dist/cv.css`, NOTRE artefact de build (M0-T14), jamais
   du contenu utilisateur — une garde refuse tout CSS contenant `</style>`
   (artefact suspect ⇒ échec, pas de réparation silencieuse).
-- Évolution prévue M2-T05 (polices embarquées) : élargissement au strict
-  nécessaire (`font-src`), consigné ici.
+- Élargissement ARBITRÉ (spike M2-T05, décision 6) : `font-src data:` seul,
+  posé quand la feuille de polices data: arrive (M2-T16) — rien d'autre.
 
 ## Décision 3 — Normalisation amont (contrôles + bidi)
 
@@ -106,10 +107,41 @@ root-owned, non-root 1001). Le CSS du package est préchargé AU DÉMARRAGE
 et `CV_RENDER_CSS_PATH`, s'il est posé, est un candidat UNIQUE à échec
 explicite (même privilège que changer l'image — pas d'escalade).
 
+## Décision 6 — JS de page DÉSACTIVÉ, auto-fit piloté de l'EXTÉRIEUR, polices en data:
+
+Arbitré par le **spike M2-T05** (exécuté dans l'image épinglée réelle,
+fixture dense — lève la contradiction R1 : l'auto-fit du renderer repose sur
+des hooks client, or le document rendu est du markup statique SANS runtime
+React : même JS activé, rien ne tournerait).
+
+- **`javaScriptEnabled: false` sur le contexte Playwright** + CSP
+  `script-src 'none'` : DOUBLE verrou, prouvé — un `<script>` hostile injecté
+  dans le document ne s'exécute pas (spike Q2).
+- **L'auto-fit vit côté service, pas dans la page** : CDP (`page.evaluate`)
+  n'est soumis ni à la CSP ni à `javaScriptEnabled:false` (spike Q1) — c'est
+  un canal de CODE DE CONFIANCE (le nôtre), jamais exposé au contenu.
+  Séquence M2-T06 : `setContent` → `document.fonts.ready` → mesure
+  `scrollHeight` → `computeFitScale` (LA MÊME fonction partagée que l'aperçu
+  Next — fidélité aperçu = PDF) → scale posé en style → `page.pdf`.
+  Prouvé : fixture dense, scale 0,82, PDF A4 d'UNE page (spike Q5).
+- **`__CV_READY__` n'est PAS utilisé côté export** (il reste le signal de
+  l'aperçu Next) : le flux séquentiel ci-dessus rend le signal inutile — pas
+  de `waitForFunction` sur un état que le document ne peut pas poser sans JS.
+- **Polices : inlinées en `data:` dans le CSS embarqué** + CSP élargie au
+  strict `font-src data:`. Prouvé (spike Q3/Q4) : les 32 `@font-face`
+  `url('fonts/…')` relatifs de dist/cv.css ne chargent JAMAIS sous
+  `setContent` (fallback système silencieux — inacceptable pour un rendu
+  déterministe), la variante `data:` charge avec ZÉRO requête réseau.
+  M2-T16 industrialise : feuille `@font-face` data: générée par famille,
+  seules les familles du thème du document sont embarquées.
+- **Zéro requête réseau** observée sur tout le rendu (spike Q6) — l'egress
+  verrouillé de M2-T08 reste le rempart réglementaire par-dessus.
+
 ## Reste à instruire (tickets ordonnancés)
 
-- M2-T05 : polices embarquées + décision JS-off/auto-fit (`__CV_READY__`).
-- M2-T06 : contexte Chromium par requête, échec rapide (`__CV_ERROR__`,
-  DET-M0-T14T15a), executablePath() au démarrage.
+- M2-T06 : contexte Chromium par requête (séquence de la décision 6), échec
+  rapide (`__CV_ERROR__` sans objet — remplacé par les erreurs du flux CDP),
+  executablePath() au démarrage, test « script injecté ne s'exécute pas ».
 - M2-T08 : egress verrouillé applicatif (dernier rempart URL « légitimes »).
 - M2-T09 : sandbox/compensations Chromium (Cloud Run gen2, /tmp seul).
+- M2-T16 : génération de la feuille de polices data: (contrat polices).
