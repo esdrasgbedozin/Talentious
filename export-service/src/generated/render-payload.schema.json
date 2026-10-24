@@ -1,0 +1,443 @@
+{
+  "$id": "talentious://export-service/render-payload",
+  "type": "object",
+  "description": "Payload de rendu AUTOPORTANT : le service n'a accès ni à la base ni au\nbackend. `theme` est REQUIS : depuis M1-T05, toute enveloppe de\ndocument porte un snapshot de thème (le repli anthracite est la\nresponsabilité du backend, pas du service de rendu — le serveur est\nplus strict que le renderer).\n",
+  "additionalProperties": false,
+  "required": [
+    "cv_content",
+    "template_id",
+    "theme",
+    "language"
+  ],
+  "properties": {
+    "cv_content": {
+      "type": "object",
+      "description": "SCHÉMA DE CONTENU CANONIQUE UNIQUE du CV (ADR-CONTENT-SCHEMA). Ce schéma est à\nla fois : la sortie de l'agent rédacteur-cv, la charge utile stockée en JSONB\n(`generated_cvs.cv_data_json`), l'entrée du package de rendu partagé\n(`@talentious/cv-render`, côté export-service et aperçu) et le modèle d'édition\n(`PUT /cv/{cv_id}`). Aucune transformation runtime entre ces usages (seule la\ncoercition de sécurité en liste blanche s'applique avant stockage).\n\nContenu PUR : aucune information de forme. `template_id`, `theme` et `language`\nvivent dans l'enveloppe du document (`CVDetailResponse`), jamais ici : le contenu\nest portable d'un Template à l'autre.\n\nContrainte : aucun champ date n'est requis dans les sous-schémas de sortie\n(`SelectedEducation`, `SelectedCertification`) pour éviter les 422 aléatoires\nlorsque l'IA ne génère pas ces dates.\n",
+      "required": [
+        "personal_info",
+        "summary",
+        "selected_experiences",
+        "highlighted_skills",
+        "selected_educations"
+      ],
+      "properties": {
+        "personal_info": {
+          "type": "object",
+          "description": "Informations personnelles du candidat. `first_name`, `last_name` et `email`\nsont les seuls champs requis. Tous les autres sont optionnels pour ne pas\nbloquer une création de profil partielle.\n",
+          "required": [
+            "first_name",
+            "last_name",
+            "email"
+          ],
+          "properties": {
+            "first_name": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "last_name": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 10000
+            },
+            "phone": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 30
+            },
+            "linkedin": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            },
+            "address": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            },
+            "city": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 100
+            },
+            "postal_code": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 20
+            },
+            "country": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Résumé professionnel réécrit et optimisé pour l'offre (50-120 mots)"
+        },
+        "selected_experiences": {
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "title",
+              "company",
+              "start_date",
+              "description",
+              "highlighted_skills"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "company": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "start_date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}$",
+                "maxLength": 10000
+              },
+              "end_date": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}$",
+                "maxLength": 10000
+              },
+              "location": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 255
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 5000,
+                "description": "Description réécrite avec verbes d'action et mots-clés de l'offre"
+              },
+              "highlighted_skills": {
+                "type": "array",
+                "maxItems": 30,
+                "items": {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                "description": "Compétences démontrées dans cette expérience, pertinentes pour l'offre"
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Expériences sélectionnées et réécrites (3-5 les plus pertinentes)"
+        },
+        "highlighted_skills": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "category",
+              "importance"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "level": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 100,
+                "description": "Niveau de maîtrise inféré par l'agent (ex. Expert, Intermédiaire)"
+              },
+              "category": {
+                "type": "string",
+                "enum": [
+                  "hard_skill",
+                  "soft_skill"
+                ],
+                "maxLength": 10000
+              },
+              "importance": {
+                "type": "string",
+                "enum": [
+                  "Critical",
+                  "Important",
+                  "Nice to have"
+                ],
+                "description": "Importance de la compétence pour l'offre ciblée",
+                "maxLength": 10000
+              }
+            },
+            "additionalProperties": false
+          },
+          "maxItems": 30,
+          "description": "Compétences priorisées pour l'offre (8-15)"
+        },
+        "selected_educations": {
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "degree",
+              "institution"
+            ],
+            "description": "Formation sélectionnée par l'agent. `end_date` est optionnel\n(était requis dans l'ancienne version — source de 422 aléatoires).\n",
+            "properties": {
+              "id": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "degree": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "institution": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "end_date": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}$",
+                "description": "Date d'obtention du diplôme, format YYYY-MM. Optionnelle.\nRemplace `graduation_date: str` (requis dans l'ancienne version agent).\n",
+                "maxLength": 10000
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 2000
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "selected_projects": {
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "description",
+              "relevant_skills"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 3000
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 500
+              },
+              "completion_date": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}$",
+                "maxLength": 10000
+              },
+              "relevant_skills": {
+                "type": "array",
+                "maxItems": 30,
+                "items": {
+                  "type": "string",
+                  "maxLength": 100
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "selected_certifications": {
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "issuer"
+            ],
+            "description": "Certification sélectionnée par l'agent. `issue_date` est optionnel\n(était requis dans l'ancienne version — source de 422 aléatoires).\n",
+            "properties": {
+              "id": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "issuer": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "issue_date": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}$",
+                "description": "Date d'obtention. Optionnelle.\nRemplace `issue_date: str` (requis dans l'ancienne version agent).\n",
+                "maxLength": 10000
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 500
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "optimization_notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Notes internes de l'agent sur sa stratégie d'optimisation.\nNE DOIT PAS être affiché à l'utilisateur final ni loggé en production\n(risque BLK-5 : exfiltration de données via prompt injection).\n",
+          "maxLength": 10000
+        }
+      },
+      "additionalProperties": false
+    },
+    "template_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[a-z0-9_]+$",
+      "description": "Id de template du registre (`cv-render` résout, repli `modern_sobre` — ADR-TEMPLATE-REGISTRY). Format strict, mais la résolution d'un id inconnu est un repli, pas une erreur.\n"
+    },
+    "theme": {
+      "type": "object",
+      "description": "Jetons de style CV-scopés (injectés en propriétés CSS propres au CV, jamais les\ncouleurs de l'interface de l'application). Validation STRICTE : couleurs en\n`#RRGGBB`, polices dans la liste blanche `CVFontFamily`, aucune propriété\nsupplémentaire acceptée. Le serveur vérifie en plus un contraste de lisibilité\nsuffisant (texte / fond) avant enregistrement ; un thème illisible répond `422`\n(seuil exact fixé côté serveur).\n",
+      "additionalProperties": false,
+      "required": [
+        "color_accent",
+        "color_text",
+        "color_muted",
+        "color_background",
+        "font_heading",
+        "font_body"
+      ],
+      "properties": {
+        "color_accent": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "Couleur au format hexadécimal strict `#RRGGBB` (défense anti-injection CSS).",
+          "maxLength": 10000
+        },
+        "color_text": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "Couleur au format hexadécimal strict `#RRGGBB` (défense anti-injection CSS).",
+          "maxLength": 10000
+        },
+        "color_muted": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "Couleur au format hexadécimal strict `#RRGGBB` (défense anti-injection CSS).",
+          "maxLength": 10000
+        },
+        "color_background": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "Couleur au format hexadécimal strict `#RRGGBB` (défense anti-injection CSS).",
+          "maxLength": 10000
+        },
+        "font_heading": {
+          "type": "string",
+          "enum": [
+            "Inter",
+            "Source Sans 3",
+            "IBM Plex Sans",
+            "Work Sans",
+            "Source Serif 4",
+            "Lora",
+            "Merriweather",
+            "IBM Plex Serif"
+          ],
+          "description": "Liste BLANCHE des polices autorisées dans un Thème CV (jeu curaté, embarqué côté\nservice d'export : déterminisme du rendu, résidence UE, défense anti-injection\nCSS). Aucune autre valeur n'est acceptée. La liste exacte doit rester alignée sur\nle manifeste de polices embarquées du package de rendu (à confirmer avant\nimplémentation).\n",
+          "maxLength": 10000
+        },
+        "font_body": {
+          "type": "string",
+          "enum": [
+            "Inter",
+            "Source Sans 3",
+            "IBM Plex Sans",
+            "Work Sans",
+            "Source Serif 4",
+            "Lora",
+            "Merriweather",
+            "IBM Plex Serif"
+          ],
+          "description": "Liste BLANCHE des polices autorisées dans un Thème CV (jeu curaté, embarqué côté\nservice d'export : déterminisme du rendu, résidence UE, défense anti-injection\nCSS). Aucune autre valeur n'est acceptée. La liste exacte doit rester alignée sur\nle manifeste de polices embarquées du package de rendu (à confirmer avant\nimplémentation).\n",
+          "maxLength": 10000
+        }
+      }
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "fr",
+        "en"
+      ],
+      "description": "Langue du document (CV ou lettre), distincte de la langue de l'interface (qui\nreste française). Uniquement `fr` et `en`. `en` est une capacité premium.\n",
+      "maxLength": 10000
+    }
+  }
+}

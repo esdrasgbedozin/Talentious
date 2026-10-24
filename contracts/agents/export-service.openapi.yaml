@@ -1,0 +1,220 @@
+openapi: 3.0.3
+info:
+  title: Export-service (rendu PDF)
+  version: "1.0.0"
+  description: |
+    Microservice privé de rendu PDF déterministe (ADR-PDF-RENDER). Reçoit un
+    payload complet et autoportant — contenu canonique + enveloppe de forme —
+    fait le SSR de `@talentious/cv-render`, injecte le HTML dans un Chromium
+    épinglé (`page.setContent`, Option B : AUCUNE navigation, aucun appel API)
+    et renvoie le PDF A4.
+
+    ## Accès
+    Service privé (Cloud Run --no-allow-unauthenticated). Seul le compte de
+    service du backend Talentious est autorisé (roles/run.invoker, OIDC).
+
+    ## Schémas canoniques par $ref inter-fichiers (délibéré)
+    Contrairement aux contrats d'agents (copies synchronisées par note
+    textuelle), ce contrat référence DIRECTEMENT les schémas canoniques de
+    `../openapi.yaml` (`GeneratedCVData`, `CVThemeTokens`, `DocumentLanguage`) :
+    le payload rendu est EXACTEMENT ce que le backend stocke, caps de contenu
+    (maxLength/maxItems, M1-T16) comprises — zéro dérive par construction.
+    L'artefact de validation runtime (`export-service/src/generated/
+    render-payload.schema.json`, consommé par ajv/Fastify) est GÉNÉRÉ
+    déréférencé depuis ce fichier (`make generate-types`), jamais édité à la
+    main ; la CI contracts-types vérifie le zéro-diff.
+
+    ## Entrées non fiables
+    Le contenu du CV vient in fine de l'utilisateur (et d'une sortie d'IA
+    coercée) : le service revalide TOUT à sa frontière (champs inconnus
+    refusés, types stricts, aucune coercition) avant tout rendu — défense en
+    profondeur, le backend valide déjà de son côté.
+
+    ## Erreurs
+    RFC 7807 (application/problem+json) pour toute réponse non-2xx.
+  license:
+    name: Proprietary
+    url: https://talentious.fr/legal/terms
+
+servers:
+  - url: http://localhost:8004
+    description: Développement local (docker-compose)
+  - url: https://export-service-placeholder-ew.a.run.app
+    description: Cloud Run (URL interne privée — remplacer par l'URL réelle)
+
+security:
+  - iamAuth: []
+
+tags:
+  - name: Render
+    description: Rendu PDF d'un document
+  - name: Health
+    description: Sonde de disponibilité
+
+paths:
+  /healthz:
+    get:
+      operationId: healthz
+      tags: [Health]
+      security: []
+      summary: Sonde de disponibilité (non authentifiée)
+      responses:
+        "200":
+          description: Service disponible
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+
+  /render/pdf:
+    post:
+      operationId: renderPdf
+      tags: [Render]
+      summary: Rendre un CV en PDF A4 déterministe
+      description: |
+        Rendu synchrone (l'asynchronisme vit côté backend : job `export`,
+        M2-T16/T17). Timeout serveur 120 s ; taille de payload bornée (413).
+        Deux appels avec le même payload produisent le même document (D6,
+        métadonnées normalisées — M2-T07).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenderPdfRequest"
+      responses:
+        "200":
+          description: Document PDF rendu
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Corps de requête illisible (JSON malformé, corps vide)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          description: Payload trop volumineux
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "415":
+          description: Type de média non supporté (application/json attendu)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: >
+            Payload invalide : champ inconnu, type incorrect, valeur hors
+            contraintes du schéma canonique (caps de contenu comprises).
+            Aucune coercition n'est tentée. `invalid_params` ne contient que
+            la PREMIÈRE erreur rencontrée (ajv allErrors désactivé —
+            anti-amplification) et ne reflète jamais une valeur soumise.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Erreur interne (aucun détail technique exposé)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "504":
+          description: Rendu interrompu après le délai maximal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+components:
+  securitySchemes:
+    iamAuth:
+      type: http
+      scheme: bearer
+      description: Token IAM Google (OIDC). Seul le compte de service backend est autorisé (roles/run.invoker).
+
+  schemas:
+    RenderPdfRequest:
+      type: object
+      description: |
+        Payload de rendu AUTOPORTANT : le service n'a accès ni à la base ni au
+        backend. `theme` est REQUIS : depuis M1-T05, toute enveloppe de
+        document porte un snapshot de thème (le repli anthracite est la
+        responsabilité du backend, pas du service de rendu — le serveur est
+        plus strict que le renderer).
+      additionalProperties: false
+      required:
+        - cv_content
+        - template_id
+        - theme
+        - language
+      properties:
+        cv_content:
+          $ref: "../openapi.yaml#/components/schemas/GeneratedCVData"
+        template_id:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: "^[a-z0-9_]+$"
+          description: >
+            Id de template du registre (`cv-render` résout, repli
+            `modern_sobre` — ADR-TEMPLATE-REGISTRY). Format strict, mais la
+            résolution d'un id inconnu est un repli, pas une erreur.
+        theme:
+          $ref: "../openapi.yaml#/components/schemas/CVThemeTokens"
+        language:
+          $ref: "../openapi.yaml#/components/schemas/DocumentLanguage"
+
+    Problem:
+      type: object
+      description: |
+        Erreur au format RFC 7807 (application/problem+json). Même convention
+        que le backend : `detail` est fixe, aucune valeur soumise n'est jamais
+        reflétée.
+      properties:
+        type:
+          type: string
+          format: uri
+          default: "about:blank"
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          description: Chemin de la ROUTE matchée (jamais l'URL appelée, donnée client).
+        invalid_params:
+          type: array
+          description: |
+            Détail des échecs de validation (422 uniquement). Une seule entrée
+            (première erreur ajv). `loc` est le chemin du champ fautif dans le
+            payload — complété du nom du champ requis manquant le cas échéant,
+            mais JAMAIS du nom d'un champ inconnu soumis (clé = donnée client).
+          items:
+            type: object
+            required: [loc, msg, type]
+            properties:
+              loc:
+                type: array
+                items:
+                  type: string
+              msg:
+                type: string
+                description: Message ajv (anglais), issu du schéma — jamais du payload.
+              type:
+                type: string
+                description: Mot-clé ajv en échec (required, maxLength, enum…).

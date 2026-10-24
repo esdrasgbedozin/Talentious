@@ -1,4 +1,4 @@
-.PHONY: up down build logs clean restart generate-types generate-types-backend generate-types-frontend generate-types-cv-render
+.PHONY: up down build logs clean restart generate-types generate-types-backend generate-types-frontend generate-types-cv-render generate-types-export-service
 
 # -----------------------------------------------------------------------------
 # Contract-first: génération des types depuis contracts/openapi.yaml
@@ -6,7 +6,7 @@
 # -----------------------------------------------------------------------------
 BACKEND_PY := backend/.venv-py312/bin/python
 
-generate-types: generate-types-backend generate-types-frontend generate-types-cv-render
+generate-types: generate-types-backend generate-types-frontend generate-types-cv-render generate-types-export-service
 
 generate-types-backend:
 	backend/.venv-py312/bin/datamodel-codegen \
@@ -31,6 +31,16 @@ generate-types-frontend:
 # l'export-service), il porte sa propre copie générée des types du contrat.
 generate-types-cv-render:
 	npx --yes openapi-typescript contracts/openapi.yaml -o packages/cv-render/src/generated/api.ts
+
+# Export-service : types TS + artefact de validation ajv, générés depuis SON
+# contrat (contracts/agents/export-service.openapi.yaml, $ref inter-fichiers
+# vers le canonique — déréférencés dans l'artefact). Prérequis :
+# npm ci --workspace export-service (swagger-parser + openapi-typescript,
+# versions ÉPINGLÉES par le lockfile — pas de npx flottant : le zéro-diff CI
+# dépend de la version du générateur).
+generate-types-export-service:
+	npm exec --workspace export-service -- openapi-typescript ../contracts/agents/export-service.openapi.yaml -o src/generated/api.ts
+	node export-service/scripts/generate-render-schema.mjs
 
 up:
 	docker-compose up -d
