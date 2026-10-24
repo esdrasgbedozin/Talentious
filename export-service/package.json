@@ -28,6 +28,7 @@
     "esbuild": "0.28.2",
     "eslint": "^9",
     "openapi-typescript": "7.13.0",
+    "pdfjs-dist": "6.4.299",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "typescript": "^5",

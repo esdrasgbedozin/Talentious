@@ -27,7 +27,15 @@ export { themeToCssVars, DEFAULT_CV_THEME_TOKENS, CV_FONT_FAMILIES } from './the
 export { getCVLocale, CV_RENDER_LOCALES, DEFAULT_CV_LANGUAGE } from './i18n';
 // Auto-fit isolé + signal de rendu stable (M0-T15) : CV_READY_FLAG est le point
 // d'attente de l'export-service (M2) avant page.pdf().
-export { computeFitScale, MIN_SCALE, CV_READY_FLAG } from './fit';
+export {
+  computeFitScale,
+  MIN_SCALE,
+  CV_READY_FLAG,
+  A4_GEOMETRY,
+  A4_AVAILABLE_CONTENT_HEIGHT_PX,
+  CV_CONTENT_ATTR,
+  fitTransform,
+} from './fit';
 export type { CVLocale, DocumentLanguage } from './i18n';
 export {
   getTemplate,

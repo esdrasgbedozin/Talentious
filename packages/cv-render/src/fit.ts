@@ -3,11 +3,42 @@
  * CVRenderer en fonctions pures/testables, et le signal de rendu stable
  * `window.__CV_READY__` attendu par l'export-service (M2) avant `page.pdf()`.
  *
- * R1 (auto-fit JS vs « JS désactivé » de ADR-RENDER-SECURITY) n'est PAS tranché
- * ici : ce module rend l'ajustement déterministe et observable ; le mode
- * d'exécution côté export (JS first-party sous CSP à hash, ou CSS pur) est
- * l'objet du spike M2-T05.
+ * R1 tranché par le spike M2-T05 (ADR-RENDER-SECURITY, décision 6) : côté
+ * export, le JS de page est DÉSACTIVÉ — l'export-service mesure et applique le
+ * fit DE L'EXTÉRIEUR via CDP, avec ce même `computeFitScale` et la géométrie
+ * exportée ci-dessous. `__CV_READY__` reste le signal de l'aperçu Next
+ * uniquement.
  */
+
+/** Géométrie A4 du rendu (mm, 96 dpi) — UNIQUE source de vérité, partagée par
+ * CVRenderer (aperçu) et par la mesure CDP de l'export-service (M2-T06). */
+export const A4_GEOMETRY = {
+  widthMm: 210,
+  heightMm: 297,
+  padYMm: 14,
+  padXMm: 16,
+  mmToPx: 96 / 25.4,
+} as const;
+
+/** Hauteur utile du contenu (px CSS) : la cible du fit une-page. */
+export const A4_AVAILABLE_CONTENT_HEIGHT_PX =
+  (A4_GEOMETRY.heightMm - 2 * A4_GEOMETRY.padYMm) * A4_GEOMETRY.mmToPx;
+
+/** Attribut posé sur le conteneur de contenu mesurable : le sélecteur STABLE
+ * de la mesure CDP côté export-service (jamais un sélecteur structurel). */
+export const CV_CONTENT_ATTR = 'data-cv-content';
+
+/** Style du fit une-page — PARTAGÉ aperçu (CVRenderer) / export (pose CDP) :
+ * « aperçu = PDF » exige le transform et l'origine STRICTEMENT identiques. */
+export function fitTransform(scale: number): {
+  transform: string | undefined;
+  transformOrigin: string;
+} {
+  return {
+    transform: scale < 1 ? `scale(${scale})` : undefined,
+    transformOrigin: 'top center',
+  };
+}
 
 /** Plancher d'échelle : en-dessous, le CV est illisible — l'utilisateur doit
  * raccourcir son contenu plutôt que subir un zoom arrière extrême. */

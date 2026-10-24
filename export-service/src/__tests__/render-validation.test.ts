@@ -2,8 +2,8 @@
  * M2-T03 — validation du payload POST /render/pdf à la frontière du service.
  * Règles : schéma GÉNÉRÉ du contrat (zéro dérive), champs inconnus refusés,
  * AUCUNE coercition de type, erreurs 422 RFC 7807 sans refléter les valeurs
- * du payload. Le rendu lui-même n'existe pas encore (M2-T06) : un payload
- * VALIDE répond 501 provisoire.
+ * du payload. Le rendu réel (M2-T06) est REMPLACÉ ici par un renderer factice :
+ * ces tests prouvent la FRONTIÈRE, pdf-render.test.ts prouve le rendu.
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -37,9 +37,16 @@ function validPayload(): Record<string, unknown> {
   };
 }
 
+/** Renderer factice : la frontière se teste sans Chromium. */
+const fakePdfRenderer = {
+  render: async () => Buffer.from("%PDF-FAKE"),
+  close: async () => {},
+  isHealthy: () => true,
+};
+
 let app: FastifyInstance;
 beforeEach(() => {
-  app = buildApp();
+  app = buildApp({ pdfRenderer: fakePdfRenderer });
 });
 afterEach(async () => {
   await app.close();
@@ -50,10 +57,60 @@ async function postRender(payload: unknown) {
 }
 
 describe("POST /render/pdf — payload valide", () => {
-  it("accepte la fixture de référence (501 provisoire jusqu'à M2-T06, en problem+json)", async () => {
+  it("accepte la fixture de référence : 200 application/pdf (M2-T06)", async () => {
     const res = await postRender(validPayload());
-    expect(res.statusCode).toBe(501);
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toContain("application/pdf");
+    expect(res.body.startsWith("%PDF-")).toBe(true);
+  });
+
+  it("le PDF (données personnelles) sort en no-store + nosniff (revue T06)", async () => {
+    const res = await postRender(validPayload());
+    expect(res.headers["cache-control"]).toBe("no-store");
+    expect(res.headers["x-content-type-options"]).toBe("nosniff");
+  });
+
+  it("renderer ABSENT (mauvais câblage) ⇒ 500 problem+json générique", async () => {
+    const bareApp = buildApp();
+    const res = await bareApp.inject({
+      method: "POST",
+      url: "/render/pdf",
+      payload: validPayload() as object,
+    });
+    expect(res.statusCode).toBe(500);
     expect(res.headers["content-type"]).toContain("application/problem+json");
+    expect(res.body).not.toContain("pdfRenderer");
+    await bareApp.close();
+  });
+
+  it("renderer qui REJETTE ⇒ 500 générique, message interne jamais reflété", async () => {
+    const failingApp = buildApp({
+      pdfRenderer: {
+        ...fakePdfRenderer,
+        render: async () => {
+          throw new Error("SECRET_INTERNE_chemin/profil");
+        },
+      },
+    });
+    const res = await failingApp.inject({
+      method: "POST",
+      url: "/render/pdf",
+      payload: validPayload() as object,
+    });
+    expect(res.statusCode).toBe(500);
+    expect(res.headers["content-type"]).toContain("application/problem+json");
+    expect(res.body).not.toContain("SECRET_INTERNE");
+    await failingApp.close();
+  });
+
+  it("navigateur mort ⇒ /healthz passe à 503 pour que Cloud Run recycle (revue T06)", async () => {
+    const deadApp = buildApp({
+      pdfRenderer: { ...fakePdfRenderer, isHealthy: () => false },
+    });
+    const res = await deadApp.inject({ method: "GET", url: "/healthz" });
+    expect(res.statusCode).toBe(503);
+    expect(res.headers["content-type"]).toContain("application/problem+json");
+    await deadApp.close();
   });
 
   it("artefact CSS illisible ⇒ 500 problem+json générique, chemin jamais reflété", async () => {
@@ -249,7 +306,7 @@ describe("POST /render/pdf — fermeture en profondeur et caps hérités", () =>
     const payload = validPayload();
     (payload.cv_content as { personal_info: Record<string, unknown> }).personal_info.phone = null;
     const res = await postRender(payload);
-    expect(res.statusCode).toBe(501);
+    expect(res.statusCode).toBe(200);
   });
 });
 

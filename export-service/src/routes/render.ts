@@ -1,19 +1,15 @@
 /**
- * POST /render/pdf — M2-T03 : la VALIDATION à la frontière du service.
+ * POST /render/pdf — validation à la frontière (M2-T03) puis rendu réel
+ * (M2-T06) : document SSR + CSP (M2-T04) passé à Chromium, PDF A4 en retour.
  *
  * Le schéma est l'artefact GÉNÉRÉ du contrat (render-payload.schema.json,
- * `make generate-types`) : champs inconnus refusés (additionalProperties
- * false hérité du canonique), caps de contenu M1-T16 comprises. Fastify le
- * compile avec ajv configuré SANS coercition (app.ts).
- *
- * Le rendu réel arrive à M2-T06 : un payload valide répond 501 provisoire —
- * hors contrat, assumé : le service n'est pas déployé avant la phase B.
+ * `make generate-types`) : champs inconnus refusés, caps M1-T16 comprises,
+ * ajv SANS coercition (app.ts). Timeout 120 s / 504 : M2-T11.
  */
 import type { FastifyInstance } from "fastify";
 
 import type { components } from "../generated/api.js";
 import renderPayloadSchema from "../generated/render-payload.schema.json" with { type: "json" };
-import { sendProblem } from "../problem.js";
 import { loadCvCss } from "../render/css.js";
 import { buildCvDocumentHtml } from "../render/document.js";
 
@@ -25,22 +21,28 @@ export function registerRenderRoutes(app: FastifyInstance): void {
     { schema: { body: renderPayloadSchema } },
     async (request, reply) => {
       const body = request.body as RenderPdfRequest;
-      // Le document HTML complet (SSR + CSP, M2-T04) est construit à chaque
-      // requête valide : SSR et CSS sont exercés en conditions réelles dès
-      // maintenant (un défaut d'artefact = 500 immédiat, pas à M2-T06).
-      buildCvDocumentHtml({
+      const renderer = app.pdfRenderer;
+      if (!renderer) {
+        // Mauvais câblage de démarrage, jamais un cas client : 500 générique
+        // via le handler d'erreurs (rien d'interne ne sort).
+        throw new Error("PDF renderer non configuré (buildApp sans pdfRenderer)");
+      }
+      const html = buildCvDocumentHtml({
         cvContent: body.cv_content,
         templateId: body.template_id,
         theme: body.theme,
         language: body.language,
         css: loadCvCss(),
       });
-      // TODO(M2-T06) : passer ce document à Chromium (setContent + page.pdf)
-      // — retirer alors le titre 501 de problem.ts et le test « 501
-      // provisoire » (hors contrat, assumé).
-      return sendProblem(request, reply, 501, {
-        detail: "Rendu PDF non implémenté (M2-T06).",
-      });
+      const pdf = await renderer.render(html);
+      // no-store : le PDF porte des données personnelles (RGPD, minimisation) ;
+      // nosniff : ceinture (revue T06, C3). Pas de Content-Disposition : le
+      // backend appelant décide du nom de fichier, rien n'est reflété ici.
+      return reply
+        .header("cache-control", "no-store")
+        .header("x-content-type-options", "nosniff")
+        .type("application/pdf")
+        .send(pdf);
     },
   );
 }

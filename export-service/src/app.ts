@@ -13,8 +13,16 @@ import Fastify, { type FastifyInstance } from "fastify";
 // sur .default ; seuls les types de .default sont callables côté TS.
 const addFormats = ajvFormatsModule.default ?? ajvFormatsModule;
 
-import { registerProblemHandlers } from "./problem.js";
+import { registerProblemHandlers, sendProblem } from "./problem.js";
+import type { PdfRenderer } from "./render/pdf.js";
 import { registerRenderRoutes } from "./routes/render.js";
+
+declare module "fastify" {
+  interface FastifyInstance {
+    /** Renderer PDF (M2-T06) — réel en prod (server.ts), factice en test de frontière. */
+    pdfRenderer?: PdfRenderer;
+  }
+}
 
 /**
  * Limite de taille du corps, explicite (revue M2-T03). Dimensionnement : un
@@ -28,6 +36,8 @@ const BODY_LIMIT_BYTES = 2 * 1024 * 1024;
 export interface BuildAppOptions {
   /** Logger pino de Fastify — false en test, true (JSON structuré) au runtime. */
   logger?: boolean;
+  /** Renderer PDF. Absent ⇒ /render/pdf répond 500 (câblage de démarrage manquant). */
+  pdfRenderer?: PdfRenderer;
 }
 
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
@@ -62,8 +72,19 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   // ne parle que application/json.
   app.removeContentTypeParser("text/plain");
 
+  if (options.pdfRenderer) app.decorate("pdfRenderer", options.pdfRenderer);
+
   registerProblemHandlers(app);
-  app.get("/healthz", async () => ({ status: "ok" }));
+  // /healthz reflète l'état du NAVIGATEUR (revue T06, C1) : browser mort ⇒
+  // 503 ⇒ Cloud Run recycle l'instance au lieu de servir des 500 en boucle.
+  app.get("/healthz", async (request, reply) => {
+    if (app.pdfRenderer && !app.pdfRenderer.isHealthy()) {
+      return sendProblem(request, reply, 503, {
+        detail: "Navigateur de rendu indisponible — instance à recycler.",
+      });
+    }
+    return { status: "ok" };
+  });
   registerRenderRoutes(app);
 
   return app;

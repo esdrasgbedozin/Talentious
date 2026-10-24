@@ -19,7 +19,15 @@ import type { GeneratedCVData } from './types';
 import type { components } from './generated/api';
 import { themeToCssVars } from './theme';
 import { getCVLocale, type CVLocale, type DocumentLanguage } from './i18n';
-import { computeFitScale, signalCVReady, whenFontsReady } from './fit';
+import {
+  A4_AVAILABLE_CONTENT_HEIGHT_PX,
+  A4_GEOMETRY,
+  CV_CONTENT_ATTR,
+  computeFitScale,
+  fitTransform,
+  signalCVReady,
+  whenFontsReady,
+} from './fit';
 
 type CVThemeTokens = components['schemas']['CVThemeTokens'];
 
@@ -40,12 +48,14 @@ interface CVRendererProps {
 const mutedText = { color: 'var(--cv-muted)' } as const;
 const headingFont = { fontFamily: 'var(--cv-font-heading)' } as const;
 
-// A4 geometry and sheet padding (mm). Kept in sync with the print @page rules.
-const A4_WIDTH_MM = 210;
-const A4_HEIGHT_MM = 297;
-const PAD_Y_MM = 14;
-const PAD_X_MM = 16;
-const MM_TO_PX = 96 / 25.4;
+// A4 geometry and sheet padding (mm) — single source of truth in fit.ts
+// (shared with the export-service CDP measurement, M2-T06). Kept in sync with
+// the print @page rules.
+const A4_WIDTH_MM = A4_GEOMETRY.widthMm;
+const A4_HEIGHT_MM = A4_GEOMETRY.heightMm;
+const PAD_Y_MM = A4_GEOMETRY.padYMm;
+const PAD_X_MM = A4_GEOMETRY.padXMm;
+const MM_TO_PX = A4_GEOMETRY.mmToPx;
 
 /** "2020-03" | "2020-03-15" → "mars 2020" / "Mar 2020" selon la locale ; "" → "". */
 function formatMonthYear(t: CVLocale, value?: string | null): string {
@@ -118,7 +128,7 @@ export default function CVRenderer({ cv, theme, language }: CVRendererProps) {
   useLayoutEffect(() => {
     const el = contentRef.current;
     if (!el) return;
-    const availableHeightPx = (A4_HEIGHT_MM - 2 * PAD_Y_MM) * MM_TO_PX;
+    const availableHeightPx = A4_AVAILABLE_CONTENT_HEIGHT_PX;
     const fit = () => {
       const natural = el.scrollHeight;
       if (!natural) return;
@@ -171,11 +181,9 @@ export default function CVRenderer({ cv, theme, language }: CVRendererProps) {
       <div style={{ padding: `${PAD_Y_MM}mm ${PAD_X_MM}mm` }}>
         <div
           ref={contentRef}
+          {...{ [CV_CONTENT_ATTR]: 'true' }}
           className="text-[11px] leading-relaxed"
-          style={{
-            transform: scale < 1 ? `scale(${scale})` : undefined,
-            transformOrigin: 'top center',
-          }}
+          style={fitTransform(scale)}
         >
       {/* Header */}
       <header className="mb-4">

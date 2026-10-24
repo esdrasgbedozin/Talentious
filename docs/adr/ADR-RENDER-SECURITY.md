@@ -120,10 +120,20 @@ React : même JS activé, rien ne tournerait).
 - **L'auto-fit vit côté service, pas dans la page** : CDP (`page.evaluate`)
   n'est soumis ni à la CSP ni à `javaScriptEnabled:false` (spike Q1) — c'est
   un canal de CODE DE CONFIANCE (le nôtre), jamais exposé au contenu.
-  Séquence M2-T06 : `setContent` → `document.fonts.ready` → mesure
-  `scrollHeight` → `computeFitScale` (LA MÊME fonction partagée que l'aperçu
-  Next — fidélité aperçu = PDF) → scale posé en style → `page.pdf`.
+  Séquence M2-T06 : média PRINT posé d'abord (le scale est mesuré dans le
+  média FINAL — une règle @media print qui change les hauteurs est mesurée
+  telle qu'imprimée, revue T06) → `setContent` → `document.fonts.ready` →
+  mesure `scrollHeight` (marqueur `data-cv-content` ; ABSENT ⇒ échec explicite,
+  jamais un multi-pages silencieux) → `computeFitScale` + `fitTransform`
+  PARTAGÉS avec l'aperçu Next (fidélité aperçu = PDF) → `page.pdf`.
   Prouvé : fixture dense, scale 0,82, PDF A4 d'UNE page (spike Q5).
+  Verrous d'exécution supplémentaires (revues T06) : liste BLANCHE des args
+  Chromium au démarrage ; contexte `serviceWorkers: block`, téléchargements
+  refusés, `context.route` qui AVORTE toute requête réseau (second verrou
+  indépendant de la CSP — T08 ajoute l'observabilité) ; navigateur mort ⇒
+  `/healthz` 503 ⇒ recyclage Cloud Run (jamais des 500 en boucle derrière un
+  healthz vert) ; réponse PDF en `Cache-Control: no-store` + `nosniff`
+  (données personnelles, minimisation).
 - **`__CV_READY__` n'est PAS utilisé côté export** (il reste le signal de
   l'aperçu Next) : le flux séquentiel ci-dessus rend le signal inutile — pas
   de `waitForFunction` sur un état que le document ne peut pas poser sans JS.
@@ -145,3 +155,7 @@ React : même JS activé, rien ne tournerait).
 - M2-T08 : egress verrouillé applicatif (dernier rempart URL « légitimes »).
 - M2-T09 : sandbox/compensations Chromium (Cloud Run gen2, /tmp seul).
 - M2-T16 : génération de la feuille de polices data: (contrat polices).
+  JUSQU'À T16, les polices sont les replis système de l'image : la hauteur
+  mesurée (donc le scale) dépend de la machine — déterminisme D6 PARTIEL,
+  assumé et borné (l'image épinglée fige les polices du conteneur) ;
+  la baseline visuelle M2-T10 le constatera.
