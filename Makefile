@@ -1,4 +1,4 @@
-.PHONY: up down build logs clean restart generate-types generate-types-backend generate-types-frontend generate-types-cv-render generate-types-export-service
+.PHONY: up down build logs clean restart generate-types generate-types-backend generate-types-frontend generate-types-cv-render generate-types-export-service e2e-export
 
 # -----------------------------------------------------------------------------
 # Contract-first: génération des types depuis contracts/openapi.yaml
@@ -41,6 +41,11 @@ generate-types-cv-render:
 generate-types-export-service:
 	npm exec --workspace export-service -- openapi-typescript ../contracts/agents/export-service.openapi.yaml -o src/generated/api.ts
 	node export-service/scripts/generate-render-schema.mjs
+
+# E2E local du rendu PDF (M2-T13) : service compose (image de prod) + POST
+# de la fixture dense => PDF valide. Prérequis : docker-compose up -d export-service.
+e2e-export:
+	node export-service/scripts/e2e.mjs
 
 up:
 	docker-compose up -d

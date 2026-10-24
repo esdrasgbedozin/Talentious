@@ -42,6 +42,8 @@ services:
       STRIPE_PRICE_30_DAYS: ${STRIPE_PRICE_30_DAYS:-}
       STRIPE_PRICE_90_DAYS: ${STRIPE_PRICE_90_DAYS:-}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+      # Export-service (rendu PDF, M2) — consommé par le backend dès M2-T14.
+      EXPORT_SERVICE_URL: ${EXPORT_SERVICE_URL:-http://export-service:8004}
 
   parser-pdf:
     build: ./agents/parser-pdf
@@ -121,6 +123,29 @@ services:
       # Logging
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
 
+  # Rendu PDF (M2-T13) : IMAGE DE PROD (Chromium épinglé — ADR-PDF-RENDER),
+  # exécutée comme en prod : FS read-only, écritures /tmp seul (tmpfs),
+  # non-root (USER 1001 de l'image), --no-sandbox + compensations (décision 7).
+  # Pas de volume source : ce service se reconstruit (make build), il ne se
+  # hot-reload pas — fidélité au déployé > confort d'édition.
+  export-service:
+    build:
+      context: .
+      dockerfile: export-service/Dockerfile.prod
+    container_name: talentious_export_service
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m
+    ports:
+      - "8004:8004"
+    environment:
+      PORT: 8004
+      CHROMIUM_EXTRA_ARGS: "--no-sandbox --disable-dev-shm-usage"
+      RENDER_CONCURRENCY: ${RENDER_CONCURRENCY:-2}
+      RENDER_QUEUE_MAX: ${RENDER_QUEUE_MAX:-8}
+      RENDER_TIMEOUT_MS: ${RENDER_TIMEOUT_MS:-120000}
+
   frontend:
     build:
       # Contexte RACINE depuis M0-T08 : le frontend importe le package workspace
@@ -155,12 +180,12 @@ services:
       dockerfile: backend/evals/Dockerfile
     container_name: talentious_evals
     profiles:
-      - testing  # Only run when explicitly requested with --profile testing
+      - testing # Only run when explicitly requested with --profile testing
     depends_on:
       - analyseur-offre
       - redacteur-cv
     volumes:
-      - ./backend/evals/results:/evals/results  # Persist results locally
+      - ./backend/evals/results:/evals/results # Persist results locally
     networks:
       - default
 

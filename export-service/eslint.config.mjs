@@ -14,7 +14,14 @@ const eslintConfig = defineConfig([
   {
     files: ["scripts/**/*.mjs"],
     languageOptions: {
-      globals: { process: "readonly", console: "readonly", URL: "readonly" },
+      globals: {
+        process: "readonly",
+        console: "readonly",
+        URL: "readonly",
+        fetch: "readonly",
+        setTimeout: "readonly",
+        Buffer: "readonly",
+      },
     },
   },
   globalIgnores(["node_modules/**", "dist/**"]),
