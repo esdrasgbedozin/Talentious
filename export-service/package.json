@@ -5,7 +5,7 @@
   "description": "Service de rendu PDF déterministe (ADR-PDF-RENDER, Option B : payload injecté, aucune navigation). 6e service Cloud Run, privé (OIDC). Consomme @talentious/cv-render pour l'invariant « aperçu = PDF ».",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "test": "vitest run",
@@ -15,11 +15,12 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
-    "fastify": "^5.2.1"
+    "fastify": "^5.2.1",
+    "playwright-core": "1.64.1"
   },
   "devDependencies": {
     "@eslint/js": "^9",
-    "@types/node": "^20",
+    "@types/node": "^24",
     "eslint": "^9",
     "typescript": "^5",
     "typescript-eslint": "^8.26.0",

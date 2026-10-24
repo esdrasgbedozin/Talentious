@@ -1,0 +1,25 @@
+# .dockerignore DÉDIÉ au build export-service (BuildKit lit
+# `<dockerfile>.dockerignore` en priorité sur le .dockerignore racine).
+# LISTE BLANCHE, comme frontend/Dockerfile.prod.dockerignore (revue M2-T02) :
+# on ignore TOUT, on ré-inclut le strict nécessaire — le démon Docker ne voit
+# jamais backend/, agents/, docs/, contrats, ni aucun fichier sensible que la
+# liste noire racine ne citerait pas (.npmrc, *.pem, clés SA…).
+*
+!package.json
+!package-lock.json
+!export-service
+
+# M2-T04 ajoutera : !packages  (consommation de @talentious/cv-render en source)
+
+# Ré-exclusions dans ce qui est ré-inclus : rien de généré ni de local ne doit
+# atteindre le contexte (un dist/ de l'hôte survivrait à tsc, qui ne nettoie
+# pas outDir).
+**/node_modules
+**/dist
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+**/.npmrc
+**/*.log
+**/tsconfig.tsbuildinfo
