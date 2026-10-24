@@ -37,9 +37,13 @@ function validPayload(): Record<string, unknown> {
   };
 }
 
-/** Renderer factice : la frontière se teste sans Chromium. */
+/** Renderer factice : la frontière se teste sans Chromium. Le PDF rendu doit
+ * être STRUCTURELLEMENT valide : la route le passe à normalizePdfMetadata
+ * (M2-T07), qui le recharge via pdf-lib. */
+const { PDFDocument } = await import("pdf-lib");
+const fakeEmptyPdf = Buffer.from(await (await PDFDocument.create()).save());
 const fakePdfRenderer = {
-  render: async () => Buffer.from("%PDF-FAKE"),
+  render: async () => fakeEmptyPdf,
   close: async () => {},
   isHealthy: () => true,
 };
@@ -81,6 +85,24 @@ describe("POST /render/pdf — payload valide", () => {
     expect(res.headers["content-type"]).toContain("application/problem+json");
     expect(res.body).not.toContain("pdfRenderer");
     await bareApp.close();
+  });
+
+  it("renderer qui produit un PDF CORROMPU ⇒ 500 générique, octets jamais envoyés (revue T07)", async () => {
+    const corruptApp = buildApp({
+      pdfRenderer: {
+        ...fakePdfRenderer,
+        render: async () => Buffer.from("GARBAGE_PAS_PDF"),
+      },
+    });
+    const res = await corruptApp.inject({
+      method: "POST",
+      url: "/render/pdf",
+      payload: validPayload() as object,
+    });
+    expect(res.statusCode).toBe(500);
+    expect(res.headers["content-type"]).toContain("application/problem+json");
+    expect(res.body).not.toContain("GARBAGE_PAS_PDF");
+    await corruptApp.close();
   });
 
   it("renderer qui REJETTE ⇒ 500 générique, message interne jamais reflété", async () => {

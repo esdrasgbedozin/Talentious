@@ -12,6 +12,7 @@ import type { components } from "../generated/api.js";
 import renderPayloadSchema from "../generated/render-payload.schema.json" with { type: "json" };
 import { loadCvCss } from "../render/css.js";
 import { buildCvDocumentHtml } from "../render/document.js";
+import { renderNormalizedPdf } from "../render/metadata.js";
 
 type RenderPdfRequest = components["schemas"]["RenderPdfRequest"];
 
@@ -34,7 +35,9 @@ export function registerRenderRoutes(app: FastifyInstance): void {
         language: body.language,
         css: loadCvCss(),
       });
-      const pdf = await renderer.render(html);
+      // Métadonnées normalisées (M2-T07, D6) : date fixe, Talentious seul,
+      // /ID constant — deux rendus du même payload = même document.
+      const pdf = await renderNormalizedPdf(renderer, html);
       // no-store : le PDF porte des données personnelles (RGPD, minimisation) ;
       // nosniff : ceinture (revue T06, C3). Pas de Content-Disposition : le
       // backend appelant décide du nom de fichier, rien n'est reflété ici.

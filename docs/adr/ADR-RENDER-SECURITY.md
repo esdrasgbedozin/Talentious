@@ -92,6 +92,17 @@ interne d'agent, risque BLK-5) n'est JAMAIS rendu — prouvé par test sur le
 document complet. Deux rendus du même payload produisent le même octet
 (fonction pure, CSS en paramètre).
 
+Côté PDF (M2-T07) : métadonnées NORMALISÉES via pdf-lib (épinglé 1.17.1
+exact) — Title « CV », Creator/Producer « Talentious » seuls, dates FIXES
+(époque 2000-01-01, assumée), /ID de trailer constant, flux XMP/Names/Outlines
+retirés s'ils apparaissent (Chromium n'en émet pas aujourd'hui, vérifié),
+`useObjectStreams:false` pour garder Info auditable en clair. Résultat mesuré :
+deux rendus du même payload = MÊMES OCTETS (au-delà du critère rasters, R4
+levée en pratique). RISQUE ASSUMÉ : pdf-lib n'est plus maintenu depuis 2022
+(`npm audit --omit=dev` propre à ce jour, Dependabot M2-T23 surveillera) —
+plan de repli si CVE : fork communautaire @cantoo/pdf-lib, ou réécriture
+ciblée du seul dictionnaire Info (périmètre minuscule).
+
 ## Décision 5 — Build : bundle esbuild, zéro source React au runtime
 
 `@talentious/cv-render` est consommé en source (.tsx, convention monorepo) :
