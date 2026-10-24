@@ -3,7 +3,12 @@
   "type": "object",
   "description": "Payload de rendu AUTOPORTANT : le service n'a accès ni à la base ni au\nbackend. `theme` est REQUIS : depuis M1-T05, toute enveloppe de\ndocument porte un snapshot de thème (le repli anthracite est la\nresponsabilité du backend, pas du service de rendu — le serveur est\nplus strict que le renderer).\n",
   "additionalProperties": false,
-  "required": ["cv_content", "template_id", "theme", "language"],
+  "required": [
+    "cv_content",
+    "template_id",
+    "theme",
+    "language"
+  ],
   "properties": {
     "cv_content": {
       "type": "object",
@@ -19,7 +24,11 @@
         "personal_info": {
           "type": "object",
           "description": "Informations personnelles du candidat. `first_name`, `last_name` et `email`\nsont les seuls champs requis. Tous les autres sont optionnels pour ne pas\nbloquer une création de profil partielle.\n",
-          "required": ["first_name", "last_name", "email"],
+          "required": [
+            "first_name",
+            "last_name",
+            "email"
+          ],
           "properties": {
             "first_name": {
               "type": "string",
@@ -35,27 +44,45 @@
               "maxLength": 10000
             },
             "phone": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "maxLength": 30
             },
             "linkedin": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "maxLength": 500
             },
             "address": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "maxLength": 255
             },
             "city": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "maxLength": 100
             },
             "postal_code": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "maxLength": 20
             },
             "country": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "maxLength": 100
             }
           },
@@ -98,12 +125,18 @@
                 "maxLength": 10000
               },
               "end_date": {
-                "type": ["string", "null"],
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "pattern": "^\\d{4}-\\d{2}$",
                 "maxLength": 10000
               },
               "location": {
-                "type": ["string", "null"],
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "maxLength": 255
               },
               "description": {
@@ -129,25 +162,39 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["name", "category", "importance"],
+            "required": [
+              "name",
+              "category",
+              "importance"
+            ],
             "properties": {
               "name": {
                 "type": "string",
                 "maxLength": 100
               },
               "level": {
-                "type": ["string", "null"],
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "maxLength": 100,
                 "description": "Niveau de maîtrise inféré par l'agent (ex. Expert, Intermédiaire)"
               },
               "category": {
                 "type": "string",
-                "enum": ["hard_skill", "soft_skill"],
+                "enum": [
+                  "hard_skill",
+                  "soft_skill"
+                ],
                 "maxLength": 10000
               },
               "importance": {
                 "type": "string",
-                "enum": ["Critical", "Important", "Nice to have"],
+                "enum": [
+                  "Critical",
+                  "Important",
+                  "Nice to have"
+                ],
                 "description": "Importance de la compétence pour l'offre ciblée",
                 "maxLength": 10000
               }
@@ -162,7 +209,11 @@
           "maxItems": 30,
           "items": {
             "type": "object",
-            "required": ["id", "degree", "institution"],
+            "required": [
+              "id",
+              "degree",
+              "institution"
+            ],
             "description": "Formation sélectionnée par l'agent. `end_date` est optionnel\n(était requis dans l'ancienne version — source de 422 aléatoires).\n",
             "properties": {
               "id": {
@@ -178,13 +229,19 @@
                 "maxLength": 255
               },
               "end_date": {
-                "type": ["string", "null"],
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "pattern": "^\\d{4}-\\d{2}$",
                 "description": "Date d'obtention du diplôme, format YYYY-MM. Optionnelle.\nRemplace `graduation_date: str` (requis dans l'ancienne version agent).\n",
                 "maxLength": 10000
               },
               "description": {
-                "type": ["string", "null"],
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "maxLength": 2000
               }
             },
@@ -196,7 +253,12 @@
           "maxItems": 30,
           "items": {
             "type": "object",
-            "required": ["id", "name", "description", "relevant_skills"],
+            "required": [
+              "id",
+              "name",
+              "description",
+              "relevant_skills"
+            ],
             "properties": {
               "id": {
                 "type": "string",
@@ -211,11 +273,17 @@
                 "maxLength": 3000
               },
               "url": {
-                "type": ["string", "null"],
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "maxLength": 500
               },
               "completion_date": {
-                "type": ["string", "null"],
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "pattern": "^\\d{4}-\\d{2}$",
                 "maxLength": 10000
               },
@@ -236,7 +304,11 @@
           "maxItems": 30,
           "items": {
             "type": "object",
-            "required": ["id", "name", "issuer"],
+            "required": [
+              "id",
+              "name",
+              "issuer"
+            ],
             "description": "Certification sélectionnée par l'agent. `issue_date` est optionnel\n(était requis dans l'ancienne version — source de 422 aléatoires).\n",
             "properties": {
               "id": {
@@ -252,13 +324,19 @@
                 "maxLength": 255
               },
               "issue_date": {
-                "type": ["string", "null"],
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "pattern": "^\\d{4}-\\d{2}$",
                 "description": "Date d'obtention. Optionnelle.\nRemplace `issue_date: str` (requis dans l'ancienne version agent).\n",
                 "maxLength": 10000
               },
               "url": {
-                "type": ["string", "null"],
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "maxLength": 500
               }
             },
@@ -266,7 +344,10 @@
           }
         },
         "optimization_notes": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Notes internes de l'agent sur sa stratégie d'optimisation.\nNE DOIT PAS être affiché à l'utilisateur final ni loggé en production\n(risque BLK-5 : exfiltration de données via prompt injection).\n",
           "maxLength": 10000
         }
@@ -351,7 +432,10 @@
     },
     "language": {
       "type": "string",
-      "enum": ["fr", "en"],
+      "enum": [
+        "fr",
+        "en"
+      ],
       "description": "Langue du document (CV ou lettre), distincte de la langue de l'interface (qui\nreste française). Uniquement `fr` et `en`. `en` est une capacité premium.\n",
       "maxLength": 10000
     }

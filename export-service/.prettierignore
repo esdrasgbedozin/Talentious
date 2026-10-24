@@ -1,0 +1,5 @@
+# Fichiers GÉNÉRÉS (make generate-types) : la CI contracts-types vérifie le
+# zéro-diff contre la sortie BRUTE des générateurs — prettier ne doit jamais
+# les reformater (leçon PR #44 : un --write les avait réindentés, cassant le
+# zéro-diff).
+src/generated/
