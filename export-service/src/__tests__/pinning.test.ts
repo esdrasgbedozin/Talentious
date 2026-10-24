@@ -15,13 +15,21 @@ const serviceRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 describe("invariant d'épinglage Playwright", () => {
   it("le tag du stage runner == la version exacte de playwright-core, avec digest", () => {
-    const dockerfile = readFileSync(join(serviceRoot, "Dockerfile.prod"), "utf8");
+    const dockerfile = readFileSync(
+      join(serviceRoot, "Dockerfile.prod"),
+      "utf8",
+    );
     const fromRunner = dockerfile.match(
       /FROM mcr\.microsoft\.com\/playwright:v(\d+\.\d+\.\d+)-noble@sha256:[0-9a-f]{64} AS runner/,
     );
-    expect(fromRunner, "stage runner introuvable ou non épinglé tag+digest").not.toBeNull();
+    expect(
+      fromRunner,
+      "stage runner introuvable ou non épinglé tag+digest",
+    ).not.toBeNull();
 
-    const pkg = JSON.parse(readFileSync(join(serviceRoot, "package.json"), "utf8")) as {
+    const pkg = JSON.parse(
+      readFileSync(join(serviceRoot, "package.json"), "utf8"),
+    ) as {
       dependencies: Record<string, string>;
     };
     // Version EXACTE exigée (pas de ^ ni ~) et égale au tag de l'image.
@@ -32,13 +40,21 @@ describe("invariant d'épinglage Playwright", () => {
     // Le stage deps installe --omit=dev : tout ce qui est ici en dependencies
     // atterrit dans l'image. La promesse « zéro react/source du package au
     // runtime » tient tant que ces paquets ne glissent pas en prod.
-    const pkg = JSON.parse(readFileSync(join(serviceRoot, "package.json"), "utf8")) as {
+    const pkg = JSON.parse(
+      readFileSync(join(serviceRoot, "package.json"), "utf8"),
+    ) as {
       dependencies: Record<string, string>;
     };
-    for (const banned of ["react", "react-dom", "@talentious/cv-render", "esbuild"]) {
-      expect(pkg.dependencies, `${banned} doit rester en devDependencies`).not.toHaveProperty(
-        banned,
-      );
+    for (const banned of [
+      "react",
+      "react-dom",
+      "@talentious/cv-render",
+      "esbuild",
+    ]) {
+      expect(
+        pkg.dependencies,
+        `${banned} doit rester en devDependencies`,
+      ).not.toHaveProperty(banned);
     }
   });
 });

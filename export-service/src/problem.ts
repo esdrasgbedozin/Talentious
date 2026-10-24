@@ -4,7 +4,12 @@
  * détail interne dans la réponse ; `invalid_params` expose loc + msg + type
  * seulement. Reste M2-T11 : 504 (timeout de rendu) et limites fines.
  */
-import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type {
+  FastifyError,
+  FastifyInstance,
+  FastifyReply,
+  FastifyRequest,
+} from "fastify";
 
 export const PROBLEM_MEDIA_TYPE = "application/problem+json";
 
@@ -71,7 +76,8 @@ export function registerProblemHandlers(app: FastifyInstance): void {
         // refléter. additionalProperty est une CLÉ SOUMISE par le client
         // (potentiellement hostile) : volontairement jamais ajoutée.
         const params = v.params as Record<string, unknown>;
-        if (typeof params.missingProperty === "string") loc.push(params.missingProperty);
+        if (typeof params.missingProperty === "string")
+          loc.push(params.missingProperty);
         return { loc, msg: v.message ?? "invalide", type: v.keyword };
       });
       return sendProblem(request, reply, 422, {
@@ -85,7 +91,10 @@ export function registerProblemHandlers(app: FastifyInstance): void {
     // (extrait du corps possible dans un SyntaxError JSON).
     const statusCode = error.statusCode ?? 500;
     if (statusCode >= 400 && statusCode < 500) {
-      request.log.warn({ code: error.code, statusCode }, "requête client rejetée");
+      request.log.warn(
+        { code: error.code, statusCode },
+        "requête client rejetée",
+      );
       return sendProblem(request, reply, statusCode, {
         detail: CLIENT_DETAILS[statusCode] ?? "Requête invalide.",
       });

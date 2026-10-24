@@ -23,9 +23,17 @@ import {
   type PdfRenderer,
 } from "../render/pdf.js";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const repoRoot = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "..",
+);
 const denseCv = JSON.parse(
-  readFileSync(join(repoRoot, "fixtures", "cv-reference", "dense.json"), "utf8"),
+  readFileSync(
+    join(repoRoot, "fixtures", "cv-reference", "dense.json"),
+    "utf8",
+  ),
 ) as GeneratedCVData;
 
 const anthracite = {
@@ -59,81 +67,92 @@ function denseHtml(): string {
   });
 }
 
-describe.skipIf(!chromiumAvailable)("normalizePdfMetadata — métadonnées neutres (M2-T07)", () => {
-  let renderer: PdfRenderer;
-  let pdf: Buffer;
+describe.skipIf(!chromiumAvailable)(
+  "normalizePdfMetadata — métadonnées neutres (M2-T07)",
+  () => {
+    let renderer: PdfRenderer;
+    let pdf: Buffer;
 
-  beforeAll(async () => {
-    renderer = await createPdfRenderer();
-    pdf = await normalizePdfMetadata(await renderer.render(denseHtml()));
-  }, 60_000);
+    beforeAll(async () => {
+      renderer = await createPdfRenderer();
+      pdf = await normalizePdfMetadata(await renderer.render(denseHtml()));
+    }, 60_000);
 
-  afterAll(async () => {
-    await renderer?.close();
-  });
+    afterAll(async () => {
+      await renderer?.close();
+    });
 
-  it("Creator et Producer = Talentious, titre neutre, dates FIXES", async () => {
-    const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    const doc = await getDocument({ data: new Uint8Array(pdf) }).promise;
-    const { info } = (await doc.getMetadata()) as {
-      info: Record<string, unknown>;
-    };
-    expect(info.Creator).toBe("Talentious");
-    expect(info.Producer).toBe("Talentious");
-    expect(info.Title).toBe("CV");
-    expect(String(info.CreationDate)).toContain(PDF_FIXED_DATE_COMPACT);
-    expect(String(info.ModDate)).toContain(PDF_FIXED_DATE_COMPACT);
-  });
+    it("Creator et Producer = Talentious, titre neutre, dates FIXES", async () => {
+      const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      const doc = await getDocument({ data: new Uint8Array(pdf) }).promise;
+      const { info } = (await doc.getMetadata()) as {
+        info: Record<string, unknown>;
+      };
+      expect(info.Creator).toBe("Talentious");
+      expect(info.Producer).toBe("Talentious");
+      expect(info.Title).toBe("CV");
+      expect(String(info.CreationDate)).toContain(PDF_FIXED_DATE_COMPACT);
+      expect(String(info.ModDate)).toContain(PDF_FIXED_DATE_COMPACT);
+    });
 
-  it("aucune trace de l'outillage (Skia/Chromium) ni d'horodatage réel dans les octets", () => {
-    const raw = pdf.toString("latin1");
-    // Préalable : Info/catalogue EN CLAIR (useObjectStreams:false) — sinon ce
-    // grep serait aveugle sur des object streams compressés (revue T07).
-    expect(raw).toContain("/Creator");
-    expect(raw).not.toContain("Skia");
-    expect(raw).not.toContain("Chromium");
-    // Assertion POSITIVE (la date fixe est là) + négative (pas la date réelle).
-    expect(raw).toContain(`D:${PDF_FIXED_DATE_COMPACT}`);
-    const year = String(new Date().getFullYear());
-    expect(raw).not.toContain(`D:${year}`);
-  });
+    it("aucune trace de l'outillage (Skia/Chromium) ni d'horodatage réel dans les octets", () => {
+      const raw = pdf.toString("latin1");
+      // Préalable : Info/catalogue EN CLAIR (useObjectStreams:false) — sinon ce
+      // grep serait aveugle sur des object streams compressés (revue T07).
+      expect(raw).toContain("/Creator");
+      expect(raw).not.toContain("Skia");
+      expect(raw).not.toContain("Chromium");
+      // Assertion POSITIVE (la date fixe est là) + négative (pas la date réelle).
+      expect(raw).toContain(`D:${PDF_FIXED_DATE_COMPACT}`);
+      const year = String(new Date().getFullYear());
+      expect(raw).not.toContain(`D:${year}`);
+    });
 
-  it("la normalisation PRÉSERVE le contenu : même texte, même nombre de pages que le brut", async () => {
-    const raw = await renderer.render(denseHtml());
-    const normalized = await normalizePdfMetadata(raw);
-    const [a, b] = await Promise.all([extract(raw), extract(normalized)]);
-    expect(b.pages).toBe(a.pages);
-    expect(b.text).toBe(a.text);
-  }, 60_000);
+    it("la normalisation PRÉSERVE le contenu : même texte, même nombre de pages que le brut", async () => {
+      const raw = await renderer.render(denseHtml());
+      const normalized = await normalizePdfMetadata(raw);
+      const [a, b] = await Promise.all([extract(raw), extract(normalized)]);
+      expect(b.pages).toBe(a.pages);
+      expect(b.text).toBe(a.text);
+    }, 60_000);
 
-  it("aucune métadonnée résiduelle : pas de flux XMP, ni Names, ni Outlines", async () => {
-    const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    const doc = await getDocument({ data: new Uint8Array(pdf) }).promise;
-    const { metadata } = (await doc.getMetadata()) as { metadata: unknown };
-    expect(metadata).toBeNull();
-    const raw = pdf.toString("latin1");
-    expect(raw).not.toContain("/Names");
-    expect(raw).not.toContain("/Outlines");
-  });
+    it("aucune métadonnée résiduelle : pas de flux XMP, ni Names, ni Outlines", async () => {
+      const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      const doc = await getDocument({ data: new Uint8Array(pdf) }).promise;
+      const { metadata } = (await doc.getMetadata()) as { metadata: unknown };
+      expect(metadata).toBeNull();
+      const raw = pdf.toString("latin1");
+      expect(raw).not.toContain("/Names");
+      expect(raw).not.toContain("/Outlines");
+    });
 
-  it("entrée corrompue ⇒ rejet explicite (jamais un PDF brut qui fuite)", async () => {
-    await expect(normalizePdfMetadata(Buffer.from("pas un pdf"))).rejects.toThrow();
-    await expect(normalizePdfMetadata(Buffer.alloc(0))).rejects.toThrow();
-  });
+    it("entrée corrompue ⇒ rejet explicite (jamais un PDF brut qui fuite)", async () => {
+      await expect(
+        normalizePdfMetadata(Buffer.from("pas un pdf")),
+      ).rejects.toThrow();
+      await expect(normalizePdfMetadata(Buffer.alloc(0))).rejects.toThrow();
+    });
 
-  it("deux rendus du même payload ⇒ documents IDENTIQUES à l'octet", async () => {
-    const second = await normalizePdfMetadata(await renderer.render(denseHtml()));
-    expect(second.equals(pdf)).toBe(true);
-  }, 60_000);
-});
+    it("deux rendus du même payload ⇒ documents IDENTIQUES à l'octet", async () => {
+      const second = await normalizePdfMetadata(
+        await renderer.render(denseHtml()),
+      );
+      expect(second.equals(pdf)).toBe(true);
+    }, 60_000);
+  },
+);
 
-async function extract(buffer: Buffer): Promise<{ pages: number; text: string }> {
+async function extract(
+  buffer: Buffer,
+): Promise<{ pages: number; text: string }> {
   const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const doc = await getDocument({ data: new Uint8Array(buffer) }).promise;
   let text = "";
   for (let i = 1; i <= doc.numPages; i += 1) {
     const content = await (await doc.getPage(i)).getTextContent();
-    text += content.items.map((item) => ("str" in item ? item.str : "")).join(" ");
+    text += content.items
+      .map((item) => ("str" in item ? item.str : ""))
+      .join(" ");
   }
   return { pages: doc.numPages, text };
 }

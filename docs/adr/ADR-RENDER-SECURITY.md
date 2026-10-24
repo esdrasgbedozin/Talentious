@@ -164,12 +164,47 @@ React : même JS activé, rien ne tournerait).
   piégé, mutation abort→continue tuée (le témoin reçoit, le test rougit).
   L'egress INFRA (VPC/Cloud Run) restera un rempart de plus (phase B).
 
+## Décision 7 — Sandbox Chromium : politique et compensations (M2-T09)
+
+Cloud Run gen2 requis (gVisor gen1 interdit le sandbox Chromium) ; la
+validation du sandbox RÉEL n'est possible qu'au premier déploiement (R3).
+Politique figée et APPLIQUÉE au démarrage (`validateChromiumLaunch`) :
+
+- les args Chromium passent une LISTE BLANCHE (`--no-sandbox`,
+  `--disable-dev-shm-usage`, `--disable-gpu`) — tout autre ⇒ échec de boot ;
+- `--no-sandbox` est REFUSÉ si le process tourne root : le non-root (1001)
+  est la compensation minimale vérifiable. Les autres compensations, toutes
+  en place et testées : egress avorté (décision 6/T08), Option B sans
+  navigation, JS de page désactivé + CSP, FS applicatif root-owned (T02),
+  écritures /tmp SEUL — PROUVÉ : le conteneur tourne en `--read-only` avec
+  un unique tmpfs /tmp (toute la chaîne boot + rendu) — recommandation infra
+  (T19) : read-only filesystem + /tmp en RAM, `--disable-dev-shm-usage`
+  (pas de /dev/shm sur Cloud Run) ;
+- borne de CONCURRENCE des rendus (sémaphore FIFO à FILE BORNÉE,
+  `RENDER_CONCURRENCY` défaut 2 / `RENDER_QUEUE_MAX` défaut 8, bornés et
+  validés au boot) : chaque rendu = un contexte Chromium (RAM) — une rafale
+  ne peut plus provoquer l'OOM du navigateur, et file pleine ⇒ rejet IMMÉDIAT
+  en 503 `Retry-After` (shedding déterministe, testé). Prouvé : 4 rendus
+  parallèles sur un conteneur read-only ⇒ 4×200, hashs IDENTIQUES.
+  CONTRAT AVEC T11 (revue T09) : le timeout de rendu doit vivre À L'INTÉRIEUR
+  de la tâche (autour de renderOnce, contexte fermé à l'expiration) — un
+  timeout autour de semaphore.run libérerait l'appelant en GARDANT le permis,
+  et deux rendus pendus suffiraient à saturer la borne derrière un /healthz
+  vert ; l'échéance doit être GLOBALE (attente en file comprise). L'annulation
+  d'une requête abandonnée en file (AbortSignal) est aussi du ressort de T11.
+  La concurrency Cloud Run (T19) complète côté infra.
+- limite connue du contrôle uid : un uid non-root doté de capabilities
+  élevées (CAP_SYS_ADMIN…) passe — indétectable au boot, c'est le
+  securityContext du déploiement qui l'exclut (T19) ;
+- au premier déploiement : TENTER le lancement SANS `--no-sandbox` (gen2,
+  noyau complet) ; s'il échoue, `--no-sandbox` + compensations ci-dessus est
+  la position de repli ASSUMÉE, consignée ici.
+
 ## Reste à instruire (tickets ordonnancés)
 
 - M2-T06 : contexte Chromium par requête (séquence de la décision 6), échec
   rapide (`__CV_ERROR__` sans objet — remplacé par les erreurs du flux CDP),
   executablePath() au démarrage, test « script injecté ne s'exécute pas ».
-- M2-T09 : sandbox/compensations Chromium (Cloud Run gen2, /tmp seul).
 - M2-T16 : génération de la feuille de polices data: (contrat polices).
   JUSQU'À T16, les polices sont les replis système de l'image : la hauteur
   mesurée (donc le scale) dépend de la machine — déterminisme D6 PARTIEL,

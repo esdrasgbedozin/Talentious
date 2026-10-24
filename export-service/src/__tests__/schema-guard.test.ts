@@ -39,21 +39,28 @@ const FORBIDDEN_KEYWORDS = [
   "examples",
 ];
 
-function collectViolations(node: SchemaNode, path: string, violations: string[]): void {
+function collectViolations(
+  node: SchemaNode,
+  path: string,
+  violations: string[],
+): void {
   for (const keyword of FORBIDDEN_KEYWORDS) {
-    if (keyword in node) violations.push(`${path} : mot-clé interdit « ${keyword} »`);
+    if (keyword in node)
+      violations.push(`${path} : mot-clé interdit « ${keyword} »`);
   }
   const types = Array.isArray(node.type) ? node.type : [node.type];
   if (node.type === undefined) violations.push(`${path} : type manquant`);
   if (types.includes("object")) {
-    if (node.additionalProperties !== false) violations.push(`${path} : objet non fermé`);
+    if (node.additionalProperties !== false)
+      violations.push(`${path} : objet non fermé`);
     if (!node.properties) violations.push(`${path} : objet sans properties`);
   }
   if (types.includes("string") && typeof node.maxLength !== "number") {
     violations.push(`${path} : chaîne sans maxLength`);
   }
   if (types.includes("array")) {
-    if (typeof node.maxItems !== "number") violations.push(`${path} : tableau sans maxItems`);
+    if (typeof node.maxItems !== "number")
+      violations.push(`${path} : tableau sans maxItems`);
     if (!node.items) violations.push(`${path} : tableau sans items`);
   }
   if (node.items) collectViolations(node.items, `${path}.items`, violations);
@@ -69,10 +76,14 @@ describe("render-payload.schema.json — invariants de sûreté", () => {
     expect(violations).toEqual([]);
   });
 
-  it("nullable traduit en type [t, \"null\"] uniquement sur des chaînes", () => {
+  it('nullable traduit en type [t, "null"] uniquement sur des chaînes', () => {
     const violations: string[] = [];
     (function walk(node: SchemaNode, path: string): void {
-      if (Array.isArray(node.type) && node.type.includes("null") && !node.type.includes("string")) {
+      if (
+        Array.isArray(node.type) &&
+        node.type.includes("null") &&
+        !node.type.includes("string")
+      ) {
         violations.push(`${path} : null autorisé sur un type non-chaîne`);
       }
       if (node.items) walk(node.items, `${path}.items`);

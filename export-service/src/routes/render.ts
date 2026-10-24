@@ -10,9 +10,11 @@ import type { FastifyInstance } from "fastify";
 
 import type { components } from "../generated/api.js";
 import renderPayloadSchema from "../generated/render-payload.schema.json" with { type: "json" };
+import { sendProblem } from "../problem.js";
 import { loadCvCss } from "../render/css.js";
 import { buildCvDocumentHtml } from "../render/document.js";
 import { renderNormalizedPdf } from "../render/metadata.js";
+import { QueueFullError } from "../render/semaphore.js";
 
 type RenderPdfRequest = components["schemas"]["RenderPdfRequest"];
 
@@ -26,7 +28,9 @@ export function registerRenderRoutes(app: FastifyInstance): void {
       if (!renderer) {
         // Mauvais câblage de démarrage, jamais un cas client : 500 générique
         // via le handler d'erreurs (rien d'interne ne sort).
-        throw new Error("PDF renderer non configuré (buildApp sans pdfRenderer)");
+        throw new Error(
+          "PDF renderer non configuré (buildApp sans pdfRenderer)",
+        );
       }
       const html = buildCvDocumentHtml({
         cvContent: body.cv_content,
@@ -37,7 +41,21 @@ export function registerRenderRoutes(app: FastifyInstance): void {
       });
       // Métadonnées normalisées (M2-T07, D6) : date fixe, Talentious seul,
       // /ID constant — deux rendus du même payload = même document.
-      const pdf = await renderNormalizedPdf(renderer, html);
+      let pdf: Buffer;
+      try {
+        pdf = await renderNormalizedPdf(renderer, html);
+      } catch (err) {
+        if (err instanceof QueueFullError) {
+          // Shedding déterministe (M2-T09) : file pleine ⇒ 503 + Retry-After,
+          // jamais une attente qui dépasse le timeout de l'appelant.
+          reply.header("retry-after", "5");
+          return sendProblem(request, reply, 503, {
+            detail:
+              "Capacité de rendu saturée — réessayer dans quelques secondes.",
+          });
+        }
+        throw err;
+      }
       // no-store : le PDF porte des données personnelles (RGPD, minimisation) ;
       // nosniff : ceinture (revue T06, C3). Pas de Content-Disposition : le
       // backend appelant décide du nom de fichier, rien n'est reflété ici.

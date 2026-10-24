@@ -32,8 +32,10 @@ describe("loadCvCss", () => {
 
   it("CV_RENDER_CSS_PATH valide ⇒ ce fichier et lui seul", () => {
     resetCvCssCacheForTests();
-    process.env.CV_RENDER_CSS_PATH = new URL("./fixtures-css-override.css", import.meta.url)
-      .pathname;
+    process.env.CV_RENDER_CSS_PATH = new URL(
+      "./fixtures-css-override.css",
+      import.meta.url,
+    ).pathname;
     expect(loadCvCss()).toContain("css-override-sentinelle");
   });
 });

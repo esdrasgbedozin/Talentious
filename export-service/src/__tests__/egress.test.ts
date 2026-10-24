@@ -32,7 +32,9 @@ describe.skipIf(!chromiumAvailable)("egress verrouillé (M2-T08)", () => {
       witnessHits.push(req.url ?? "?");
       res.end("tu ne devrais jamais me lire");
     });
-    await new Promise<void>((resolve) => witness.listen(0, "127.0.0.1", resolve));
+    await new Promise<void>((resolve) =>
+      witness.listen(0, "127.0.0.1", resolve),
+    );
     witnessPort = (witness.address() as AddressInfo).port;
   });
 
@@ -40,53 +42,47 @@ describe.skipIf(!chromiumAvailable)("egress verrouillé (M2-T08)", () => {
     await new Promise((resolve) => witness.close(resolve));
   });
 
-  it(
-    "HTML piégé (img métadonnées GCP + img/css vers le témoin) : ZÉRO requête sortante, rendu abouti",
-    async () => {
-      const blocked: string[] = [];
-      const renderer = await createPdfRenderer({
-        onEgressBlocked: (url) => blocked.push(url),
-      });
-      try {
-        const html =
-          '<!doctype html><html><head><meta charset="utf-8">' +
-          `<link rel="stylesheet" href="http://127.0.0.1:${witnessPort}/evil.css">` +
-          "</head><body>" +
-          '<img src="http://169.254.169.254/computeMetadata/v1/">' +
-          `<img src="http://127.0.0.1:${witnessPort}/beacon.png">` +
-          '<p data-cv-content="true">RENDU_SANS_EGRESS</p></body></html>';
-        const pdf = await renderer.render(html);
-        expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
-        // Le témoin n'a RIEN reçu : c'est le critère du ticket.
-        expect(witnessHits).toEqual([]);
-        // Et chaque tentative a été VUE et bloquée (observabilité).
-        expect(blocked.length).toBeGreaterThanOrEqual(2);
-        expect(blocked.some((u) => u.includes("169.254.169.254"))).toBe(true);
-        expect(blocked.some((u) => u.includes(`127.0.0.1:${witnessPort}`))).toBe(true);
-      } finally {
-        await renderer.close();
-      }
-    },
-    60_000,
-  );
+  it("HTML piégé (img métadonnées GCP + img/css vers le témoin) : ZÉRO requête sortante, rendu abouti", async () => {
+    const blocked: string[] = [];
+    const renderer = await createPdfRenderer({
+      onEgressBlocked: (url) => blocked.push(url),
+    });
+    try {
+      const html =
+        '<!doctype html><html><head><meta charset="utf-8">' +
+        `<link rel="stylesheet" href="http://127.0.0.1:${witnessPort}/evil.css">` +
+        "</head><body>" +
+        '<img src="http://169.254.169.254/computeMetadata/v1/">' +
+        `<img src="http://127.0.0.1:${witnessPort}/beacon.png">` +
+        '<p data-cv-content="true">RENDU_SANS_EGRESS</p></body></html>';
+      const pdf = await renderer.render(html);
+      expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
+      // Le témoin n'a RIEN reçu : c'est le critère du ticket.
+      expect(witnessHits).toEqual([]);
+      // Et chaque tentative a été VUE et bloquée (observabilité).
+      expect(blocked.length).toBeGreaterThanOrEqual(2);
+      expect(blocked.some((u) => u.includes("169.254.169.254"))).toBe(true);
+      expect(blocked.some((u) => u.includes(`127.0.0.1:${witnessPort}`))).toBe(
+        true,
+      );
+    } finally {
+      await renderer.close();
+    }
+  }, 60_000);
 
-  it(
-    "document légitime : AUCUNE tentative d'egress détectée (pas de faux positif)",
-    async () => {
-      const blocked: string[] = [];
-      const renderer = await createPdfRenderer({
-        onEgressBlocked: (url) => blocked.push(url),
-      });
-      try {
-        const html =
-          '<!doctype html><html><head><meta charset="utf-8"><style>p{color:#111}</style></head>' +
-          '<body><p data-cv-content="true">DOCUMENT_PROPRE</p></body></html>';
-        await renderer.render(html);
-        expect(blocked).toEqual([]);
-      } finally {
-        await renderer.close();
-      }
-    },
-    60_000,
-  );
+  it("document légitime : AUCUNE tentative d'egress détectée (pas de faux positif)", async () => {
+    const blocked: string[] = [];
+    const renderer = await createPdfRenderer({
+      onEgressBlocked: (url) => blocked.push(url),
+    });
+    try {
+      const html =
+        '<!doctype html><html><head><meta charset="utf-8"><style>p{color:#111}</style></head>' +
+        '<body><p data-cv-content="true">DOCUMENT_PROPRE</p></body></html>';
+      await renderer.render(html);
+      expect(blocked).toEqual([]);
+    } finally {
+      await renderer.close();
+    }
+  }, 60_000);
 });

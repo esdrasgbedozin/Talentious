@@ -14,9 +14,17 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { buildApp } from "../app.js";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const repoRoot = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "..",
+);
 const denseCv = JSON.parse(
-  readFileSync(join(repoRoot, "fixtures", "cv-reference", "dense.json"), "utf8"),
+  readFileSync(
+    join(repoRoot, "fixtures", "cv-reference", "dense.json"),
+    "utf8",
+  ),
 ) as Record<string, unknown>;
 
 const anthracite = {
@@ -57,7 +65,11 @@ afterEach(async () => {
 });
 
 async function postRender(payload: unknown) {
-  return app.inject({ method: "POST", url: "/render/pdf", payload: payload as object });
+  return app.inject({
+    method: "POST",
+    url: "/render/pdf",
+    payload: payload as object,
+  });
 }
 
 describe("POST /render/pdf — payload valide", () => {
@@ -85,6 +97,27 @@ describe("POST /render/pdf — payload valide", () => {
     expect(res.headers["content-type"]).toContain("application/problem+json");
     expect(res.body).not.toContain("pdfRenderer");
     await bareApp.close();
+  });
+
+  it("file de rendu PLEINE ⇒ 503 problem+json avec Retry-After (M2-T09)", async () => {
+    const { QueueFullError } = await import("../render/semaphore.js");
+    const saturatedApp = buildApp({
+      pdfRenderer: {
+        ...fakePdfRenderer,
+        render: async () => {
+          throw new QueueFullError(2, 8);
+        },
+      },
+    });
+    const res = await saturatedApp.inject({
+      method: "POST",
+      url: "/render/pdf",
+      payload: validPayload() as object,
+    });
+    expect(res.statusCode).toBe(503);
+    expect(res.headers["content-type"]).toContain("application/problem+json");
+    expect(res.headers["retry-after"]).toBe("5");
+    await saturatedApp.close();
   });
 
   it("renderer qui produit un PDF CORROMPU ⇒ 500 générique, octets jamais envoyés (revue T07)", async () => {
@@ -166,7 +199,8 @@ describe("POST /render/pdf — champs inconnus refusés (jamais retirés en sile
 
   it("422 sur champ inconnu dans le contenu canonique", async () => {
     const payload = validPayload();
-    (payload.cv_content as Record<string, unknown>).script = "<script>alert(1)</script>";
+    (payload.cv_content as Record<string, unknown>).script =
+      "<script>alert(1)</script>";
     const res = await postRender(payload);
     expect(res.statusCode).toBe(422);
   });
@@ -175,7 +209,8 @@ describe("POST /render/pdf — champs inconnus refusés (jamais retirés en sile
 describe("POST /render/pdf — payloads hostiles", () => {
   it("422 sur couleur hors #RRGGBB (injection CSS)", async () => {
     const payload = validPayload();
-    (payload.theme as Record<string, unknown>).color_accent = "red;} body{display:none";
+    (payload.theme as Record<string, unknown>).color_accent =
+      "red;} body{display:none";
     const res = await postRender(payload);
     expect(res.statusCode).toBe(422);
   });
@@ -186,13 +221,18 @@ describe("POST /render/pdf — payloads hostiles", () => {
   });
 
   it("422 sur template_id hors format strict", async () => {
-    const res = await postRender({ ...validPayload(), template_id: "../../etc/passwd" });
+    const res = await postRender({
+      ...validPayload(),
+      template_id: "../../etc/passwd",
+    });
     expect(res.statusCode).toBe(422);
   });
 
   it("422 sur dépassement d'un cap de contenu (maxLength hérité de M1-T16)", async () => {
     const payload = validPayload();
-    (payload.cv_content as Record<string, unknown>).summary = "x".repeat(100_000);
+    (payload.cv_content as Record<string, unknown>).summary = "x".repeat(
+      100_000,
+    );
     const res = await postRender(payload);
     expect(res.statusCode).toBe(422);
   });
@@ -290,7 +330,9 @@ describe("POST /render/pdf — contenu d'invalid_params", () => {
     delete payload.theme;
     const res = await postRender(payload);
     expect(res.statusCode).toBe(422);
-    const body = res.json() as { invalid_params: { loc: string[]; type: string }[] };
+    const body = res.json() as {
+      invalid_params: { loc: string[]; type: string }[];
+    };
     expect(body.invalid_params[0].type).toBe("required");
     expect(body.invalid_params[0].loc).toContain("theme");
   });
@@ -308,8 +350,9 @@ describe("POST /render/pdf — contenu d'invalid_params", () => {
 describe("POST /render/pdf — fermeture en profondeur et caps hérités", () => {
   it("422 sur champ inconnu dans un item de tableau imbriqué", async () => {
     const payload = validPayload();
-    const experiences = (payload.cv_content as { selected_experiences: Record<string, unknown>[] })
-      .selected_experiences;
+    const experiences = (
+      payload.cv_content as { selected_experiences: Record<string, unknown>[] }
+    ).selected_experiences;
     experiences[0].champ_inconnu = "x";
     const res = await postRender(payload);
     expect(res.statusCode).toBe(422);
@@ -319,14 +362,18 @@ describe("POST /render/pdf — fermeture en profondeur et caps hérités", () =>
     const payload = validPayload();
     const cv = payload.cv_content as { selected_experiences: unknown[] };
     const un = cv.selected_experiences[0];
-    cv.selected_experiences = Array.from({ length: 31 }, () => structuredClone(un));
+    cv.selected_experiences = Array.from({ length: 31 }, () =>
+      structuredClone(un),
+    );
     const res = await postRender(payload);
     expect(res.statusCode).toBe(422);
   });
 
   it("accepte null sur un champ nullable du canonique (phone)", async () => {
     const payload = validPayload();
-    (payload.cv_content as { personal_info: Record<string, unknown> }).personal_info.phone = null;
+    (
+      payload.cv_content as { personal_info: Record<string, unknown> }
+    ).personal_info.phone = null;
     const res = await postRender(payload);
     expect(res.statusCode).toBe(200);
   });
@@ -345,14 +392,18 @@ describe("POST /render/pdf — matrice anti-reflet (tous mots-clés ajv)", () =>
     expect(res.body).not.toContain(MARQUEUR);
   }
 
-  it("enum (language)", () => expectNoReflect((p) => void (p.language = MARQUEUR)));
+  it("enum (language)", () =>
+    expectNoReflect((p) => void (p.language = MARQUEUR)));
   it("maxLength (summary)", () =>
     expectNoReflect(
-      (p) => void ((p.cv_content as Record<string, unknown>).summary = MARQUEUR.repeat(200)),
+      (p) =>
+        void ((p.cv_content as Record<string, unknown>).summary =
+          MARQUEUR.repeat(200)),
     ));
   it("type (template_id objet)", () =>
     expectNoReflect((p) => void (p.template_id = { [MARQUEUR]: MARQUEUR })));
-  it("clé inconnue portant le marqueur", () => expectNoReflect((p) => void (p[MARQUEUR] = 1)));
+  it("clé inconnue portant le marqueur", () =>
+    expectNoReflect((p) => void (p[MARQUEUR] = 1)));
 });
 
 describe("POST /render/pdf — forme des erreurs", () => {

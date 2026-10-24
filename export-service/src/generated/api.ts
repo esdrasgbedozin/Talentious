@@ -4,366 +4,374 @@
  */
 
 export interface paths {
-    "/healthz": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Sonde de disponibilité (non authentifiée) */
-        get: operations["healthz"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+  "/healthz": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/render/pdf": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Rendre un CV en PDF A4 déterministe
-         * @description Rendu synchrone (l'asynchronisme vit côté backend : job `export`,
-         *     M2-T16/T17). Timeout serveur 120 s ; taille de payload bornée (413).
-         *     Deux appels avec le même payload produisent le même document (D6,
-         *     métadonnées normalisées — M2-T07).
-         */
-        post: operations["renderPdf"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Sonde de disponibilité (non authentifiée) */
+    get: operations["healthz"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/render/pdf": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    get?: never;
+    put?: never;
+    /**
+     * Rendre un CV en PDF A4 déterministe
+     * @description Rendu synchrone (l'asynchronisme vit côté backend : job `export`,
+     *     M2-T16/T17). Timeout serveur 120 s ; taille de payload bornée (413).
+     *     Deux appels avec le même payload produisent le même document (D6,
+     *     métadonnées normalisées — M2-T07).
+     */
+    post: operations["renderPdf"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: {
-        /**
-         * @description Payload de rendu AUTOPORTANT : le service n'a accès ni à la base ni au
-         *     backend. `theme` est REQUIS : depuis M1-T05, toute enveloppe de
-         *     document porte un snapshot de thème (le repli anthracite est la
-         *     responsabilité du backend, pas du service de rendu — le serveur est
-         *     plus strict que le renderer).
-         */
-        RenderPdfRequest: {
-            cv_content: components["schemas"]["GeneratedCVData"];
-            /** @description Id de template du registre (`cv-render` résout, repli `modern_sobre` — ADR-TEMPLATE-REGISTRY). Format strict, mais la résolution d'un id inconnu est un repli, pas une erreur. */
-            template_id: string;
-            theme: components["schemas"]["CVThemeTokens"];
-            language: components["schemas"]["DocumentLanguage"];
-        };
-        /**
-         * @description Erreur au format RFC 7807 (application/problem+json). Même convention
-         *     que le backend : `detail` est fixe, aucune valeur soumise n'est jamais
-         *     reflétée.
-         */
-        Problem: {
-            /**
-             * Format: uri
-             * @default about:blank
-             */
-            type: string;
-            title?: string;
-            status?: number;
-            detail?: string;
-            /** @description Chemin de la ROUTE matchée (jamais l'URL appelée, donnée client). */
-            instance?: string;
-            /**
-             * @description Détail des échecs de validation (422 uniquement). Une seule entrée
-             *     (première erreur ajv). `loc` est le chemin du champ fautif dans le
-             *     payload — complété du nom du champ requis manquant le cas échéant,
-             *     mais JAMAIS du nom d'un champ inconnu soumis (clé = donnée client).
-             */
-            invalid_params?: {
-                loc: string[];
-                /** @description Message ajv (anglais), issu du schéma — jamais du payload. */
-                msg: string;
-                /** @description Mot-clé ajv en échec (required, maxLength, enum…). */
-                type: string;
-            }[];
-        };
-        /**
-         * @description Informations personnelles du candidat. `first_name`, `last_name` et `email`
-         *     sont les seuls champs requis. Tous les autres sont optionnels pour ne pas
-         *     bloquer une création de profil partielle.
-         */
-        PersonalInfo: {
-            /** @example Alice */
-            first_name: string;
-            /** @example Dupont */
-            last_name: string;
-            /**
-             * Format: email
-             * @example alice@example.com
-             */
-            email: string;
-            /** @example +33 6 12 34 56 78 */
-            phone?: string | null;
-            /** @example https://linkedin.com/in/alice-dupont */
-            linkedin?: string | null;
-            address?: string | null;
-            /** @example Paris */
-            city?: string | null;
-            /** @example 75001 */
-            postal_code?: string | null;
-            /**
-             * @default France
-             * @example France
-             */
-            country: string | null;
-        };
-        SelectedExperience: {
-            id: string;
-            title: string;
-            company: string;
-            start_date: string;
-            end_date?: string | null;
-            location?: string | null;
-            /** @description Description réécrite avec verbes d'action et mots-clés de l'offre */
-            description: string;
-            /** @description Compétences démontrées dans cette expérience, pertinentes pour l'offre */
-            highlighted_skills: string[];
-        };
-        HighlightedSkill: {
-            name: string;
-            /** @description Niveau de maîtrise inféré par l'agent (ex. Expert, Intermédiaire) */
-            level?: string | null;
-            /** @enum {string} */
-            category: "hard_skill" | "soft_skill";
-            /**
-             * @description Importance de la compétence pour l'offre ciblée
-             * @enum {string}
-             */
-            importance: "Critical" | "Important" | "Nice to have";
-        };
-        /**
-         * @description Formation sélectionnée par l'agent. `end_date` est optionnel
-         *     (était requis dans l'ancienne version — source de 422 aléatoires).
-         */
-        SelectedEducation: {
-            id: string;
-            degree: string;
-            institution: string;
-            /**
-             * @description Date d'obtention du diplôme, format YYYY-MM. Optionnelle.
-             *     Remplace `graduation_date: str` (requis dans l'ancienne version agent).
-             */
-            end_date?: string | null;
-            description?: string | null;
-        };
-        SelectedProject: {
-            id: string;
-            name: string;
-            description: string;
-            url?: string | null;
-            completion_date?: string | null;
-            relevant_skills: string[];
-        };
-        /**
-         * @description Certification sélectionnée par l'agent. `issue_date` est optionnel
-         *     (était requis dans l'ancienne version — source de 422 aléatoires).
-         */
-        SelectedCertification: {
-            id: string;
-            name: string;
-            issuer: string;
-            /**
-             * @description Date d'obtention. Optionnelle.
-             *     Remplace `issue_date: str` (requis dans l'ancienne version agent).
-             */
-            issue_date?: string | null;
-            url?: string | null;
-        };
-        /**
-         * @description SCHÉMA DE CONTENU CANONIQUE UNIQUE du CV (ADR-CONTENT-SCHEMA). Ce schéma est à
-         *     la fois : la sortie de l'agent rédacteur-cv, la charge utile stockée en JSONB
-         *     (`generated_cvs.cv_data_json`), l'entrée du package de rendu partagé
-         *     (`@talentious/cv-render`, côté export-service et aperçu) et le modèle d'édition
-         *     (`PUT /cv/{cv_id}`). Aucune transformation runtime entre ces usages (seule la
-         *     coercition de sécurité en liste blanche s'applique avant stockage).
-         *
-         *     Contenu PUR : aucune information de forme. `template_id`, `theme` et `language`
-         *     vivent dans l'enveloppe du document (`CVDetailResponse`), jamais ici : le contenu
-         *     est portable d'un Template à l'autre.
-         *
-         *     Contrainte : aucun champ date n'est requis dans les sous-schémas de sortie
-         *     (`SelectedEducation`, `SelectedCertification`) pour éviter les 422 aléatoires
-         *     lorsque l'IA ne génère pas ces dates.
-         */
-        GeneratedCVData: {
-            personal_info: components["schemas"]["PersonalInfo"];
-            /** @description Résumé professionnel réécrit et optimisé pour l'offre (50-120 mots) */
-            summary: string;
-            /** @description Expériences sélectionnées et réécrites (3-5 les plus pertinentes) */
-            selected_experiences: components["schemas"]["SelectedExperience"][];
-            /** @description Compétences priorisées pour l'offre (8-15) */
-            highlighted_skills: components["schemas"]["HighlightedSkill"][];
-            selected_educations: components["schemas"]["SelectedEducation"][];
-            /** @default [] */
-            selected_projects: components["schemas"]["SelectedProject"][];
-            /** @default [] */
-            selected_certifications: components["schemas"]["SelectedCertification"][];
-            /**
-             * @description Notes internes de l'agent sur sa stratégie d'optimisation.
-             *     NE DOIT PAS être affiché à l'utilisateur final ni loggé en production
-             *     (risque BLK-5 : exfiltration de données via prompt injection).
-             */
-            optimization_notes?: string | null;
-        };
-        /**
-         * @description Couleur au format hexadécimal strict `#RRGGBB` (défense anti-injection CSS).
-         * @example #2D3748
-         */
-        HexColor: string;
-        /**
-         * @description Liste BLANCHE des polices autorisées dans un Thème CV (jeu curaté, embarqué côté
-         *     service d'export : déterminisme du rendu, résidence UE, défense anti-injection
-         *     CSS). Aucune autre valeur n'est acceptée. La liste exacte doit rester alignée sur
-         *     le manifeste de polices embarquées du package de rendu (à confirmer avant
-         *     implémentation).
-         * @enum {string}
-         */
-        CVFontFamily: "Inter" | "Source Sans 3" | "IBM Plex Sans" | "Work Sans" | "Source Serif 4" | "Lora" | "Merriweather" | "IBM Plex Serif";
-        /**
-         * @description Jetons de style CV-scopés (injectés en propriétés CSS propres au CV, jamais les
-         *     couleurs de l'interface de l'application). Validation STRICTE : couleurs en
-         *     `#RRGGBB`, polices dans la liste blanche `CVFontFamily`, aucune propriété
-         *     supplémentaire acceptée. Le serveur vérifie en plus un contraste de lisibilité
-         *     suffisant (texte / fond) avant enregistrement ; un thème illisible répond `422`
-         *     (seuil exact fixé côté serveur).
-         */
-        CVThemeTokens: {
-            color_accent: components["schemas"]["HexColor"];
-            color_text: components["schemas"]["HexColor"];
-            color_muted: components["schemas"]["HexColor"];
-            color_background: components["schemas"]["HexColor"];
-            font_heading: components["schemas"]["CVFontFamily"];
-            font_body: components["schemas"]["CVFontFamily"];
-        };
-        /**
-         * @description Langue du document (CV ou lettre), distincte de la langue de l'interface (qui
-         *     reste française). Uniquement `fr` et `en`. `en` est une capacité premium.
-         * @enum {string}
-         */
-        DocumentLanguage: "fr" | "en";
+  schemas: {
+    /**
+     * @description Payload de rendu AUTOPORTANT : le service n'a accès ni à la base ni au
+     *     backend. `theme` est REQUIS : depuis M1-T05, toute enveloppe de
+     *     document porte un snapshot de thème (le repli anthracite est la
+     *     responsabilité du backend, pas du service de rendu — le serveur est
+     *     plus strict que le renderer).
+     */
+    RenderPdfRequest: {
+      cv_content: components["schemas"]["GeneratedCVData"];
+      /** @description Id de template du registre (`cv-render` résout, repli `modern_sobre` — ADR-TEMPLATE-REGISTRY). Format strict, mais la résolution d'un id inconnu est un repli, pas une erreur. */
+      template_id: string;
+      theme: components["schemas"]["CVThemeTokens"];
+      language: components["schemas"]["DocumentLanguage"];
     };
-    responses: never;
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+    /**
+     * @description Erreur au format RFC 7807 (application/problem+json). Même convention
+     *     que le backend : `detail` est fixe, aucune valeur soumise n'est jamais
+     *     reflétée.
+     */
+    Problem: {
+      /**
+       * Format: uri
+       * @default about:blank
+       */
+      type: string;
+      title?: string;
+      status?: number;
+      detail?: string;
+      /** @description Chemin de la ROUTE matchée (jamais l'URL appelée, donnée client). */
+      instance?: string;
+      /**
+       * @description Détail des échecs de validation (422 uniquement). Une seule entrée
+       *     (première erreur ajv). `loc` est le chemin du champ fautif dans le
+       *     payload — complété du nom du champ requis manquant le cas échéant,
+       *     mais JAMAIS du nom d'un champ inconnu soumis (clé = donnée client).
+       */
+      invalid_params?: {
+        loc: string[];
+        /** @description Message ajv (anglais), issu du schéma — jamais du payload. */
+        msg: string;
+        /** @description Mot-clé ajv en échec (required, maxLength, enum…). */
+        type: string;
+      }[];
+    };
+    /**
+     * @description Informations personnelles du candidat. `first_name`, `last_name` et `email`
+     *     sont les seuls champs requis. Tous les autres sont optionnels pour ne pas
+     *     bloquer une création de profil partielle.
+     */
+    PersonalInfo: {
+      /** @example Alice */
+      first_name: string;
+      /** @example Dupont */
+      last_name: string;
+      /**
+       * Format: email
+       * @example alice@example.com
+       */
+      email: string;
+      /** @example +33 6 12 34 56 78 */
+      phone?: string | null;
+      /** @example https://linkedin.com/in/alice-dupont */
+      linkedin?: string | null;
+      address?: string | null;
+      /** @example Paris */
+      city?: string | null;
+      /** @example 75001 */
+      postal_code?: string | null;
+      /**
+       * @default France
+       * @example France
+       */
+      country: string | null;
+    };
+    SelectedExperience: {
+      id: string;
+      title: string;
+      company: string;
+      start_date: string;
+      end_date?: string | null;
+      location?: string | null;
+      /** @description Description réécrite avec verbes d'action et mots-clés de l'offre */
+      description: string;
+      /** @description Compétences démontrées dans cette expérience, pertinentes pour l'offre */
+      highlighted_skills: string[];
+    };
+    HighlightedSkill: {
+      name: string;
+      /** @description Niveau de maîtrise inféré par l'agent (ex. Expert, Intermédiaire) */
+      level?: string | null;
+      /** @enum {string} */
+      category: "hard_skill" | "soft_skill";
+      /**
+       * @description Importance de la compétence pour l'offre ciblée
+       * @enum {string}
+       */
+      importance: "Critical" | "Important" | "Nice to have";
+    };
+    /**
+     * @description Formation sélectionnée par l'agent. `end_date` est optionnel
+     *     (était requis dans l'ancienne version — source de 422 aléatoires).
+     */
+    SelectedEducation: {
+      id: string;
+      degree: string;
+      institution: string;
+      /**
+       * @description Date d'obtention du diplôme, format YYYY-MM. Optionnelle.
+       *     Remplace `graduation_date: str` (requis dans l'ancienne version agent).
+       */
+      end_date?: string | null;
+      description?: string | null;
+    };
+    SelectedProject: {
+      id: string;
+      name: string;
+      description: string;
+      url?: string | null;
+      completion_date?: string | null;
+      relevant_skills: string[];
+    };
+    /**
+     * @description Certification sélectionnée par l'agent. `issue_date` est optionnel
+     *     (était requis dans l'ancienne version — source de 422 aléatoires).
+     */
+    SelectedCertification: {
+      id: string;
+      name: string;
+      issuer: string;
+      /**
+       * @description Date d'obtention. Optionnelle.
+       *     Remplace `issue_date: str` (requis dans l'ancienne version agent).
+       */
+      issue_date?: string | null;
+      url?: string | null;
+    };
+    /**
+     * @description SCHÉMA DE CONTENU CANONIQUE UNIQUE du CV (ADR-CONTENT-SCHEMA). Ce schéma est à
+     *     la fois : la sortie de l'agent rédacteur-cv, la charge utile stockée en JSONB
+     *     (`generated_cvs.cv_data_json`), l'entrée du package de rendu partagé
+     *     (`@talentious/cv-render`, côté export-service et aperçu) et le modèle d'édition
+     *     (`PUT /cv/{cv_id}`). Aucune transformation runtime entre ces usages (seule la
+     *     coercition de sécurité en liste blanche s'applique avant stockage).
+     *
+     *     Contenu PUR : aucune information de forme. `template_id`, `theme` et `language`
+     *     vivent dans l'enveloppe du document (`CVDetailResponse`), jamais ici : le contenu
+     *     est portable d'un Template à l'autre.
+     *
+     *     Contrainte : aucun champ date n'est requis dans les sous-schémas de sortie
+     *     (`SelectedEducation`, `SelectedCertification`) pour éviter les 422 aléatoires
+     *     lorsque l'IA ne génère pas ces dates.
+     */
+    GeneratedCVData: {
+      personal_info: components["schemas"]["PersonalInfo"];
+      /** @description Résumé professionnel réécrit et optimisé pour l'offre (50-120 mots) */
+      summary: string;
+      /** @description Expériences sélectionnées et réécrites (3-5 les plus pertinentes) */
+      selected_experiences: components["schemas"]["SelectedExperience"][];
+      /** @description Compétences priorisées pour l'offre (8-15) */
+      highlighted_skills: components["schemas"]["HighlightedSkill"][];
+      selected_educations: components["schemas"]["SelectedEducation"][];
+      /** @default [] */
+      selected_projects: components["schemas"]["SelectedProject"][];
+      /** @default [] */
+      selected_certifications: components["schemas"]["SelectedCertification"][];
+      /**
+       * @description Notes internes de l'agent sur sa stratégie d'optimisation.
+       *     NE DOIT PAS être affiché à l'utilisateur final ni loggé en production
+       *     (risque BLK-5 : exfiltration de données via prompt injection).
+       */
+      optimization_notes?: string | null;
+    };
+    /**
+     * @description Couleur au format hexadécimal strict `#RRGGBB` (défense anti-injection CSS).
+     * @example #2D3748
+     */
+    HexColor: string;
+    /**
+     * @description Liste BLANCHE des polices autorisées dans un Thème CV (jeu curaté, embarqué côté
+     *     service d'export : déterminisme du rendu, résidence UE, défense anti-injection
+     *     CSS). Aucune autre valeur n'est acceptée. La liste exacte doit rester alignée sur
+     *     le manifeste de polices embarquées du package de rendu (à confirmer avant
+     *     implémentation).
+     * @enum {string}
+     */
+    CVFontFamily:
+      | "Inter"
+      | "Source Sans 3"
+      | "IBM Plex Sans"
+      | "Work Sans"
+      | "Source Serif 4"
+      | "Lora"
+      | "Merriweather"
+      | "IBM Plex Serif";
+    /**
+     * @description Jetons de style CV-scopés (injectés en propriétés CSS propres au CV, jamais les
+     *     couleurs de l'interface de l'application). Validation STRICTE : couleurs en
+     *     `#RRGGBB`, polices dans la liste blanche `CVFontFamily`, aucune propriété
+     *     supplémentaire acceptée. Le serveur vérifie en plus un contraste de lisibilité
+     *     suffisant (texte / fond) avant enregistrement ; un thème illisible répond `422`
+     *     (seuil exact fixé côté serveur).
+     */
+    CVThemeTokens: {
+      color_accent: components["schemas"]["HexColor"];
+      color_text: components["schemas"]["HexColor"];
+      color_muted: components["schemas"]["HexColor"];
+      color_background: components["schemas"]["HexColor"];
+      font_heading: components["schemas"]["CVFontFamily"];
+      font_body: components["schemas"]["CVFontFamily"];
+    };
+    /**
+     * @description Langue du document (CV ou lettre), distincte de la langue de l'interface (qui
+     *     reste française). Uniquement `fr` et `en`. `en` est une capacité premium.
+     * @enum {string}
+     */
+    DocumentLanguage: "fr" | "en";
+  };
+  responses: never;
+  parameters: never;
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    healthz: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Service disponible */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @enum {string} */
-                        status: "ok";
-                    };
-                };
-            };
-        };
+  healthz: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    renderPdf: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Service disponible */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RenderPdfRequest"];
-            };
+        content: {
+          "application/json": {
+            /** @enum {string} */
+            status: "ok";
+          };
         };
-        responses: {
-            /** @description Document PDF rendu */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/pdf": string;
-                };
-            };
-            /** @description Corps de requête illisible (JSON malformé, corps vide) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Payload trop volumineux */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Type de média non supporté (application/json attendu) */
-            415: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Payload invalide : champ inconnu, type incorrect, valeur hors contraintes du schéma canonique (caps de contenu comprises). Aucune coercition n'est tentée. `invalid_params` ne contient que la PREMIÈRE erreur rencontrée (ajv allErrors désactivé — anti-amplification) et ne reflète jamais une valeur soumise. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Erreur interne (aucun détail technique exposé) */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Rendu interrompu après le délai maximal */
-            504: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
+      };
     };
+  };
+  renderPdf: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RenderPdfRequest"];
+      };
+    };
+    responses: {
+      /** @description Document PDF rendu */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/pdf": string;
+        };
+      };
+      /** @description Corps de requête illisible (JSON malformé, corps vide) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Problem"];
+        };
+      };
+      /** @description Payload trop volumineux */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Problem"];
+        };
+      };
+      /** @description Type de média non supporté (application/json attendu) */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Problem"];
+        };
+      };
+      /** @description Payload invalide : champ inconnu, type incorrect, valeur hors contraintes du schéma canonique (caps de contenu comprises). Aucune coercition n'est tentée. `invalid_params` ne contient que la PREMIÈRE erreur rencontrée (ajv allErrors désactivé — anti-amplification) et ne reflète jamais une valeur soumise. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Problem"];
+        };
+      };
+      /** @description Erreur interne (aucun détail technique exposé) */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Problem"];
+        };
+      };
+      /** @description Rendu interrompu après le délai maximal */
+      504: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Problem"];
+        };
+      };
+    };
+  };
 }

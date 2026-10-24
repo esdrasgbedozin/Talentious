@@ -13,7 +13,9 @@ describe("sanitizeForRender — contrôles", () => {
     expect(sanitizeForRender("A\u0000B\u0007C\u009FD")).toBe("ABCD");
     expect(sanitizeForRender("a\u0008b\u000Bc\u000Ed")).toBe("abcd");
     expect(sanitizeForRender("x\u007Fy\u0085z")).toBe("xyz");
-    expect(sanitizeForRender("ligne1\nligne2\tfin")).toBe("ligne1\nligne2\tfin");
+    expect(sanitizeForRender("ligne1\nligne2\tfin")).toBe(
+      "ligne1\nligne2\tfin",
+    );
     expect(sanitizeForRender("\t seul \n")).toBe("\t seul \n");
   });
 
@@ -34,12 +36,18 @@ describe("sanitizeForRender — bidi et invisibles", () => {
   });
 
   it("retire les largeur-nulle (ZWSP, WJ, BOM, soft hyphen, U+180E) mais GARDE ZWJ/ZWNJ", () => {
-    expect(sanitizeForRender("m\u200Bo\u2060t\uFEFFs\u00ADx\u180E")).toBe("motsx");
-    expect(sanitizeForRender("👩\u200D💻 et fa\u200Crsi")).toBe("👩\u200D💻 et fa\u200Crsi");
+    expect(sanitizeForRender("m\u200Bo\u2060t\uFEFFs\u00ADx\u180E")).toBe(
+      "motsx",
+    );
+    expect(sanitizeForRender("👩\u200D💻 et fa\u200Crsi")).toBe(
+      "👩\u200D💻 et fa\u200Crsi",
+    );
   });
 
   it("retire les caractères Tag (ASCII smuggling) et sélecteurs de variation hors BMP", () => {
-    expect(sanitizeForRender("plan\u{E0041}\u{E0049}visible")).toBe("planvisible");
+    expect(sanitizeForRender("plan\u{E0041}\u{E0049}visible")).toBe(
+      "planvisible",
+    );
     expect(sanitizeForRender("a\u{E0100}b")).toBe("ab");
   });
 
@@ -71,10 +79,9 @@ describe("sanitizeForRender — structure", () => {
   });
 
   it("une clé __proto__ reste une donnée (jamais le prototype)", () => {
-    const input = JSON.parse('{"__proto__": {"pollue": true}, "ok": "v"}') as Record<
-      string,
-      unknown
-    >;
+    const input = JSON.parse(
+      '{"__proto__": {"pollue": true}, "ok": "v"}',
+    ) as Record<string, unknown>;
     const out = sanitizeForRender(input) as Record<string, unknown>;
     expect(Object.getPrototypeOf(out)).toBe(Object.prototype);
     expect((out as { pollue?: unknown }).pollue).toBeUndefined();

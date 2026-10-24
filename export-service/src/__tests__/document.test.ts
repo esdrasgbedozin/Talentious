@@ -22,9 +22,17 @@ import type { GeneratedCVData } from "@talentious/cv-render";
 
 import { buildCvDocumentHtml, CV_PDF_CSP } from "../render/document.js";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const repoRoot = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "..",
+);
 const denseCv = JSON.parse(
-  readFileSync(join(repoRoot, "fixtures", "cv-reference", "dense.json"), "utf8"),
+  readFileSync(
+    join(repoRoot, "fixtures", "cv-reference", "dense.json"),
+    "utf8",
+  ),
 ) as Record<string, unknown>;
 
 const anthracite = {
@@ -38,10 +46,16 @@ const anthracite = {
 
 const FAKE_CSS = "/* css-build-m0t14 */ .cv-sheet{position:relative}";
 
-function buildDoc(overrides: Record<string, unknown> = {}, templateId = "modern_sobre"): string {
+function buildDoc(
+  overrides: Record<string, unknown> = {},
+  templateId = "modern_sobre",
+): string {
   // Fixture JSON (non typée) + payloads HOSTILES hors schéma : cast assumé —
   // au runtime, la frontière ajv (T03) garantit la forme avant ce module.
-  const cv = { ...structuredClone(denseCv), ...overrides } as unknown as GeneratedCVData;
+  const cv = {
+    ...structuredClone(denseCv),
+    ...overrides,
+  } as unknown as GeneratedCVData;
   return buildCvDocumentHtml({
     cvContent: cv,
     templateId,
@@ -58,13 +72,16 @@ describe("buildCvDocumentHtml — document nominal", () => {
     expect(html).toContain('<html lang="fr">');
     expect(html).toContain('<meta charset="utf-8"');
     expect(html).toContain(FAKE_CSS);
-    const p = (denseCv as { personal_info: { first_name: string } }).personal_info;
+    const p = (denseCv as { personal_info: { first_name: string } })
+      .personal_info;
     expect(html).toContain(p.first_name);
   });
 
   it("la CSP est présente en meta, interdit tout par défaut et les scripts EXPLICITEMENT", () => {
     const html = buildDoc();
-    expect(html).toContain(`<meta http-equiv="Content-Security-Policy" content="${CV_PDF_CSP}"`);
+    expect(html).toContain(
+      `<meta http-equiv="Content-Security-Policy" content="${CV_PDF_CSP}"`,
+    );
     expect(CV_PDF_CSP).toContain("default-src 'none'");
     // Revue T04 : on verrouille l'EFFET (script-src 'none'), pas l'absence de
     // directive — un futur élargissement de default-src ne rouvre jamais les scripts.
@@ -125,7 +142,9 @@ describe("buildCvDocumentHtml — surface d'attaque (DET-M0-AC1)", () => {
   });
 
   it("balise hostile dans le texte : échappée, jamais interprétable", () => {
-    const html = buildDoc({ summary: '<script>alert(1)</script><img src=x onerror=alert(2)>' });
+    const html = buildDoc({
+      summary: "<script>alert(1)</script><img src=x onerror=alert(2)>",
+    });
     expect(html.toLowerCase()).not.toContain("<script");
     expect(html.toLowerCase()).not.toContain("<img");
     expect(html).toContain("&lt;script&gt;");
@@ -147,7 +166,9 @@ describe("buildCvDocumentHtml — surface d'attaque (DET-M0-AC1)", () => {
   });
 
   it("optimization_notes n'apparaît JAMAIS dans le document (BLK-5)", () => {
-    const html = buildDoc({ optimization_notes: "NOTE_INTERNE_EXFILTRATION_BLK5" });
+    const html = buildDoc({
+      optimization_notes: "NOTE_INTERNE_EXFILTRATION_BLK5",
+    });
     expect(html).not.toContain("NOTE_INTERNE_EXFILTRATION_BLK5");
   });
 

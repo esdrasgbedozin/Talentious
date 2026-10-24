@@ -41,7 +41,13 @@ try {
 }
 
 const DEFAULT_STRING_MAX = 10_000;
-const STRIPPED_KEYS = new Set(["example", "examples", "xml", "default", "nullable"]);
+const STRIPPED_KEYS = new Set([
+  "example",
+  "examples",
+  "xml",
+  "default",
+  "nullable",
+]);
 /** Mots-clés qui rouvriraient le schéma ou rendraient instancePath non sûr. */
 const FORBIDDEN_KEYWORDS = [
   "allOf",
@@ -63,11 +69,26 @@ function fail(message) {
 }
 
 const serviceRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const contractPath = join(serviceRoot, "..", "contracts", "agents", "export-service.openapi.yaml");
-const outPath = join(serviceRoot, "src", "generated", "render-payload.schema.json");
+const contractPath = join(
+  serviceRoot,
+  "..",
+  "contracts",
+  "agents",
+  "export-service.openapi.yaml",
+);
+const outPath = join(
+  serviceRoot,
+  "src",
+  "generated",
+  "render-payload.schema.json",
+);
 
-const api = await SwaggerParser.dereference(contractPath, { resolve: { http: false } });
-const schema = api.paths?.["/render/pdf"]?.post?.requestBody?.content?.["application/json"]?.schema;
+const api = await SwaggerParser.dereference(contractPath, {
+  resolve: { http: false },
+});
+const schema =
+  api.paths?.["/render/pdf"]?.post?.requestBody?.content?.["application/json"]
+    ?.schema;
 if (!schema) {
   fail("schéma de requête /render/pdf introuvable");
 }
@@ -80,7 +101,9 @@ function toJsonSchema(node, seen, path) {
   }
   seen.add(node);
   if (Array.isArray(node)) {
-    const out = node.map((item, i) => toJsonSchema(item, seen, `${path}[${i}]`));
+    const out = node.map((item, i) =>
+      toJsonSchema(item, seen, `${path}[${i}]`),
+    );
     seen.delete(node);
     return out;
   }
@@ -93,13 +116,19 @@ function toJsonSchema(node, seen, path) {
     // Laxisme contrôlé : null n'est toléré QUE sur des chaînes. Un
     // `cv_content: null` ou `theme: null` valide serait un trou de rendu.
     if (out.type !== "string") {
-      fail(`${path} : nullable n'est accepté que sur une chaîne (type=${JSON.stringify(out.type)})`);
+      fail(
+        `${path} : nullable n'est accepté que sur une chaîne (type=${JSON.stringify(out.type)})`,
+      );
     }
     out.type = ["string", "null"];
     if (out.enum) out.enum = [...out.enum, null];
   }
   const types = Array.isArray(out.type) ? out.type : [out.type];
-  if (types.includes("object") && out.properties && out.additionalProperties === undefined) {
+  if (
+    types.includes("object") &&
+    out.properties &&
+    out.additionalProperties === undefined
+  ) {
     out.additionalProperties = false;
   }
   if (types.includes("string") && out.maxLength === undefined) {
@@ -112,19 +141,22 @@ function toJsonSchema(node, seen, path) {
 /** Invariants de sûreté, revérifiés sur l'artefact final (défense du script lui-même). */
 function collectViolations(node, path, violations) {
   for (const keyword of FORBIDDEN_KEYWORDS) {
-    if (keyword in node) violations.push(`${path} : mot-clé interdit « ${keyword} »`);
+    if (keyword in node)
+      violations.push(`${path} : mot-clé interdit « ${keyword} »`);
   }
   const types = Array.isArray(node.type) ? node.type : [node.type];
   if (node.type === undefined) violations.push(`${path} : type manquant`);
   if (types.includes("object")) {
-    if (node.additionalProperties !== false) violations.push(`${path} : objet non fermé`);
+    if (node.additionalProperties !== false)
+      violations.push(`${path} : objet non fermé`);
     if (!node.properties) violations.push(`${path} : objet sans properties`);
   }
   if (types.includes("string") && typeof node.maxLength !== "number") {
     violations.push(`${path} : chaîne sans maxLength`);
   }
   if (types.includes("array")) {
-    if (typeof node.maxItems !== "number") violations.push(`${path} : tableau sans maxItems`);
+    if (typeof node.maxItems !== "number")
+      violations.push(`${path} : tableau sans maxItems`);
     if (!node.items) violations.push(`${path} : tableau sans items`);
   }
   if (node.items) collectViolations(node.items, `${path}.items`, violations);
@@ -141,9 +173,13 @@ const jsonSchema = {
 const violations = [];
 collectViolations(jsonSchema, "$", violations);
 if (violations.length > 0) {
-  fail(`le schéma généré viole les invariants de sûreté :\n  - ${violations.join("\n  - ")}`);
+  fail(
+    `le schéma généré viole les invariants de sûreté :\n  - ${violations.join("\n  - ")}`,
+  );
 }
 
 mkdirSync(dirname(outPath), { recursive: true });
 writeFileSync(outPath, JSON.stringify(jsonSchema, null, 2) + "\n");
-console.log(`render-payload.schema.json généré (${JSON.stringify(jsonSchema).length} octets)`);
+console.log(
+  `render-payload.schema.json généré (${JSON.stringify(jsonSchema).length} octets)`,
+);

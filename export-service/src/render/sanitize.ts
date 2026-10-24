@@ -42,13 +42,17 @@ function sanitizeString(value: string): string {
 /** Copie profonde du payload avec toutes les chaînes normalisées (l'entrée n'est jamais mutée). */
 export function sanitizeForRender<T>(value: T): T {
   if (typeof value === "string") return sanitizeString(value) as T;
-  if (Array.isArray(value)) return value.map((item) => sanitizeForRender(item)) as T;
+  if (Array.isArray(value))
+    return value.map((item) => sanitizeForRender(item)) as T;
   if (value !== null && typeof value === "object") {
     // Object.fromEntries pose les clés en DATA properties : une clé __proto__
     // ne peut pas toucher le prototype (défense par construction — Fastify la
     // rejette déjà en amont).
     return Object.fromEntries(
-      Object.entries(value).map(([key, child]) => [key, sanitizeForRender(child)]),
+      Object.entries(value).map(([key, child]) => [
+        key,
+        sanitizeForRender(child),
+      ]),
     ) as T;
   }
   return value;

@@ -57,10 +57,14 @@ export function buildCvDocumentHtml(input: RenderDocumentInput): string {
   // build. S'il pouvait fermer son <style>, c'est le build qui est compromis
   // — on échoue, on ne « répare » pas.
   if (/<\/style/i.test(input.css)) {
-    throw new Error("CSS non embarquable : contient </style> — artefact de build suspect");
+    throw new Error(
+      "CSS non embarquable : contient </style> — artefact de build suspect",
+    );
   }
   if (!ALLOWED_LANGUAGES.has(input.language)) {
-    throw new Error("Langue de document hors liste blanche (contrat DocumentLanguage)");
+    throw new Error(
+      "Langue de document hors liste blanche (contrat DocumentLanguage)",
+    );
   }
 
   const cv = sanitizeForRender(input.cvContent);
@@ -70,7 +74,11 @@ export function buildCvDocumentHtml(input: RenderDocumentInput): string {
   delete (cv as { optimization_notes?: unknown }).optimization_notes;
   const Template = getTemplate(input.templateId);
   const markup = renderToStaticMarkup(
-    createElement(Template, { cv, theme: input.theme, language: input.language }),
+    createElement(Template, {
+      cv,
+      theme: input.theme,
+      language: input.language,
+    }),
   );
 
   return (
