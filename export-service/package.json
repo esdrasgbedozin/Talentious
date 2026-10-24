@@ -1,0 +1,28 @@
+{
+  "name": "@talentious/export-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Service de rendu PDF déterministe (ADR-PDF-RENDER, Option B : payload injecté, aucune navigation). 6e service Cloud Run, privé (OIDC). Consomme @talentious/cv-render pour l'invariant « aperçu = PDF ».",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "fastify": "^5.2.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9",
+    "@types/node": "^20",
+    "eslint": "^9",
+    "typescript": "^5",
+    "typescript-eslint": "^8.26.0",
+    "vitest": "^3.0.8"
+  }
+}
