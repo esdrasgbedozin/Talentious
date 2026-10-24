@@ -708,8 +708,8 @@ export interface paths {
          * Lancer l'export asynchrone d'un CV (PDF ou docx)
          * @description Lance la production d'un fichier téléchargeable du CV (`job_type` = `export`).
          *     Réponse `202` + `job_id` ; le client interroge `GET /jobs/{job_id}` jusqu'à
-         *     `succeeded`, puis lit `result.download_url` (URL signée à durée limitée,
-         *     `result.expires_at`). Le PDF est rendu côté serveur (fidèle et déterministe) ;
+         *     `succeeded`, puis lit `result.download_url` (URL de téléchargement servie
+         *     par le backend — download PROXIFIÉ, ADR-EXPORT-DELIVERY ; `result.expires_at`). Le PDF est rendu côté serveur (fidèle et déterministe) ;
          *     le docx est produit depuis le contenu structuré, avec une mise en forme
          *     simplifiée (fidélité exacte au PDF : décision D8 ouverte).
          *
@@ -871,8 +871,8 @@ export interface paths {
          * Lancer l'export asynchrone d'une lettre (PDF ou docx)
          * @description Lance la production d'un fichier téléchargeable de la lettre (`job_type` =
          *     `export`). Même mécanique que `POST /cv/{cv_id}/export` : `202` + `job_id`,
-         *     polling via `GET /jobs/{job_id}`, puis `result.download_url` (URL signée,
-         *     `result.expires_at`).
+         *     polling via `GET /jobs/{job_id}`, puis `result.download_url` (URL de
+         *     téléchargement backend — download proxifié, `result.expires_at`).
          *
          *     Gating = ownership (décision D1) : exporter ou re-télécharger une lettre DÉJÀ
          *     POSSÉDÉE est autorisé sans Pass actif. Un seul export actif par utilisateur à
@@ -1913,15 +1913,19 @@ export interface components {
             result_id: string;
             /**
              * Format: uri
-             * @description URL signée (GCS) à durée limitée pour télécharger le fichier. Renseignée
-             *     uniquement si `result_kind` = `export`.
+             * @description URL de téléchargement du fichier, servie par le BACKEND (download
+             *     proxifié : authentification + ownership revérifiés à chaque accès,
+             *     le bucket reste privé — ADR-EXPORT-DELIVERY, R2 tranché).
+             *     Renseignée uniquement si `result_kind` = `export`.
              */
             download_url?: string | null;
             /**
              * Format: date-time
-             * @description Expiration de `download_url`. Une URL expirée se renouvelle en relançant
-             *     l'export (le fichier à jour est resservi sans nouveau rendu). Renseignée
-             *     uniquement si `result_kind` = `export`.
+             * @description Horizon de disponibilité du fichier (politique de rétention du
+             *     stockage). Un fichier purgé se renouvelle en relançant l'export
+             *     (le fichier à jour est resservi sans nouveau rendu). Null = pas
+             *     d'expiration programmée. Renseignée uniquement si `result_kind`
+             *     = `export`.
              */
             expires_at?: string | null;
             /** @description Résultat de la relecture. Présent uniquement si `result_kind` = `review` (omis sinon). */

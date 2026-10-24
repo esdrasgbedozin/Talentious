@@ -69,6 +69,13 @@ class Settings(BaseSettings):
     # recharge pas le compteur). Le kill-switch GLOBAL arrive à M6-T03.
     free_daily_generation_cap: int = 5
 
+    # Stockage des exports (M2-T15, ADR-EXPORT-DELIVERY) : bucket GCS PRIVÉ,
+    # download toujours PROXIFIÉ par le backend (jamais d'URL signée). Vide =
+    # stockage désactivé (dev sans émulateur) : le worker d'export échouera
+    # proprement. STORAGE_EMULATOR_HOST (env standard du client GCS) route
+    # vers fake-gcs-server en test.
+    export_bucket_name: str = ""
+
     # CORS
     cors_origins: Annotated[list[str], NoDecode] = [
         "http://localhost:3000",

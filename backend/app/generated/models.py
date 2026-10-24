@@ -1469,11 +1469,11 @@ class JobResult(BaseModel):
     result_id: UUID
     download_url: AnyUrl | None = Field(
         None,
-        description='URL signée (GCS) à durée limitée pour télécharger le fichier. Renseignée\nuniquement si `result_kind` = `export`.\n',
+        description='URL de téléchargement du fichier, servie par le BACKEND (download\nproxifié : authentification + ownership revérifiés à chaque accès,\nle bucket reste privé — ADR-EXPORT-DELIVERY, R2 tranché).\nRenseignée uniquement si `result_kind` = `export`.\n',
     )
     expires_at: AwareDatetime | None = Field(
         None,
-        description="Expiration de `download_url`. Une URL expirée se renouvelle en relançant\nl'export (le fichier à jour est resservi sans nouveau rendu). Renseignée\nuniquement si `result_kind` = `export`.\n",
+        description="Horizon de disponibilité du fichier (politique de rétention du\nstockage). Un fichier purgé se renouvelle en relançant l'export\n(le fichier à jour est resservi sans nouveau rendu). Null = pas\nd'expiration programmée. Renseignée uniquement si `result_kind`\n= `export`.\n",
     )
     review: ReviewResult | None = Field(
         None,
