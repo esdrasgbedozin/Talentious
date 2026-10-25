@@ -36,5 +36,19 @@ reste 100 % PRIVÉ, aucun octet n'en sort sans passer par l'API.
   (le re-rendu est la voie de renouvellement).
 - `storage_service` (T15) expose upload/download/delete d'objets du bucket
   privé ; la route de téléchargement est T17 ; le worker écrit à T16.
+- **Sémantique du téléchargement (T17, revue)** : `GET /jobs/{id}/download`
+  sert l'export COURANT du CV (`cv.gcs_pdf_url`), pas une copie figée propre à
+  ce job. Si le CV a été ré-exporté depuis (contenu modifié ⇒ nouvelle
+  empreinte, ancien objet purgé par le worker), le `download_url` d'un ancien
+  job `succeeded` sert le fichier À JOUR — comportement voulu (toujours le
+  dernier rendu du CV), cohérent avec « expires_at null + relancer l'export
+  pour régénérer ». Figer un fichier par job est hors périmètre bêta.
+- **RGPD — purge à l'effacement (ROUTÉ, revues T16/T17)** : la suppression
+  d'un CV ou d'un compte doit purger le préfixe `exports/{user_id}/...` du
+  bucket (aujourd'hui `delete_cv` ne supprime pas l'objet GCS ; `cv_id` passe
+  à NULL sur le job, le fichier devient inaccessible via l'API mais reste
+  stocké jusqu'à la rétention). À traiter en T18/ticket RGPD avant la V1.
+- **Exposition de `gcs_pdf_url` (ROUTÉ, revue T17)** : la réponse CV expose le
+  nom d'objet interne ; à retirer de la sérialisation publique (T18).
 - Émulateur : fake-gcs-server (`STORAGE_EMULATOR_HOST`) pour les tests —
   aucun bucket réel n'est touché avant le terraform T19 ([PAH-M2b]).

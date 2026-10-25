@@ -106,7 +106,6 @@ tags:
 # PATHS
 # =============================================================================
 paths:
-
   # ---------------------------------------------------------------------------
   # Auth
   # ---------------------------------------------------------------------------
@@ -134,28 +133,28 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserCreate'
+              $ref: "#/components/schemas/UserCreate"
       responses:
-        '201':
+        "201":
           description: Compte créé avec succès
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserResponse'
-        '400':
+                $ref: "#/components/schemas/UserResponse"
+        "400":
           description: Email déjà utilisé
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
               example:
                 type: "https://talentious.fr/errors/email-already-registered"
                 title: "Email Already Registered"
                 status: 400
                 detail: "An account with this email address already exists."
                 instance: "/v1/auth/register"
-        '422':
-          $ref: '#/components/responses/ValidationError'
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /auth/login:
     post:
@@ -172,27 +171,27 @@ paths:
         content:
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/LoginForm'
+              $ref: "#/components/schemas/LoginForm"
       responses:
-        '200':
+        "200":
           description: Authentification réussie
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Token'
-        '401':
+                $ref: "#/components/schemas/Token"
+        "401":
           description: Identifiants invalides
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
               example:
                 type: "https://talentious.fr/errors/invalid-credentials"
                 title: "Invalid Credentials"
                 status: 401
                 detail: "Incorrect email or password."
                 instance: "/v1/auth/login"
-        '403':
+        "403":
           description: |
             Adresse email non vérifiée. Les identifiants sont corrects mais la
             connexion est refusée tant que l'adresse n'a pas été confirmée
@@ -201,15 +200,15 @@ paths:
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
               example:
                 type: "https://talentious.fr/errors/email-not-verified"
                 title: "Forbidden"
                 status: 403
                 detail: "Adresse email non vérifiée. Consultez votre boîte mail ou renvoyez l'email de confirmation."
                 instance: "/v1/auth/login"
-        '422':
-          $ref: '#/components/responses/ValidationError'
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /auth/google:
     post:
@@ -246,20 +245,20 @@ paths:
                   type: string
                   description: Jeton d'identité (JWT) émis par Google Identity Services
       responses:
-        '200':
+        "200":
           description: Authentification réussie (compte créé ou lié si nécessaire)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Token'
-        '401':
+                $ref: "#/components/schemas/Token"
+        "401":
           description: Jeton Google invalide, expiré ou d'audience inattendue
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: "#/components/schemas/Problem"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /auth/verify-email:
     post:
@@ -281,20 +280,20 @@ paths:
                 token:
                   type: string
       responses:
-        '200':
+        "200":
           description: Email confirmé
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserResponse'
-        '400':
+                $ref: "#/components/schemas/UserResponse"
+        "400":
           description: Lien invalide ou expiré
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: "#/components/schemas/Problem"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /auth/resend-verification:
     post:
@@ -305,10 +304,10 @@ paths:
         Renvoie le lien de vérification à l'utilisateur authentifié. Réponse
         toujours 204 (ne révèle pas l'état de vérification).
       responses:
-        '204':
+        "204":
           description: Demande prise en compte (email renvoyé si nécessaire)
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /auth/refresh:
     post:
@@ -322,18 +321,18 @@ paths:
         toute la famille (détection de vol).
       security: []
       responses:
-        '200':
+        "200":
           description: Nouvel access token (et refresh token renouvelé en cookie)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Token'
-        '401':
+                $ref: "#/components/schemas/Token"
+        "401":
           description: Refresh token absent, invalide, expiré ou révoqué
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
 
   /auth/logout:
     post:
@@ -344,7 +343,7 @@ paths:
         Révoque le refresh token courant côté serveur et efface le cookie.
         Idempotent : réussit même sans session active.
       responses:
-        '204':
+        "204":
           description: Déconnecté (refresh token révoqué, cookie effacé)
 
   /auth/password/forgot:
@@ -368,10 +367,10 @@ paths:
                   type: string
                   format: email
       responses:
-        '204':
+        "204":
           description: Demande prise en compte (email envoyé si le compte existe)
-        '422':
-          $ref: '#/components/responses/ValidationError'
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /auth/password/reset:
     post:
@@ -396,16 +395,16 @@ paths:
                   type: string
                   minLength: 8
       responses:
-        '204':
+        "204":
           description: Mot de passe réinitialisé, sessions révoquées
-        '400':
+        "400":
           description: Lien invalide ou expiré
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: "#/components/schemas/Problem"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /auth/verify-email/resend:
     post:
@@ -430,16 +429,16 @@ paths:
                   type: string
                   format: email
       responses:
-        '204':
+        "204":
           description: Demande acceptée (réponse constante, anti-énumération)
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '429':
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
           description: Trop de demandes (rate limit)
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
 
   /auth/password/change:
     post:
@@ -464,16 +463,16 @@ paths:
                   type: string
                   minLength: 8
       responses:
-        '204':
+        "204":
           description: Mot de passe changé, sessions révoquées
-        '401':
+        "401":
           description: Mot de passe actuel incorrect (ou non authentifié)
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: "#/components/schemas/Problem"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /auth/email/change:
     post:
@@ -498,26 +497,26 @@ paths:
                 current_password:
                   type: string
       responses:
-        '204':
+        "204":
           description: Lien de confirmation envoyé à la nouvelle adresse
-        '400':
+        "400":
           description: Nouvelle adresse invalide (déjà utilisée ou identique à l'actuelle)
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '401':
+                $ref: "#/components/schemas/Problem"
+        "401":
           description: Mot de passe actuel incorrect (ou non authentifié)
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '429':
+                $ref: "#/components/schemas/Problem"
+        "429":
           description: Trop de demandes (rate limit)
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
 
   /auth/email/confirm:
     post:
@@ -540,18 +539,18 @@ paths:
                 token:
                   type: string
       responses:
-        '200':
+        "200":
           description: Adresse mise à jour
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserResponse'
-        '400':
+                $ref: "#/components/schemas/UserResponse"
+        "400":
           description: Jeton invalide/expiré, ou adresse devenue indisponible
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
 
   /auth/me:
     get:
@@ -559,14 +558,14 @@ paths:
       operationId: getCurrentUser
       summary: Obtenir les informations de l'utilisateur courant
       responses:
-        '200':
+        "200":
           description: Informations de l'utilisateur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   # ---------------------------------------------------------------------------
   # Profile
@@ -611,7 +610,7 @@ paths:
                   format: binary
                   description: Fichier PDF (max 10 Mo, application/pdf)
       responses:
-        '202':
+        "202":
           description: Job d'import accepté
           headers:
             Location:
@@ -621,27 +620,27 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ImportJobAccepted'
-        '400':
+                $ref: "#/components/schemas/ImportJobAccepted"
+        "400":
           description: Fichier absent, non-PDF, vide ou trop volumineux
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '409':
+                $ref: "#/components/schemas/Problem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
           description: Un import est déjà en cours pour cet utilisateur
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '429':
+                $ref: "#/components/schemas/Problem"
+        "429":
           description: Limite d'imports atteinte (5/heure)
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
 
   /profile/import-cv/jobs/{job_id}:
     get:
@@ -670,16 +669,16 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: État du job d'import
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ImportJobStatus'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/ImportJobStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /profile:
     get:
@@ -690,14 +689,14 @@ paths:
         Retourne le profil JSONB de l'utilisateur. Si aucun profil n'existe encore,
         un profil vide est créé automatiquement avant d'être retourné.
       responses:
-        '200':
+        "200":
           description: Profil de l'utilisateur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProfileResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/ProfileResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
     put:
       tags: [Profile]
@@ -711,20 +710,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProfileUpdate'
+              $ref: "#/components/schemas/ProfileUpdate"
       responses:
-        '200':
+        "200":
           description: Profil mis à jour
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProfileResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: "#/components/schemas/ProfileResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   # ---------------------------------------------------------------------------
   # CV — Génération asynchrone
@@ -763,9 +762,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GenerateCVRequest'
+              $ref: "#/components/schemas/GenerateCVRequest"
       responses:
-        '202':
+        "202":
           description: Job de génération accepté
           headers:
             Location:
@@ -775,30 +774,30 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GenerateCVJobAccepted'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '402':
-          $ref: '#/components/responses/PassRequired'
-        '404':
+                $ref: "#/components/schemas/GenerateCVJobAccepted"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "402":
+          $ref: "#/components/responses/PassRequired"
+        "404":
           description: Profil utilisateur introuvable
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '409':
+                $ref: "#/components/schemas/Problem"
+        "409":
           description: Une génération est déjà en cours
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
               example:
                 type: "https://talentious.fr/errors/generation-in-progress"
                 title: "Generation Already In Progress"
                 status: 409
                 detail: "A CV generation job is already running for your account. Please wait for it to complete."
                 instance: "/v1/cv/generate"
-        '429':
+        "429":
           description: |
             Plafond journalier de générations atteint (utilisateur SANS Pass actif :
             frein de coût IA, calculé sur les jobs `cv_generation` des dernières 24 h,
@@ -808,14 +807,14 @@ paths:
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
               example:
                 type: "https://talentious.fr/errors/generation-daily-cap"
                 title: "Too Many Requests"
                 status: 429
                 detail: "Daily free generation limit reached. Try again tomorrow or activate a Career Pass."
                 instance: "/v1/cv/generate"
-        '422':
+        "422":
           description: |
             Erreur de validation du corps de la requête : champ invalide, `template_id`
             inconnu, ou Thème CV refusé (couleur hors format hex, police hors liste
@@ -823,7 +822,7 @@ paths:
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
               example:
                 type: "https://talentious.fr/errors/validation-error"
                 title: "Validation Error"
@@ -857,18 +856,18 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: État du job
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CVJobStatus'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/CVJobStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /cv/jobs/{job_id}/events:
     get:
@@ -900,19 +899,19 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Flux SSE ouvert
           content:
             text/event-stream:
               schema:
                 type: string
                 description: Flux d'événements SSE (voir description de l'opération pour les formats)
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   # ---------------------------------------------------------------------------
   # CV — CRUD
@@ -942,16 +941,16 @@ paths:
             minimum: 0
             default: 0
       responses:
-        '200':
+        "200":
           description: Liste des CV
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/CVListItem'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                  $ref: "#/components/schemas/CVListItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /cv/templates:
     get:
@@ -968,16 +967,16 @@ paths:
         Le registre est piloté par les données (table de référence), pas codé en dur.
         Chemin littéral : prioritaire sur `/cv/{cv_id}`.
       responses:
-        '200':
+        "200":
           description: Liste des Templates
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/CVTemplate'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                  $ref: "#/components/schemas/CVTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /cv/themes:
     get:
@@ -994,16 +993,16 @@ paths:
         « Moderne sobre » (`is_free` = true). Chemin littéral : prioritaire sur
         `/cv/{cv_id}`.
       responses:
-        '200':
+        "200":
           description: Liste des presets de Thème CV
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/CVTheme'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                  $ref: "#/components/schemas/CVTheme"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /cv/{cv_id}:
     get:
@@ -1014,20 +1013,20 @@ paths:
         Lecture d'un Document existant : gating par ownership uniquement, jamais par
         le Pass (le CV reste consultable après expiration du Pass).
       parameters:
-        - $ref: '#/components/parameters/cvIdPath'
+        - $ref: "#/components/parameters/cvIdPath"
       responses:
-        '200':
+        "200":
           description: CV complet
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CVDetailResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/CVDetailResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
     put:
       tags: [CV]
@@ -1054,30 +1053,30 @@ paths:
         `402`. Renommer ou éditer le contenu d'un CV entièrement gratuit reste possible
         sans Pass.
       parameters:
-        - $ref: '#/components/parameters/cvIdPath'
+        - $ref: "#/components/parameters/cvIdPath"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateCVRequest'
+              $ref: "#/components/schemas/UpdateCVRequest"
       responses:
-        '200':
+        "200":
           description: CV mis à jour
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CVDetailResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '402':
-          $ref: '#/components/responses/PassRequired'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: "#/components/schemas/CVDetailResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "402":
+          $ref: "#/components/responses/PassRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
     delete:
       tags: [CV]
@@ -1089,16 +1088,16 @@ paths:
         supprimés avec lui. Les Lettres liées (`cv_id`) ne sont pas supprimées : leur
         `cv_id` passe à `null`.
       parameters:
-        - $ref: '#/components/parameters/cvIdPath'
+        - $ref: "#/components/parameters/cvIdPath"
       responses:
-        '204':
+        "204":
           description: CV supprimé avec succès (aucun corps)
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   # ---------------------------------------------------------------------------
   # CV — Score ATS, Export, Relecture
@@ -1134,46 +1133,46 @@ paths:
         correction rédigées par l'IA relèvent de la Relecture IA
         (`POST /cv/{cv_id}/review`), pas de cet endpoint.
       parameters:
-        - $ref: '#/components/parameters/cvIdPath'
+        - $ref: "#/components/parameters/cvIdPath"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ATSScoreRequest'
+              $ref: "#/components/schemas/ATSScoreRequest"
       responses:
-        '200':
+        "200":
           description: Score ATS calculé
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ATSScoreResult'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
+                $ref: "#/components/schemas/ATSScoreResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
           description: CV ou offre (`job_offer_id`) introuvable
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '429':
+                $ref: "#/components/schemas/Problem"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
           description: |
             Volume de scores atteint. Réservé à la politique de limitation du palier
             gratuit (décision produit D3 OUVERTE : plafond non défini par ce contrat).
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '502':
+                $ref: "#/components/schemas/Problem"
+        "502":
           description: Analyse d'offre indisponible (agent analyseur-offre en erreur)
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
 
   /cv/{cv_id}/export:
     post:
@@ -1197,15 +1196,15 @@ paths:
 
         Idempotency : un seul export actif par utilisateur à la fois (`409`).
       parameters:
-        - $ref: '#/components/parameters/cvIdPath'
+        - $ref: "#/components/parameters/cvIdPath"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExportRequest'
+              $ref: "#/components/schemas/ExportRequest"
       responses:
-        '202':
+        "202":
           description: Job d'export accepté
           headers:
             Location:
@@ -1215,19 +1214,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ExportJobAccepted'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '402':
-          $ref: '#/components/responses/PassRequired'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/JobConflict'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: "#/components/schemas/ExportJobAccepted"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "402":
+          $ref: "#/components/responses/PassRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/JobConflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /cv/{cv_id}/review:
     post:
@@ -1251,9 +1250,9 @@ paths:
 
         Idempotency : une seule relecture active par utilisateur à la fois (`409`).
       parameters:
-        - $ref: '#/components/parameters/cvIdPath'
+        - $ref: "#/components/parameters/cvIdPath"
       responses:
-        '202':
+        "202":
           description: Job de relecture accepté
           headers:
             Location:
@@ -1263,25 +1262,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReviewJobAccepted'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '402':
-          $ref: '#/components/responses/PassRequired'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/JobConflict'
-        '429':
+                $ref: "#/components/schemas/ReviewJobAccepted"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "402":
+          $ref: "#/components/responses/PassRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/JobConflict"
+        "429":
           description: |
             Plafond de relectures atteint. Réservé à la politique de limitation
             (décision produit D9 OUVERTE : plafond non défini par ce contrat).
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
 
   # ---------------------------------------------------------------------------
   # Lettres de motivation
@@ -1317,9 +1316,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GenerateLetterRequest'
+              $ref: "#/components/schemas/GenerateLetterRequest"
       responses:
-        '202':
+        "202":
           description: Job de génération de lettre accepté
           headers:
             Location:
@@ -1329,21 +1328,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LetterJobAccepted'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '402':
-          $ref: '#/components/responses/PassRequired'
-        '404':
+                $ref: "#/components/schemas/LetterJobAccepted"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "402":
+          $ref: "#/components/responses/PassRequired"
+        "404":
           description: Profil, CV (`cv_id`) ou offre (`job_offer_id`) introuvable
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '409':
-          $ref: '#/components/responses/JobConflict'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: "#/components/schemas/Problem"
+        "409":
+          $ref: "#/components/responses/JobConflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /letters:
     get:
@@ -1375,16 +1374,16 @@ paths:
             format: uuid
           description: Ne retourne que les lettres liées à ce CV
       responses:
-        '200':
+        "200":
           description: Liste des lettres
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/LetterListItem'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                  $ref: "#/components/schemas/LetterListItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /letters/{letter_id}:
     get:
@@ -1395,20 +1394,20 @@ paths:
         Lecture d'un Document existant : gating par ownership uniquement, jamais par
         le Pass (la lettre reste consultable après expiration du Pass).
       parameters:
-        - $ref: '#/components/parameters/letterIdPath'
+        - $ref: "#/components/parameters/letterIdPath"
       responses:
-        '200':
+        "200":
           description: Lettre complète
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LetterDetailResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/LetterDetailResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
     patch:
       tags: [Letters]
@@ -1423,30 +1422,30 @@ paths:
         Gating (Pass) : la lettre est une capacité premium ; son édition exige un Pass
         actif, sinon `402`. La lettre reste consultable et exportable sans Pass (D1).
       parameters:
-        - $ref: '#/components/parameters/letterIdPath'
+        - $ref: "#/components/parameters/letterIdPath"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateLetterRequest'
+              $ref: "#/components/schemas/UpdateLetterRequest"
       responses:
-        '200':
+        "200":
           description: Lettre mise à jour
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LetterDetailResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '402':
-          $ref: '#/components/responses/PassRequired'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: "#/components/schemas/LetterDetailResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "402":
+          $ref: "#/components/responses/PassRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
     delete:
       tags: [Letters]
@@ -1456,16 +1455,16 @@ paths:
         Supprime la lettre et les fichiers exportés associés (PDF, docx) du bucket GCS.
         Suppression possible sans Pass actif (l'utilisateur maîtrise toujours ses données).
       parameters:
-        - $ref: '#/components/parameters/letterIdPath'
+        - $ref: "#/components/parameters/letterIdPath"
       responses:
-        '204':
+        "204":
           description: Lettre supprimée avec succès (aucun corps)
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /letters/{letter_id}/export:
     post:
@@ -1482,15 +1481,15 @@ paths:
         POSSÉDÉE est autorisé sans Pass actif. Un seul export actif par utilisateur à
         la fois (`409`).
       parameters:
-        - $ref: '#/components/parameters/letterIdPath'
+        - $ref: "#/components/parameters/letterIdPath"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExportRequest'
+              $ref: "#/components/schemas/ExportRequest"
       responses:
-        '202':
+        "202":
           description: Job d'export accepté
           headers:
             Location:
@@ -1500,19 +1499,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ExportJobAccepted'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '402':
-          $ref: '#/components/responses/PassRequired'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/JobConflict'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                $ref: "#/components/schemas/ExportJobAccepted"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "402":
+          $ref: "#/components/responses/PassRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/JobConflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   # ---------------------------------------------------------------------------
   # Jobs (suivi asynchrone générique)
@@ -1540,20 +1539,62 @@ paths:
         Un job inconnu répond `404` ; un job appartenant à un autre utilisateur `403`.
         Remplace `GET /cv/jobs/{job_id}` (déprécié).
       parameters:
-        - $ref: '#/components/parameters/jobIdPath'
+        - $ref: "#/components/parameters/jobIdPath"
       responses:
-        '200':
+        "200":
           description: État du job
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JobStatus'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/JobStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /jobs/{job_id}/download:
+    get:
+      tags: [Jobs]
+      operationId: downloadJobResult
+      summary: Télécharger le fichier produit par un job d'export (proxifié)
+      description: |
+        Renvoie le FICHIER produit par un job d'export `succeeded`
+        (download PROXIFIÉ par le backend — ADR-EXPORT-DELIVERY : le bucket
+        reste privé, l'ownership est revérifié à CHAQUE téléchargement). C'est
+        la cible de `result.download_url`.
+
+        Autorisé sans Pass (D1 : re-télécharger un document possédé n'est pas
+        une action premium). Un job inconnu ou d'un autre utilisateur, un job
+        non-export, ou un fichier purgé par la rétention répondent `404`
+        (relancer l'export reproduit le fichier). Un job non encore `succeeded`
+        répond `409`.
+      parameters:
+        - $ref: "#/components/parameters/jobIdPath"
+      responses:
+        "200":
+          description: Le fichier exporté (binaire)
+          headers:
+            Content-Disposition:
+              description: Pièce jointe (nom de fichier suggéré)
+              schema:
+                type: string
+            Cache-Control:
+              description: Donnée personnelle — jamais mise en cache
+              schema:
+                type: string
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/JobConflict"
 
   # ---------------------------------------------------------------------------
   # Billing
@@ -1576,28 +1617,28 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CheckoutSessionRequest'
+              $ref: "#/components/schemas/CheckoutSessionRequest"
       responses:
-        '200':
+        "200":
           description: Session Stripe créée
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CheckoutSessionResponse'
-        '400':
+                $ref: "#/components/schemas/CheckoutSessionResponse"
+        "400":
           description: Type de pass invalide
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '502':
+                $ref: "#/components/schemas/Problem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "502":
           description: Erreur Stripe
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
 
   /billing/webhook:
     post:
@@ -1631,7 +1672,7 @@ paths:
               type: object
               description: Payload brut de l'événement Stripe (non typé dans ce contrat)
       responses:
-        '200':
+        "200":
           description: Webhook traité avec succès
           content:
             application/json:
@@ -1641,12 +1682,12 @@ paths:
                   received:
                     type: boolean
                     example: true
-        '400':
+        "400":
           description: Signature invalide ou payload malformé
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
 
   /billing/catalog:
     get:
@@ -1659,14 +1700,14 @@ paths:
         `currency` peuvent être `null` si Stripe n'est pas configuré ou si la
         récupération échoue — dans ce cas le prix est confirmé à l'étape Checkout.
       responses:
-        '200':
+        "200":
           description: Catalogue des Pass
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BillingCatalogResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/BillingCatalogResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /billing/status:
     get:
@@ -1677,14 +1718,14 @@ paths:
         Indique si l'utilisateur détient un CareerPass actuellement valide et,
         le cas échéant, jusqu'à quand.
       responses:
-        '200':
+        "200":
           description: Statut d'accès de l'utilisateur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BillingStatusResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/BillingStatusResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   # ---------------------------------------------------------------------------
   # Account (RGPD Art. 17)
@@ -1712,10 +1753,10 @@ paths:
         Cette opération est irréversible. Le JWT de l'utilisateur est invalidé
         immédiatement après. Conforme au droit à l'effacement RGPD Article 17.
       responses:
-        '204':
+        "204":
           description: Compte et toutes les données supprimés (aucun corps)
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   # ---------------------------------------------------------------------------
   # Administration (rôle admin uniquement)
@@ -1750,22 +1791,21 @@ paths:
             default: 0
           description: Décalage de pagination
       responses:
-        '200':
+        "200":
           description: Liste paginée des comptes
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AdminUsersResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+                $ref: "#/components/schemas/AdminUsersResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
 # =============================================================================
 # COMPONENTS
 # =============================================================================
 components:
-
   securitySchemes:
     bearerAuth:
       type: http
@@ -1810,7 +1850,7 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Problem'
+            $ref: "#/components/schemas/Problem"
           example:
             type: "https://talentious.fr/errors/unauthorized"
             title: "Unauthorized"
@@ -1823,7 +1863,7 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Problem'
+            $ref: "#/components/schemas/Problem"
           example:
             type: "https://talentious.fr/errors/forbidden"
             title: "Forbidden"
@@ -1836,7 +1876,7 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Problem'
+            $ref: "#/components/schemas/Problem"
           example:
             type: "https://talentious.fr/errors/not-found"
             title: "Not Found"
@@ -1849,7 +1889,7 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Problem'
+            $ref: "#/components/schemas/Problem"
           example:
             type: "https://talentious.fr/errors/validation-error"
             title: "Validation Error"
@@ -1875,7 +1915,7 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Problem'
+            $ref: "#/components/schemas/Problem"
           example:
             type: "https://talentious.fr/errors/career-pass-required"
             title: "Career Pass Required"
@@ -1890,7 +1930,7 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Problem'
+            $ref: "#/components/schemas/Problem"
           example:
             type: "https://talentious.fr/errors/job-in-progress"
             title: "Job Already In Progress"
@@ -1902,7 +1942,6 @@ components:
   # Schémas
   # ---------------------------------------------------------------------------
   schemas:
-
     # =========================================================================
     # RFC 7807 — Problem Details
     # =========================================================================
@@ -2001,7 +2040,7 @@ components:
           type: string
           format: email
         role:
-          $ref: '#/components/schemas/UserRole'
+          $ref: "#/components/schemas/UserRole"
         is_active:
           type: boolean
         email_verified:
@@ -2143,7 +2182,11 @@ components:
           description: |
             Liste de réalisations concrètes et chiffrées.
             Transmis à l'agent rédacteur pour enrichir le CV généré.
-          example: ["Réduit le temps de build CI de 40%", "Migré 3 services vers Kubernetes"]
+          example:
+            [
+              "Réduit le temps de build CI de 40%",
+              "Migré 3 services vers Kubernetes",
+            ]
 
     Education:
       type: object
@@ -2382,7 +2425,7 @@ components:
         - skills
       properties:
         personal_info:
-          $ref: '#/components/schemas/PersonalInfo'
+          $ref: "#/components/schemas/PersonalInfo"
         summary:
           type: string
           maxLength: 2000
@@ -2391,19 +2434,19 @@ components:
         experiences:
           type: array
           items:
-            $ref: '#/components/schemas/Experience'
+            $ref: "#/components/schemas/Experience"
           default: []
         educations:
           type: array
           items:
-            $ref: '#/components/schemas/Education'
+            $ref: "#/components/schemas/Education"
           default: []
         skills:
-          $ref: '#/components/schemas/Skills'
+          $ref: "#/components/schemas/Skills"
         languages:
           type: array
           items:
-            $ref: '#/components/schemas/Language'
+            $ref: "#/components/schemas/Language"
           default: []
           description: |
             Langues parlées. Était présent dans l'agent rédacteur mais jamais
@@ -2411,12 +2454,12 @@ components:
         projects:
           type: array
           items:
-            $ref: '#/components/schemas/Project'
+            $ref: "#/components/schemas/Project"
           default: []
         certifications:
           type: array
           items:
-            $ref: '#/components/schemas/Certification'
+            $ref: "#/components/schemas/Certification"
           default: []
 
     ProfileResponse:
@@ -2430,7 +2473,7 @@ components:
           type: string
           format: uuid
         profile_data:
-          $ref: '#/components/schemas/ProfileData'
+          $ref: "#/components/schemas/ProfileData"
         updated_at:
           type: string
           format: date-time
@@ -2442,7 +2485,7 @@ components:
         - profile_data
       properties:
         profile_data:
-          $ref: '#/components/schemas/ProfileData'
+          $ref: "#/components/schemas/ProfileData"
 
     # =========================================================================
     # CV — Génération asynchrone (Job)
@@ -2481,7 +2524,7 @@ components:
           example: "modern_sobre"
         theme:
           allOf:
-            - $ref: '#/components/schemas/CVTheme'
+            - $ref: "#/components/schemas/CVTheme"
           description: |
             Thème CV INLINE (preset de `GET /cv/themes`, éventuellement modifié).
             Optionnel : omis, le Thème CV par défaut du Template s'applique. Le thème
@@ -2489,7 +2532,7 @@ components:
             répond `402` (`premium-theme-required`).
         target_language:
           allOf:
-            - $ref: '#/components/schemas/DocumentLanguage'
+            - $ref: "#/components/schemas/DocumentLanguage"
           default: fr
           description: |
             Langue du document. Le contenu est RÉÉCRIT dans cette langue en visant
@@ -2622,7 +2665,7 @@ components:
         users:
           type: array
           items:
-            $ref: '#/components/schemas/AdminUserItem'
+            $ref: "#/components/schemas/AdminUserItem"
 
     # =========================================================================
     # Profil — Import asynchrone (brouillon éphémère, jamais persisté)
@@ -2667,7 +2710,7 @@ components:
             - `failed` : import échoué, `error_message` renseigné ; relancer via POST /profile/import-cv.
         profile_data:
           allOf:
-            - $ref: '#/components/schemas/ProfileData'
+            - $ref: "#/components/schemas/ProfileData"
           description: Brouillon extrait (non persisté). Présent uniquement si statut = `succeeded` (omis sinon).
         warnings:
           type: array
@@ -2707,10 +2750,10 @@ components:
           example: "modern_sobre"
         theme:
           allOf:
-            - $ref: '#/components/schemas/CVTheme'
+            - $ref: "#/components/schemas/CVTheme"
           description: Snapshot du Thème CV appliqué à ce CV (enveloppe du document).
         language:
-          $ref: '#/components/schemas/DocumentLanguage'
+          $ref: "#/components/schemas/DocumentLanguage"
         job_offer_id:
           type: string
           nullable: true
@@ -2750,12 +2793,12 @@ components:
           example: "modern_sobre"
         theme:
           allOf:
-            - $ref: '#/components/schemas/CVTheme'
+            - $ref: "#/components/schemas/CVTheme"
           description: |
             Snapshot du Thème CV appliqué (objet stocké avec le document, pas une
             référence mutable : modifier un preset n'altère jamais un document existant).
         language:
-          $ref: '#/components/schemas/DocumentLanguage'
+          $ref: "#/components/schemas/DocumentLanguage"
         job_offer_id:
           type: string
           nullable: true
@@ -2766,7 +2809,7 @@ components:
           nullable: true
           description: Texte de l'offre d'emploi utilisée pour la génération
         cv_data_json:
-          $ref: '#/components/schemas/GeneratedCVData'
+          $ref: "#/components/schemas/GeneratedCVData"
         gcs_pdf_url:
           type: string
           nullable: true
@@ -2797,7 +2840,7 @@ components:
           minLength: 1
           maxLength: 255
         cv_data_json:
-          $ref: '#/components/schemas/GeneratedCVData'
+          $ref: "#/components/schemas/GeneratedCVData"
         template_id:
           type: string
           minLength: 1
@@ -2808,13 +2851,13 @@ components:
           example: "modern_sobre"
         theme:
           allOf:
-            - $ref: '#/components/schemas/CVTheme'
+            - $ref: "#/components/schemas/CVTheme"
           description: |
             Nouveau Thème CV (inline, snapshoté). Personnalisé sans Pass actif : `402`
             (`premium-theme-required`).
         language:
           allOf:
-            - $ref: '#/components/schemas/DocumentLanguage'
+            - $ref: "#/components/schemas/DocumentLanguage"
           description: |
             Nouvelle langue de RENDU (titres de section, mois). Ne traduit pas le contenu.
             `en` sans Pass actif : `402` (`premium-language-required`).
@@ -2848,7 +2891,7 @@ components:
         - selected_educations
       properties:
         personal_info:
-          $ref: '#/components/schemas/PersonalInfo'
+          $ref: "#/components/schemas/PersonalInfo"
         summary:
           type: string
           maxLength: 2000
@@ -2857,30 +2900,30 @@ components:
           type: array
           maxItems: 30
           items:
-            $ref: '#/components/schemas/SelectedExperience'
+            $ref: "#/components/schemas/SelectedExperience"
           description: Expériences sélectionnées et réécrites (3-5 les plus pertinentes)
         highlighted_skills:
           type: array
           items:
-            $ref: '#/components/schemas/HighlightedSkill'
+            $ref: "#/components/schemas/HighlightedSkill"
           maxItems: 30
           description: Compétences priorisées pour l'offre (8-15)
         selected_educations:
           type: array
           maxItems: 30
           items:
-            $ref: '#/components/schemas/SelectedEducation'
+            $ref: "#/components/schemas/SelectedEducation"
         selected_projects:
           type: array
           maxItems: 30
           items:
-            $ref: '#/components/schemas/SelectedProject'
+            $ref: "#/components/schemas/SelectedProject"
           default: []
         selected_certifications:
           type: array
           maxItems: 30
           items:
-            $ref: '#/components/schemas/SelectedCertification'
+            $ref: "#/components/schemas/SelectedCertification"
           default: []
         optimization_notes:
           type: string
@@ -3095,7 +3138,7 @@ components:
           type: string
           example: "Moderne sobre"
         sector:
-          $ref: '#/components/schemas/TemplateSector'
+          $ref: "#/components/schemas/TemplateSector"
         is_free:
           type: boolean
           description: |
@@ -3138,7 +3181,7 @@ components:
 
     HexColor:
       type: string
-      pattern: '^#[0-9A-Fa-f]{6}$'
+      pattern: "^#[0-9A-Fa-f]{6}$"
       description: Couleur au format hexadécimal strict `#RRGGBB` (défense anti-injection CSS).
       example: "#2D3748"
 
@@ -3161,17 +3204,17 @@ components:
         - font_body
       properties:
         color_accent:
-          $ref: '#/components/schemas/HexColor'
+          $ref: "#/components/schemas/HexColor"
         color_text:
-          $ref: '#/components/schemas/HexColor'
+          $ref: "#/components/schemas/HexColor"
         color_muted:
-          $ref: '#/components/schemas/HexColor'
+          $ref: "#/components/schemas/HexColor"
         color_background:
-          $ref: '#/components/schemas/HexColor'
+          $ref: "#/components/schemas/HexColor"
         font_heading:
-          $ref: '#/components/schemas/CVFontFamily'
+          $ref: "#/components/schemas/CVFontFamily"
         font_body:
-          $ref: '#/components/schemas/CVFontFamily'
+          $ref: "#/components/schemas/CVFontFamily"
 
     CVTheme:
       type: object
@@ -3200,7 +3243,7 @@ components:
           maxLength: 60
           example: "Anthracite"
         tokens:
-          $ref: '#/components/schemas/CVThemeTokens'
+          $ref: "#/components/schemas/CVThemeTokens"
         is_free:
           type: boolean
           readOnly: true
@@ -3242,19 +3285,24 @@ components:
         - result_id
       properties:
         result_kind:
-          $ref: '#/components/schemas/JobResultKind'
+          $ref: "#/components/schemas/JobResultKind"
         result_id:
           type: string
           format: uuid
+          description: |
+            Identifiant de la ressource produite : le CV (`cv`), la lettre
+            (`letter`), ou — pour un `export` — le CV SOURCE exporté (le fichier
+            lui-même se récupère via `download_url`, pas par cet id).
         download_url:
           type: string
           nullable: true
-          format: uri
           description: |
-            URL de téléchargement du fichier, servie par le BACKEND (download
-            proxifié : authentification + ownership revérifiés à chaque accès,
-            le bucket reste privé — ADR-EXPORT-DELIVERY, R2 tranché).
-            Renseignée uniquement si `result_kind` = `export`.
+            CHEMIN de téléchargement RELATIF à l'API (ex. `/jobs/{id}/download`),
+            servi par le BACKEND (download proxifié : authentification +
+            ownership revérifiés à chaque accès, le bucket reste privé —
+            ADR-EXPORT-DELIVERY, R2 tranché ; relatif car le client appelle la
+            même origine que l'API). Renseigné uniquement si `result_kind` =
+            `export`.
         expires_at:
           type: string
           nullable: true
@@ -3267,7 +3315,7 @@ components:
             = `export`.
         review:
           allOf:
-            - $ref: '#/components/schemas/ReviewResult'
+            - $ref: "#/components/schemas/ReviewResult"
           description: Résultat de la relecture. Présent uniquement si `result_kind` = `review` (omis sinon).
 
     JobStatus:
@@ -3285,7 +3333,7 @@ components:
           type: string
           format: uuid
         job_type:
-          $ref: '#/components/schemas/JobType'
+          $ref: "#/components/schemas/JobType"
         status:
           type: string
           enum: [queued, running, succeeded, failed]
@@ -3303,7 +3351,7 @@ components:
           example: 55
         result:
           allOf:
-            - $ref: '#/components/schemas/JobResult'
+            - $ref: "#/components/schemas/JobResult"
           description: Ressource produite. Présent uniquement si statut = `succeeded` (omis sinon).
         error_message:
           type: string
@@ -3404,12 +3452,12 @@ components:
         matched_keywords:
           type: array
           items:
-            $ref: '#/components/schemas/ATSKeyword'
+            $ref: "#/components/schemas/ATSKeyword"
           description: Mots-clés de l'offre présents dans le CV. Partiel ou vide si `detail_truncated` = true.
         missing_keywords:
           type: array
           items:
-            $ref: '#/components/schemas/ATSKeyword'
+            $ref: "#/components/schemas/ATSKeyword"
           description: Mots-clés manquants. Partiel ou vide si `detail_truncated` = true.
         missing_keywords_count:
           type: integer
@@ -3442,7 +3490,7 @@ components:
         - format
       properties:
         format:
-          $ref: '#/components/schemas/ExportFormat'
+          $ref: "#/components/schemas/ExportFormat"
 
     ExportJobAccepted:
       type: object
@@ -3465,7 +3513,7 @@ components:
           enum: [queued]
           example: "queued"
         format:
-          $ref: '#/components/schemas/ExportFormat'
+          $ref: "#/components/schemas/ExportFormat"
         message:
           type: string
           example: "Export job accepted. Poll GET /v1/jobs/{job_id} for status."
@@ -3514,7 +3562,7 @@ components:
           description: Identifiant de la suggestion, unique au sein d'une relecture (suivi accepter / refuser côté client)
           example: "s1"
         section:
-          $ref: '#/components/schemas/ReviewSection'
+          $ref: "#/components/schemas/ReviewSection"
         target_id:
           type: string
           nullable: true
@@ -3522,7 +3570,7 @@ components:
             Identifiant de l'élément visé dans la section (ex. `id` d'une
             `SelectedExperience`). Null pour une suggestion portant sur toute la section.
         severity:
-          $ref: '#/components/schemas/ReviewSeverity'
+          $ref: "#/components/schemas/ReviewSeverity"
         message:
           type: string
           maxLength: 1000
@@ -3554,7 +3602,7 @@ components:
         suggestions:
           type: array
           items:
-            $ref: '#/components/schemas/ReviewSuggestion'
+            $ref: "#/components/schemas/ReviewSuggestion"
 
     ReviewJobAccepted:
       type: object
@@ -3651,9 +3699,9 @@ components:
         - signature
       properties:
         personal_info:
-          $ref: '#/components/schemas/PersonalInfo'
+          $ref: "#/components/schemas/PersonalInfo"
         recipient:
-          $ref: '#/components/schemas/CoverLetterRecipient'
+          $ref: "#/components/schemas/CoverLetterRecipient"
         place:
           type: string
           nullable: true
@@ -3691,7 +3739,7 @@ components:
           description: Formule de politesse finale
           example: "Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées."
         signature:
-          $ref: '#/components/schemas/CoverLetterSignature'
+          $ref: "#/components/schemas/CoverLetterSignature"
 
     GenerateLetterRequest:
       type: object
@@ -3734,20 +3782,20 @@ components:
           example: "modern_sobre"
         theme:
           allOf:
-            - $ref: '#/components/schemas/CVTheme'
+            - $ref: "#/components/schemas/CVTheme"
           description: |
             Thème CV INLINE, snapshoté dans la lettre. Défaut : celui du CV si `cv_id`
             est fourni, sinon le thème par défaut du Template.
         target_language:
           allOf:
-            - $ref: '#/components/schemas/DocumentLanguage'
+            - $ref: "#/components/schemas/DocumentLanguage"
           default: fr
           description: |
             Langue de la lettre. Le contenu est RÉÉCRIT dans cette langue en visant
             l'offre (pas de traduction littérale ; décision D7 ouverte).
         tone:
           allOf:
-            - $ref: '#/components/schemas/LetterTone'
+            - $ref: "#/components/schemas/LetterTone"
           description: Ton souhaité. Optionnel ; défaut serveur `balanced`.
 
     LetterJobAccepted:
@@ -3803,10 +3851,10 @@ components:
           example: "modern_sobre"
         theme:
           allOf:
-            - $ref: '#/components/schemas/CVTheme'
+            - $ref: "#/components/schemas/CVTheme"
           description: Snapshot du Thème CV appliqué à cette lettre.
         language:
-          $ref: '#/components/schemas/DocumentLanguage'
+          $ref: "#/components/schemas/DocumentLanguage"
         created_at:
           type: string
           format: date-time
@@ -3852,12 +3900,12 @@ components:
           example: "modern_sobre"
         theme:
           allOf:
-            - $ref: '#/components/schemas/CVTheme'
+            - $ref: "#/components/schemas/CVTheme"
           description: Snapshot du Thème CV appliqué (objet stocké, pas une référence mutable).
         language:
-          $ref: '#/components/schemas/DocumentLanguage'
+          $ref: "#/components/schemas/DocumentLanguage"
         letter_data_json:
-          $ref: '#/components/schemas/CoverLetterContent'
+          $ref: "#/components/schemas/CoverLetterContent"
         is_editable:
           type: boolean
           description: |
@@ -3883,19 +3931,19 @@ components:
           minLength: 1
           maxLength: 255
         letter_data_json:
-          $ref: '#/components/schemas/CoverLetterContent'
+          $ref: "#/components/schemas/CoverLetterContent"
         template_id:
           type: string
           minLength: 1
           maxLength: 64
-          description: 'Nouveau Template (identifiant inconnu : `422`)'
+          description: "Nouveau Template (identifiant inconnu : `422`)"
         theme:
           allOf:
-            - $ref: '#/components/schemas/CVTheme'
+            - $ref: "#/components/schemas/CVTheme"
           description: Nouveau Thème CV (inline, snapshoté)
         language:
           allOf:
-            - $ref: '#/components/schemas/DocumentLanguage'
+            - $ref: "#/components/schemas/DocumentLanguage"
           description: Nouvelle langue de RENDU (titres, dates). Ne traduit pas le contenu.
 
     # =========================================================================
@@ -3916,7 +3964,7 @@ components:
         - pass_type
       properties:
         pass_type:
-          $ref: '#/components/schemas/PassType'
+          $ref: "#/components/schemas/PassType"
         success_url:
           type: string
           description: URL de redirection après paiement réussi (override de la valeur par défaut)
@@ -3948,7 +3996,7 @@ components:
         - duration_days
       properties:
         pass_type:
-          $ref: '#/components/schemas/PassType'
+          $ref: "#/components/schemas/PassType"
         duration_days:
           type: integer
           description: Durée de validité du Pass en jours
@@ -3974,7 +4022,7 @@ components:
         passes:
           type: array
           items:
-            $ref: '#/components/schemas/CatalogEntry'
+            $ref: "#/components/schemas/CatalogEntry"
 
     BillingStatusResponse:
       type: object

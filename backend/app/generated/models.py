@@ -1466,10 +1466,13 @@ class JobResult(BaseModel):
     """
 
     result_kind: JobResultKind
-    result_id: UUID
-    download_url: AnyUrl | None = Field(
+    result_id: UUID = Field(
+        ...,
+        description='Identifiant de la ressource produite : le CV (`cv`), la lettre\n(`letter`), ou — pour un `export` — le CV SOURCE exporté (le fichier\nlui-même se récupère via `download_url`, pas par cet id).\n',
+    )
+    download_url: str | None = Field(
         None,
-        description='URL de téléchargement du fichier, servie par le BACKEND (download\nproxifié : authentification + ownership revérifiés à chaque accès,\nle bucket reste privé — ADR-EXPORT-DELIVERY, R2 tranché).\nRenseignée uniquement si `result_kind` = `export`.\n',
+        description="CHEMIN de téléchargement RELATIF à l'API (ex. `/jobs/{id}/download`),\nservi par le BACKEND (download proxifié : authentification +\nownership revérifiés à chaque accès, le bucket reste privé —\nADR-EXPORT-DELIVERY, R2 tranché ; relatif car le client appelle la\nmême origine que l'API). Renseigné uniquement si `result_kind` =\n`export`.\n",
     )
     expires_at: AwareDatetime | None = Field(
         None,

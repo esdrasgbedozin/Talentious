@@ -27,10 +27,15 @@ async def get_owned_job(
     current_user: User,
     *,
     job_types: Optional[tuple[JobType, ...]] = None,
+    not_found_on_forbidden: bool = False,
 ) -> CVJob:
     """Charge un job avec ownership (ou admin) ; `job_types` restreint les
     types servis (alias dépréciés) — hors périmètre ⇒ 404 identique à
-    l'inconnu."""
+    l'inconnu.
+
+    `not_found_on_forbidden` (M2-T17, download d'un fichier) : un job d'autrui
+    répond 404 au lieu de 403 — anti-IDOR strict, aucun oracle d'existence sur
+    un téléchargement. L'unification 403→404 des autres endpoints jobs est T18."""
     job = (await db.execute(select(CVJob).where(CVJob.id == job_id))).scalars().first()
     if job is None:
         raise HTTPException(
@@ -38,6 +43,11 @@ async def get_owned_job(
             detail=f"Job {job_id} not found",
         )
     if job.user_id != current_user.id and current_user.role != UserRole.ADMIN:
+        if not_found_on_forbidden:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Job {job_id} not found",
+            )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to access this job",

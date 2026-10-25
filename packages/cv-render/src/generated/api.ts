@@ -919,6 +919,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/jobs/{job_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Télécharger le fichier produit par un job d'export (proxifié)
+         * @description Renvoie le FICHIER produit par un job d'export `succeeded`
+         *     (download PROXIFIÉ par le backend — ADR-EXPORT-DELIVERY : le bucket
+         *     reste privé, l'ownership est revérifié à CHAQUE téléchargement). C'est
+         *     la cible de `result.download_url`.
+         *
+         *     Autorisé sans Pass (D1 : re-télécharger un document possédé n'est pas
+         *     une action premium). Un job inconnu ou d'un autre utilisateur, un job
+         *     non-export, ou un fichier purgé par la rétention répondent `404`
+         *     (relancer l'export reproduit le fichier). Un job non encore `succeeded`
+         *     répond `409`.
+         */
+        get: operations["downloadJobResult"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/billing/checkout-session": {
         parameters: {
             query?: never;
@@ -1909,14 +1938,20 @@ export interface components {
          */
         JobResult: {
             result_kind: components["schemas"]["JobResultKind"];
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Identifiant de la ressource produite : le CV (`cv`), la lettre
+             *     (`letter`), ou — pour un `export` — le CV SOURCE exporté (le fichier
+             *     lui-même se récupère via `download_url`, pas par cet id).
+             */
             result_id: string;
             /**
-             * Format: uri
-             * @description URL de téléchargement du fichier, servie par le BACKEND (download
-             *     proxifié : authentification + ownership revérifiés à chaque accès,
-             *     le bucket reste privé — ADR-EXPORT-DELIVERY, R2 tranché).
-             *     Renseignée uniquement si `result_kind` = `export`.
+             * @description CHEMIN de téléchargement RELATIF à l'API (ex. `/jobs/{id}/download`),
+             *     servi par le BACKEND (download proxifié : authentification +
+             *     ownership revérifiés à chaque accès, le bucket reste privé —
+             *     ADR-EXPORT-DELIVERY, R2 tranché ; relatif car le client appelle la
+             *     même origine que l'API). Renseigné uniquement si `result_kind` =
+             *     `export`.
              */
             download_url?: string | null;
             /**
@@ -3805,6 +3840,36 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    downloadJobResult: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du job asynchrone */
+                job_id: components["parameters"]["jobIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Le fichier exporté (binaire) */
+            200: {
+                headers: {
+                    /** @description Pièce jointe (nom de fichier suggéré) */
+                    "Content-Disposition"?: string;
+                    /** @description Donnée personnelle — jamais mise en cache */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["JobConflict"];
         };
     };
     createCheckoutSession: {

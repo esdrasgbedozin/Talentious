@@ -15,17 +15,25 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     HTTPException,
+    Request,
     Response,
     status,
 )
 from fastapi.responses import StreamingResponse
+
+from app.core.rate_limit import EXPORT_RATE_LIMIT, limiter
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.database import get_db, get_session_factory
-from app.generated.models import GeneratedCVData
+from app.generated.models import (
+    ExportFormat,
+    ExportJobAccepted,
+    ExportRequest,
+    GeneratedCVData,
+)
 from app.generated.models import CVTemplate as CVTemplateContract
 from app.generated.models import CVTheme as CVThemeContract
 from app.generated.models import DocumentLanguage as DocumentLanguageContract
@@ -63,6 +71,7 @@ from app.services.cv_worker import (
     CVEnvelope,
     run_cv_generation,
 )
+from app.services.export_worker import run_export_job
 
 logger = logging.getLogger(__name__)
 
@@ -577,6 +586,109 @@ async def generate_cv(
 
     response.headers["Location"] = f"/cv/jobs/{job.id}"
     return GenerateCVJobAccepted(job_id=job.id, status=job.status)
+
+
+_EXPORT_IN_PROGRESS = "An export is already in progress. Please wait for it to finish."
+
+
+@router.post(
+    "/{cv_id}/export",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=ExportJobAccepted,
+)
+@limiter.limit(EXPORT_RATE_LIMIT)
+async def export_cv(
+    request: Request,  # requis par slowapi (rate limit) — distinct du corps
+    cv_id: UUID,
+    payload: ExportRequest,
+    response: Response,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+    session_factory: async_sessionmaker = Depends(get_session_factory),
+):
+    """Lance l'export asynchrone d'un CV possédé (`job_type=export`).
+
+    Gating = OWNERSHIP (D1) : exporter un document possédé n'est PAS premium —
+    le PDF est autorisé sans Pass. `docx` est refusé par le drapeau R6 tant que
+    M8-T05/T07 n'a pas livré le rendu docx (422, jamais un échec sale en aval).
+
+    Raises:
+        HTTPException(404): CV inexistant OU appartenant à un autre utilisateur
+            (anti-IDOR : aucun oracle d'existence).
+        HTTPException(422): format `docx` tant que le drapeau est désactivé.
+        HTTPException(409): un export est déjà en cours pour cet utilisateur.
+    """
+    # Ownership : un CV d'autrui répond comme un inexistant (anti-IDOR). Le
+    # user_id vient de la SESSION authentifiée, jamais de la requête.
+    cv = (
+        (
+            await db.execute(
+                select(GeneratedCV)
+                .where(GeneratedCV.id == cv_id)
+                .where(GeneratedCV.user_id == current_user.id)
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if cv is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="CV not found"
+        )
+
+    # docx : capacité au contrat mais non implémentée (R6) — drapeau off ⇒ 422
+    # explicite, même avec un Pass (la gratuité premium viendra à M8-T07).
+    if payload.format is ExportFormat.docx and not settings.export_docx_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="L'export docx n'est pas encore disponible.",
+        )
+
+    # Idempotence : au plus un export actif par utilisateur (pré-check amical,
+    # l'index partiel uq_cv_jobs_one_active_per_user_type reste le vrai garde).
+    active = await db.execute(
+        select(CVJob)
+        .where(CVJob.user_id == current_user.id)
+        .where(CVJob.job_type == JobType.EXPORT)
+        .where(CVJob.status.in_([JobStatus.QUEUED, JobStatus.RUNNING]))
+    )
+    if active.scalars().first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=_EXPORT_IN_PROGRESS,
+        )
+
+    job = CVJob(
+        user_id=current_user.id,
+        cv_name=cv.cv_name,
+        status=JobStatus.QUEUED,
+        job_type=JobType.EXPORT,
+        cv_id=cv.id,
+        progress_pct=0,
+    )
+    db.add(job)
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        if not _is_active_job_conflict(exc):
+            raise
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=_EXPORT_IN_PROGRESS,
+        )
+    await db.refresh(job)
+
+    background_tasks.add_task(run_export_job, session_factory, job.id)
+    response.headers["Location"] = f"/jobs/{job.id}"
+    return ExportJobAccepted(
+        job_id=job.id,
+        job_type="export",
+        status="queued",
+        format=payload.format,
+        message="Export job accepted. Poll GET /jobs/{job_id} for status.",
+    )
 
 
 async def _get_owned_cv_generation_job(
