@@ -75,6 +75,10 @@ def _delete_sync(object_name: str) -> None:
         pass
 
 
+def _exists_sync(object_name: str) -> bool:
+    return _client().bucket(_bucket_name()).blob(object_name).exists()
+
+
 async def upload_export(object_name: str, data: bytes, content_type: str) -> None:
     """Écrit un fichier d'export dans le bucket privé (écrase l'existant)."""
     _bucket_name()  # échec AVANT le threadpool si non configuré
@@ -92,3 +96,13 @@ async def delete_export(object_name: str) -> None:
     """Supprime un fichier d'export (idempotent)."""
     _bucket_name()
     await run_in_threadpool(_delete_sync, object_name)
+
+
+async def export_exists(object_name: str) -> bool:
+    """Vrai si l'objet est présent dans le bucket (cache-hit vérifié, M2-T16).
+
+    Un objet purgé par la rétention laisse `cv.gcs_pdf_url` pointer dans le
+    vide : sans ce contrôle, le worker resservirait un cache mort et le
+    téléchargement échouerait — le re-rendu est alors forcé."""
+    _bucket_name()
+    return await run_in_threadpool(_exists_sync, object_name)
