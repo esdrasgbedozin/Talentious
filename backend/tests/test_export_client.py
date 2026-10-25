@@ -126,3 +126,104 @@ async def test_200_sans_pdf_est_une_erreur_sure():
     with pytest.raises(ExportUnavailableError) as exc:
         await render_pdf(**PAYLOAD_ARGS)
     assert "pas un pdf" not in str(exc.value)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [408, 429])
+@respx.mock
+async def test_408_et_429_sont_retryables(status):
+    """Revue T14 : statuts 4xx TRANSITOIRES ⇒ ExportUnavailableable (rejouable)."""
+    respx.post(f"{BASE}/render/pdf").mock(return_value=httpx.Response(status))
+    with pytest.raises(ExportUnavailableError):
+        await render_pdf(**PAYLOAD_ARGS)
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_pdf_trop_volumineux_rejete_sans_fuite():
+    """Revue T14 : un corps au-delà du plafond ⇒ erreur retryable, rien stocké."""
+    enorme = b"%PDF-" + b"x" * (21 * 1024 * 1024)
+    respx.post(f"{BASE}/render/pdf").mock(
+        return_value=httpx.Response(
+            200, content=enorme, headers={"content-type": "application/pdf"}
+        )
+    )
+    with pytest.raises(ExportUnavailableError) as exc:
+        await render_pdf(**PAYLOAD_ARGS)
+    assert "volumineuse" in str(exc.value).lower()
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_content_length_annonce_trop_grand_rejete():
+    respx.post(f"{BASE}/render/pdf").mock(
+        return_value=httpx.Response(
+            200,
+            content=b"%PDF-court",
+            headers={
+                "content-type": "application/pdf",
+                "content-length": str(99 * 1024 * 1024),
+            },
+        )
+    )
+    with pytest.raises(ExportUnavailableError):
+        await render_pdf(**PAYLOAD_ARGS)
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_request_id_hostile_non_propage():
+    """Revue T14 : un request_id hors format (CRLF) n'est jamais mis en en-tête."""
+    route = respx.post(f"{BASE}/render/pdf").mock(
+        return_value=httpx.Response(
+            200, content=b"%PDF-ok", headers={"content-type": "application/pdf"}
+        )
+    )
+    await render_pdf(**PAYLOAD_ARGS, request_id="abc\r\nX-Evil: 1")
+    assert "x-request-id" not in route.calls.last.request.headers
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_302_non_suivi_est_retryable():
+    """Revue T14 : un 3xx ne doit pas emporter le jeton ailleurs ⇒ statut ≠ 200."""
+    respx.post(f"{BASE}/render/pdf").mock(
+        return_value=httpx.Response(302, headers={"location": "https://evil.example"})
+    )
+    with pytest.raises(ExportUnavailableError):
+        await render_pdf(**PAYLOAD_ARGS)
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_audience_oidc_est_l_url_du_service(monkeypatch):
+    from app.config import settings
+    from app.services import iam_auth
+
+    monkeypatch.setattr(settings, "enable_iam_auth", True)
+    captured = {}
+    monkeypatch.setattr(
+        iam_auth, "_fetch_id_token", lambda audience: captured.setdefault("aud", audience) or "jeton"
+    )
+    respx.post(f"{BASE}/render/pdf").mock(
+        return_value=httpx.Response(
+            200, content=b"%PDF-ok", headers={"content-type": "application/pdf"}
+        )
+    )
+    await render_pdf(**PAYLOAD_ARGS)
+    assert captured["aud"] == BASE
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_read_timeout_est_retryable():
+    respx.post(f"{BASE}/render/pdf").mock(side_effect=httpx.ReadTimeout("130s"))
+    with pytest.raises(ExportUnavailableError):
+        await render_pdf(**PAYLOAD_ARGS)
+
+
+def test_timeout_lecture_couvre_le_rendu_service():
+    """La contrainte de l'ADR (lecture client > rendu service 120 s) est figée."""
+    from app.services import export_client
+
+    assert export_client._TIMEOUT.read > 120

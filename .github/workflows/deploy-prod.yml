@@ -67,11 +67,22 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - name: Install backend deps
         run: pip install -r backend/requirements.txt
+      # Émulateur GCS (M2-T15) : les services containers ne peuvent pas passer
+      # `-scheme http`, d'où un run explicite — sans lui les tests de
+      # storage_service seraient ignorés (DoD « les tests passent »).
+      - name: Start GCS emulator
+        run: |
+          docker run -d --name fake-gcs -p 4443:4443 fsouza/fake-gcs-server -scheme http
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:4443/storage/v1/b >/dev/null && break
+            sleep 0.5
+          done
       - name: Run backend tests
         working-directory: backend
         env:
           TEST_DATABASE_URL: postgresql+asyncpg://talentious:talentious@localhost:5432/talentious_test
           SECRET_KEY: test-secret-key-for-ci-only-not-production
+          STORAGE_EMULATOR_HOST: http://localhost:4443
         run: python -m pytest -q
       - name: Run parser-pdf agent tests (coercition ProfileData, sans dépendances)
         working-directory: agents/parser-pdf
