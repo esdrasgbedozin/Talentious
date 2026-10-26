@@ -9,6 +9,7 @@ and that Stripe customer deletion is best-effort (only when a customer exists).
 """
 
 from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import func, select
@@ -23,6 +24,7 @@ from app.models import (
     UserProfile,
 )
 from app.models.user import UserRole
+from app.services import storage_service
 from app.services.auth import hash_password
 
 
@@ -160,6 +162,48 @@ class TestDeleteAccount:
         monkeypatch.setattr("app.services.billing.delete_customer", _boom)
 
         response = await client.delete("/users/me", headers=headers)
+
+        assert response.status_code == 204
+        assert await _count(test_db, User) == 0
+
+    async def test_gcs_exports_purged_with_user_prefix(
+        self, client, auth_headers, test_user, monkeypatch
+    ):
+        """L'effacement purge le préfixe GCS de TOUT l'utilisateur (M2-T28)."""
+        purge = AsyncMock(return_value=3)
+        monkeypatch.setattr(storage_service, "delete_export_prefix", purge)
+
+        response = await client.delete("/users/me", headers=auth_headers)
+
+        assert response.status_code == 204
+        purge.assert_awaited_once_with(f"exports/{test_user.id}/")
+
+    async def test_gcs_purge_failure_does_not_block_erasure(
+        self, client, auth_headers, test_user, test_db, monkeypatch
+    ):
+        """Un échec de purge GCS ne bloque pas l'effacement dû (best-effort)."""
+        monkeypatch.setattr(
+            storage_service,
+            "delete_export_prefix",
+            AsyncMock(side_effect=RuntimeError("GCS down")),
+        )
+
+        response = await client.delete("/users/me", headers=auth_headers)
+
+        assert response.status_code == 204
+        assert await _count(test_db, User) == 0
+
+    async def test_gcs_non_configure_n_empeche_pas_effacement(
+        self, client, auth_headers, test_user, test_db, monkeypatch
+    ):
+        """Dev sans bucket : purge no-op, effacement RGPD normal."""
+        monkeypatch.setattr(
+            storage_service,
+            "delete_export_prefix",
+            AsyncMock(side_effect=storage_service.StorageNotConfiguredError()),
+        )
+
+        response = await client.delete("/users/me", headers=auth_headers)
 
         assert response.status_code == 204
         assert await _count(test_db, User) == 0

@@ -52,6 +52,7 @@ from app.core.problem import ProblemException
 from app.models.generated_cv import ANTHRACITE_TOKENS, DocumentLanguage
 from app.routes.auth import get_current_active_user
 from app.services.cv_content_coercion import CVContentCoercionError, coerce_cv_content
+from app.services import storage_service
 from app.services.cv_access import get_owned_cv
 from app.services.jobs import get_owned_job
 from app.services.entitlements import (
@@ -1010,7 +1011,17 @@ async def delete_cv(
             (ADR-GATING : accès croisé = 404, aucun oracle d'existence)
     """
     cv = await get_owned_cv(db, cv_id, current_user)
+    owner_id, cv_uuid = cv.user_id, cv.id
+
+    # Purge RGPD du fichier d'export AVANT la suppression DB (ADR-RGPD-ERASURE
+    # déc. 3), bornée à CE user/CV. Best-effort : un incident de stockage ne
+    # bloque JAMAIS la suppression (rétention du bucket M2-T20 en filet).
+    await storage_service.safe_delete_export_prefix(
+        storage_service.export_prefix(owner_id, cv_uuid), context=f"cv={cv_uuid}"
+    )
+
     await db.delete(cv)
     await db.commit()
 
-    logger.info(f"CV {cv_id} deleted by user {current_user.email}")
+    # Journal sans PII (ADR-RGPD-ERASURE déc. 6) : identifiants pseudonymes seuls.
+    logger.info("CV deleted: cv_id=%s user_id=%s", cv_id, current_user.id)

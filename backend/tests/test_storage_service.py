@@ -13,6 +13,7 @@ En CI : service `fake-gcs` du job `test` (deploy-prod.yml).
 
 import os
 import uuid
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -110,6 +111,66 @@ async def test_upload_refuse_un_export_trop_volumineux(bucket):
         )
 
 
+@requires_emulator
+@pytest.mark.asyncio
+async def test_delete_export_prefix_purge_ciblee(bucket):
+    """Purge RGPD : efface TOUT sous le préfixe d'un user/CV, et RIEN d'un autre."""
+    u_a, u_b = uuid.uuid4(), uuid.uuid4()
+    cv = uuid.uuid4()
+    pref_a = f"exports/{u_a}/{cv}/"
+    await storage_service.upload_export(f"{pref_a}e1.pdf", b"%PDF-1", "application/pdf")
+    await storage_service.upload_export(f"{pref_a}e2.pdf", b"%PDF-2", "application/pdf")
+    await storage_service.upload_export(
+        f"exports/{u_b}/{uuid.uuid4()}/autre.pdf", b"%PDF-B", "application/pdf"
+    )
+    deleted = await storage_service.delete_export_prefix(pref_a)
+    assert deleted == 2
+    assert await storage_service.export_exists(f"{pref_a}e1.pdf") is False
+    assert await storage_service.export_exists(f"{pref_a}e2.pdf") is False
+    # L'export d'un AUTRE utilisateur est intact (pas de sur-purge).
+    assert (
+        len(
+            list(storage_service._client().list_blobs(bucket, prefix=f"exports/{u_b}/"))
+        )
+        == 1
+    )
+
+
+@requires_emulator
+@pytest.mark.asyncio
+async def test_delete_export_prefix_idempotent(bucket):
+    """Purger un préfixe sans aucun objet ⇒ 0, sans erreur."""
+    assert await storage_service.delete_export_prefix(f"exports/{uuid.uuid4()}/") == 0
+
+
+@pytest.mark.parametrize(
+    "mauvais",
+    [
+        "",  # vide ⇒ effacerait tout le bucket
+        "exports/",  # pas d'UUID ⇒ tous les users
+        "exports/not-a-uuid/",  # UUID malformé
+        "exports/" + str(uuid.uuid4()),  # pas de / final ⇒ engloberait les voisins
+        "autre/" + str(uuid.uuid4()) + "/",  # pas ancré sur exports/
+        str(uuid.uuid4()) + "/",  # pas de racine exports/
+        # sous-chemin arbitraire au-delà de {user}/{cv}/ ⇒ refusé par fullmatch
+        f"exports/{uuid.uuid4()}/{uuid.uuid4()}/sous/",
+        f"exports/{uuid.uuid4()}/../{uuid.uuid4()}/",  # traversée refusée (fullmatch)
+    ],
+)
+@pytest.mark.asyncio
+async def test_delete_export_prefix_refuse_prefixe_dangereux(monkeypatch, mauvais):
+    """Garde-fou FAIL-CLOSED : un préfixe trop large lève ValueError AVANT réseau
+    (jamais de purge catastrophique). Le client GCS n'est même pas sollicité."""
+    monkeypatch.setattr(settings, "export_bucket_name", "un-bucket")
+    appels = []
+    monkeypatch.setattr(
+        storage_service, "_delete_prefix_sync", lambda p: appels.append(p)
+    )
+    with pytest.raises(ValueError):
+        await storage_service.delete_export_prefix(mauvais)
+    assert appels == []  # jamais exécuté sur un préfixe refusé
+
+
 @pytest.mark.asyncio
 async def test_bucket_non_configure_erreur_explicite_sans_reseau(monkeypatch):
     """Sans émulateur : bucket vide ⇒ erreur AVANT tout réseau (revue T15)."""
@@ -119,6 +180,7 @@ async def test_bucket_non_configure_erreur_explicite_sans_reseau(monkeypatch):
         storage_service.upload_export("exports/u1/x.pdf", b"x", "application/pdf"),
         storage_service.export_exists("exports/u1/x.pdf"),
         storage_service.delete_export("exports/u1/x.pdf"),
+        storage_service.delete_export_prefix(f"exports/{uuid.uuid4()}/"),
     ):
         with pytest.raises(StorageNotConfiguredError):
             await call
@@ -132,3 +194,58 @@ def test_emulateur_interdit_hors_development(monkeypatch):
     with pytest.raises(RuntimeError, match="hors development"):
         storage_service._client()
     storage_service._client.cache_clear()
+
+
+def test_export_prefix_builder():
+    """Source UNIQUE du préfixe (écriture == purge)."""
+    assert storage_service.export_prefix("u1") == "exports/u1/"
+    assert storage_service.export_prefix("u1", "c1") == "exports/u1/c1/"
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [
+        StorageNotConfiguredError("dev"),
+        ValueError("préfixe invalide"),
+        RuntimeError("GCS down"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_safe_delete_export_prefix_ne_leve_jamais(monkeypatch, exc):
+    """Le wrapper best-effort absorbe TOUTES les erreurs (effacement non bloqué)."""
+    monkeypatch.setattr(
+        storage_service, "delete_export_prefix", AsyncMock(side_effect=exc)
+    )
+    # Ne doit lever aucune exception, quel que soit l'incident.
+    await storage_service.safe_delete_export_prefix("exports/u/", context="t")
+
+
+def test_delete_prefix_sync_continue_sur_erreur_unitaire(monkeypatch):
+    """Un blob.delete en erreur NE stoppe PAS la purge : les autres sont tentés,
+    puis un bilan est levé (revue T28)."""
+
+    class _Blob:
+        def __init__(self, fail):
+            self.fail = fail
+            self.deleted = False
+
+        def delete(self, timeout=None):
+            if self.fail:
+                raise RuntimeError("boom")
+            self.deleted = True
+
+    b1, b2, b3 = _Blob(False), _Blob(True), _Blob(False)
+
+    class _Client:
+        def bucket(self, name):
+            return object()
+
+        def list_blobs(self, bucket, prefix=None, timeout=None):
+            return [b1, b2, b3]
+
+    monkeypatch.setattr(storage_service, "_client", lambda: _Client())
+    monkeypatch.setattr(settings, "export_bucket_name", "un-bucket")
+    with pytest.raises(RuntimeError, match="partielle"):
+        storage_service._delete_prefix_sync("exports/x/")
+    # b1 et b3 sont bien supprimés malgré l'échec de b2 (pas d'arrêt au 1er échec).
+    assert b1.deleted and b3.deleted

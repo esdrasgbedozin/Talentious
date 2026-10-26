@@ -43,11 +43,11 @@ reste 100 % PRIVÉ, aucun octet n'en sort sans passer par l'API.
   job `succeeded` sert le fichier À JOUR — comportement voulu (toujours le
   dernier rendu du CV), cohérent avec « expires_at null + relancer l'export
   pour régénérer ». Figer un fichier par job est hors périmètre bêta.
-- **RGPD — purge à l'effacement (ROUTÉ, revues T16/T17)** : la suppression
-  d'un CV ou d'un compte doit purger le préfixe `exports/{user_id}/...` du
-  bucket (aujourd'hui `delete_cv` ne supprime pas l'objet GCS ; `cv_id` passe
-  à NULL sur le job, le fichier devient inaccessible via l'API mais reste
-  stocké jusqu'à la rétention). À traiter en T18/ticket RGPD avant la V1.
+- **RGPD — purge à l'effacement (RÉSOLU M2-T28)** : `DELETE /cv/{id}` purge
+  `exports/{user_id}/{cv_id}/` et `DELETE /users/me` tout `exports/{user_id}/`,
+  AVANT la suppression DB, via `storage_service.delete_export_prefix`
+  (garde-fou fail-closed, best-effort) — voir ADR-RGPD-ERASURE déc. 3. La
+  rétention du bucket (M2-T20) rattrape un orphelin d'échec best-effort.
 - **Exposition de `gcs_pdf_url` (RÉSOLU M2-T18)** : le nom d'objet interne a été
   retiré de `CVDetailResponse` (contrat + types régénérés) — voir ADR-GATING
   déc. 10. La colonne DB demeure (usage serveur : worker + download proxifié).

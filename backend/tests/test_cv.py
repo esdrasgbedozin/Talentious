@@ -12,7 +12,7 @@ from sqlalchemy import select
 
 from app.models import CVJob, GeneratedCV, JobStatus, UserProfile
 from app.models.generated_cv import DocumentLanguage
-from app.services import cv_worker
+from app.services import cv_worker, storage_service
 from tests.test_cv_themes import _ANTHRACITE_TOKENS
 
 VALID_OFFER = (
@@ -200,6 +200,60 @@ class TestCVOwnership:
         assert (
             await client.delete(f"/cv/{cv.id}", headers=auth_headers)
         ).status_code == 404
+
+
+class TestDeleteCVPurgeExport:
+    """M2-T28 : supprimer un CV purge son export GCS (best-effort, borné au CV)."""
+
+    async def _make_cv(self, test_db, owner_id):
+        cv = GeneratedCV(
+            user_id=owner_id,
+            cv_name="à supprimer",
+            template_id="modern_sobre",
+            cv_data_json={"summary": "x"},
+        )
+        test_db.add(cv)
+        await test_db.commit()
+        await test_db.refresh(cv)
+        return cv
+
+    async def test_delete_purge_le_prefixe_du_cv(
+        self, client, auth_headers, test_user, test_db, monkeypatch
+    ):
+        cv = await self._make_cv(test_db, test_user.id)
+        purge = AsyncMock(return_value=1)
+        monkeypatch.setattr(storage_service, "delete_export_prefix", purge)
+        res = await client.delete(f"/cv/{cv.id}", headers=auth_headers)
+        assert res.status_code == 204
+        # Préfixe borné à CE user ET CE cv (jamais plus large).
+        purge.assert_awaited_once_with(f"exports/{test_user.id}/{cv.id}/")
+
+    async def test_echec_purge_ne_bloque_pas_la_suppression(
+        self, client, auth_headers, test_user, test_db, monkeypatch
+    ):
+        cv = await self._make_cv(test_db, test_user.id)
+        monkeypatch.setattr(
+            storage_service,
+            "delete_export_prefix",
+            AsyncMock(side_effect=RuntimeError("GCS down")),
+        )
+        res = await client.delete(f"/cv/{cv.id}", headers=auth_headers)
+        assert res.status_code == 204
+        assert await test_db.get(GeneratedCV, cv.id) is None
+
+    async def test_dev_sans_bucket_supprime_quand_meme(
+        self, client, auth_headers, test_user, test_db, monkeypatch
+    ):
+        """Stockage non configuré (dev) : purge no-op, suppression DB normale."""
+        cv = await self._make_cv(test_db, test_user.id)
+        monkeypatch.setattr(
+            storage_service,
+            "delete_export_prefix",
+            AsyncMock(side_effect=storage_service.StorageNotConfiguredError()),
+        )
+        res = await client.delete(f"/cv/{cv.id}", headers=auth_headers)
+        assert res.status_code == 204
+        assert await test_db.get(GeneratedCV, cv.id) is None
 
 
 # ----------------------------------------------------------------------------

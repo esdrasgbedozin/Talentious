@@ -139,7 +139,7 @@ async def download_job_result(
     # Défense en profondeur (revue T16) : ne JAMAIS servir un pointeur qui ne
     # vit pas sous le préfixe de CE user/CV — un pointeur corrompu ou croisé
     # ne doit pas livrer le fichier d'un autre. Jamais le nom en clair au client.
-    expected_prefix = f"exports/{job.user_id}/{job.cv_id}/"
+    expected_prefix = storage_service.export_prefix(job.user_id, job.cv_id)
     if not object_name or not object_name.startswith(expected_prefix):
         logger.error(
             "download: pointeur absent ou hors préfixe",

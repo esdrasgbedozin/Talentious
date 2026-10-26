@@ -167,7 +167,9 @@ async def _process(db, job: CVJob, session_factory: async_sessionmaker) -> None:
     language = cv.language.value if hasattr(cv.language, "value") else str(cv.language)
 
     fingerprint = _fingerprint(cv_content, template_id, theme, language, _FORMAT)
-    object_name = f"exports/{job.user_id}/{cv.id}/{fingerprint}.{_FORMAT}"
+    object_name = (
+        f"{storage_service.export_prefix(job.user_id, cv.id)}{fingerprint}.{_FORMAT}"
+    )
 
     try:
         # CACHE : même empreinte ET objet toujours présent ⇒ resservi sans
