@@ -156,7 +156,8 @@ class TestJobStatus:
     async def test_cannot_read_another_users_job(
         self, client, auth_headers, admin_user, test_db
     ):
-        """A non-owner, non-admin user gets 403 on someone else's job (IDOR guard)."""
+        """ADR-GATING (M2-T18) : un non-propriétaire reçoit 404 (PAS 403) sur le
+        job d'un autre — aucun oracle d'existence (IDOR guard)."""
         job = CVJob(user_id=admin_user.id, cv_name="admin job", status=JobStatus.QUEUED)
         test_db.add(job)
         await test_db.commit()
@@ -164,7 +165,7 @@ class TestJobStatus:
 
         # auth_headers is the standard (non-admin) test_user, not the owner.
         response = await client.get(f"/cv/jobs/{job.id}", headers=auth_headers)
-        assert response.status_code == 403
+        assert response.status_code == 404
 
 
 class TestCVOwnership:
@@ -184,19 +185,21 @@ class TestCVOwnership:
     async def test_cannot_get_update_delete_another_users_cv(
         self, client, auth_headers, admin_user, test_db
     ):
+        """ADR-GATING (M2-T18) : accès croisé en 404 sur GET/PUT/DELETE — aucun
+        oracle (indistinct d'un CV inexistant), jamais 403."""
         cv = await self._make_cv(test_db, admin_user.id)
         # auth_headers = non-admin test_user (not the owner)
         assert (
             await client.get(f"/cv/{cv.id}", headers=auth_headers)
-        ).status_code == 403
+        ).status_code == 404
         assert (
             await client.put(
                 f"/cv/{cv.id}", headers=auth_headers, json={"cv_name": "hacked"}
             )
-        ).status_code == 403
+        ).status_code == 404
         assert (
             await client.delete(f"/cv/{cv.id}", headers=auth_headers)
-        ).status_code == 403
+        ).status_code == 404
 
 
 # ----------------------------------------------------------------------------

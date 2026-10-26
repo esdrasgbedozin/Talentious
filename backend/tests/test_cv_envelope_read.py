@@ -207,8 +207,8 @@ class TestDetailAvecEnveloppe:
         self, client, auth_headers, test_db, admin_user
     ):
         """L'enveloppe n'ouvre aucune brèche d'ownership : le CV d'un autre
-        user répond comme avant (403 contrat V1 — harmonisation 404
-        anti-IDOR tracée M9-T11), sans fuite d'is_editable."""
+        user répond 404 (ADR-GATING M2-T18 : accès croisé = 404, aucun oracle),
+        sans fuite d'is_editable."""
         autre = GeneratedCV(
             user_id=admin_user.id,
             cv_name="pas à moi",
@@ -220,7 +220,7 @@ class TestDetailAvecEnveloppe:
         await test_db.refresh(autre)
 
         response = await client.get(f"/cv/{autre.id}", headers=auth_headers)
-        assert response.status_code == 403
+        assert response.status_code == 404
         assert "is_editable" not in response.json()
 
     async def test_un_id_inconnu_reste_404(self, client, auth_headers):

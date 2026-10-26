@@ -63,7 +63,6 @@ function cvDetail(templateId: string): CVDetail {
     updated_at: '2026-10-01T00:00:00Z',
     job_offer_context: null,
     cv_data_json: completeFixture as unknown as GeneratedCVData,
-    gcs_pdf_url: null,
   };
 }
 

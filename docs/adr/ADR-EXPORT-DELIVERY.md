@@ -48,7 +48,8 @@ reste 100 % PRIVÉ, aucun octet n'en sort sans passer par l'API.
   bucket (aujourd'hui `delete_cv` ne supprime pas l'objet GCS ; `cv_id` passe
   à NULL sur le job, le fichier devient inaccessible via l'API mais reste
   stocké jusqu'à la rétention). À traiter en T18/ticket RGPD avant la V1.
-- **Exposition de `gcs_pdf_url` (ROUTÉ, revue T17)** : la réponse CV expose le
-  nom d'objet interne ; à retirer de la sérialisation publique (T18).
+- **Exposition de `gcs_pdf_url` (RÉSOLU M2-T18)** : le nom d'objet interne a été
+  retiré de `CVDetailResponse` (contrat + types régénérés) — voir ADR-GATING
+  déc. 10. La colonne DB demeure (usage serveur : worker + download proxifié).
 - Émulateur : fake-gcs-server (`STORAGE_EMULATOR_HOST`) pour les tests —
   aucun bucket réel n'est touché avant le terraform T19 ([PAH-M2b]).

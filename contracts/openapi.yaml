@@ -864,8 +864,6 @@ paths:
                 $ref: "#/components/schemas/CVJobStatus"
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -908,8 +906,6 @@ paths:
                 description: Flux d'événements SSE (voir description de l'opération pour les formats)
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -1023,8 +1019,6 @@ paths:
                 $ref: "#/components/schemas/CVDetailResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -1071,8 +1065,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "402":
           $ref: "#/components/responses/PassRequired"
-        "403":
-          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "422":
@@ -1083,10 +1075,9 @@ paths:
       operationId: deleteCV
       summary: Supprimer un CV
       description: |
-        Supprime le CV et, si un PDF GCS existe (`gcs_pdf_url`), le fichier associé
-        est également supprimé du bucket. Les fichiers exportés (PDF, docx) sont
-        supprimés avec lui. Les Lettres liées (`cv_id`) ne sont pas supprimées : leur
-        `cv_id` passe à `null`.
+        Supprime le CV. Les Lettres liées (`cv_id`) ne sont pas supprimées : leur
+        `cv_id` passe à `null`. La purge du fichier d'export associé dans le stockage
+        relève de l'effacement RGPD (ticket dédié).
       parameters:
         - $ref: "#/components/parameters/cvIdPath"
       responses:
@@ -1094,8 +1085,6 @@ paths:
           description: CV supprimé avec succès (aucun corps)
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -1149,8 +1138,6 @@ paths:
                 $ref: "#/components/schemas/ATSScoreResult"
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
         "404":
           description: CV ou offre (`job_offer_id`) introuvable
           content:
@@ -1219,8 +1206,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "402":
           $ref: "#/components/responses/PassRequired"
-        "403":
-          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
@@ -1267,8 +1252,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "402":
           $ref: "#/components/responses/PassRequired"
-        "403":
-          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
@@ -1404,8 +1387,6 @@ paths:
                 $ref: "#/components/schemas/LetterDetailResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -1440,8 +1421,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "402":
           $ref: "#/components/responses/PassRequired"
-        "403":
-          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "422":
@@ -1461,8 +1440,6 @@ paths:
           description: Lettre supprimée avec succès (aucun corps)
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -1504,8 +1481,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "402":
           $ref: "#/components/responses/PassRequired"
-        "403":
-          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
@@ -1536,7 +1511,8 @@ paths:
         - `failed` : le traitement a échoué ; `error_message` contient un message
           générique.
 
-        Un job inconnu répond `404` ; un job appartenant à un autre utilisateur `403`.
+        Un job inconnu OU appartenant à un autre utilisateur répond `404` :
+        aucun oracle d'existence (ADR-GATING). Un admin accède en support.
         Remplace `GET /cv/jobs/{job_id}` (déprécié).
       parameters:
         - $ref: "#/components/parameters/jobIdPath"
@@ -1549,8 +1525,6 @@ paths:
                 $ref: "#/components/schemas/JobStatus"
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -2810,10 +2784,6 @@ components:
           description: Texte de l'offre d'emploi utilisée pour la génération
         cv_data_json:
           $ref: "#/components/schemas/GeneratedCVData"
-        gcs_pdf_url:
-          type: string
-          nullable: true
-          description: URL GCS du PDF exporté. Null si pas encore généré.
         is_editable:
           type: boolean
           description: |

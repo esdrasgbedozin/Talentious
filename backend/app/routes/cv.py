@@ -46,13 +46,13 @@ from app.models import (
     JobType,
     User,
     UserProfile,
-    UserRole,
 )
 from app.config import settings
 from app.core.problem import ProblemException
 from app.models.generated_cv import ANTHRACITE_TOKENS, DocumentLanguage
 from app.routes.auth import get_current_active_user
 from app.services.cv_content_coercion import CVContentCoercionError, coerce_cv_content
+from app.services.cv_access import get_owned_cv
 from app.services.jobs import get_owned_job
 from app.services.entitlements import (
     Decision,
@@ -154,7 +154,6 @@ class CVDetailResponse(BaseModel):
     job_offer_id: Optional[UUID] = None
     job_offer_context: Optional[str]
     cv_data_json: dict
-    gcs_pdf_url: Optional[str]
     is_editable: bool
     created_at: datetime
     updated_at: datetime
@@ -355,7 +354,6 @@ async def _detail_response(
         job_offer_id=cv.offer_id,
         job_offer_context=cv.job_offer_context,
         cv_data_json=cv.cv_data_json,
-        gcs_pdf_url=cv.gcs_pdf_url,
         is_editable=editable.allowed,
         created_at=cv.created_at,
         updated_at=cv.updated_at,
@@ -865,26 +863,10 @@ async def get_cv(
         Complete CV data including cv_data_json
 
     Raises:
-        HTTPException(404): CV not found
-        HTTPException(403): CV belongs to another user
+        HTTPException(404): CV inconnu OU appartenant à un autre utilisateur
+            (ADR-GATING : accès croisé = 404, aucun oracle d'existence)
     """
-    result = await db.execute(select(GeneratedCV).where(GeneratedCV.id == cv_id))
-    cv = result.scalars().first()
-
-    if not cv:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"CV with ID {cv_id} not found",
-        )
-
-    # Authorization check (403 contrat V1 — harmonisation 404 anti-IDOR
-    # tracée pour la matrice M9-T11, ADR-GATING).
-    if cv.user_id != current_user.id and current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to access this CV",
-        )
-
+    cv = await get_owned_cv(db, cv_id, current_user)
     return await _detail_response(db, current_user, cv)
 
 
@@ -906,29 +888,18 @@ async def update_cv(
     created_under_pass=true, jamais l'inverse (ADR-GATING déc. 8).
 
     Raises:
-        HTTPException(404): CV not found
-        HTTPException(403): CV belongs to another user
+        HTTPException(404): CV inconnu OU appartenant à un autre utilisateur
+            (ADR-GATING : accès croisé = 404, aucun oracle d'existence)
         ProblemException(402): édition d'un doc créé sous Pass sans Pass
             actif (D1), ou capacité premium introduite sans droit (types
             RFC 7807 du contrat)
         HTTPException(422): corps vide, contenu invalide, template/preset
             inconnu, thème illisible, langue désactivée (drapeau R6)
     """
-    result = await db.execute(select(GeneratedCV).where(GeneratedCV.id == cv_id))
-    cv = result.scalars().first()
-
-    if not cv:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"CV with ID {cv_id} not found",
-        )
-
-    # Authorization check (ownership D'ABORD, gating ENSUITE — ADR-GATING).
-    if cv.user_id != current_user.id and current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to update this CV",
-        )
+    # ADR-GATING (M2-T18) : ownership D'ABORD (404 inconnu/croisé, aucun
+    # oracle), gating premium (402) ENSUITE seulement — jamais un 402 avant le
+    # 404 qui révélerait qu'un CV d'autrui existe ET qu'il est premium.
+    cv = await get_owned_cv(db, cv_id, current_user)
 
     # Gating D1 (revue M1-T11 pt 2) : l'ÉCRITURE suit la même règle que
     # is_editable — un document créé sous Pass ne se modifie pas sans Pass
@@ -1035,25 +1006,10 @@ async def delete_cv(
     Delete a CV
 
     Raises:
-        HTTPException(404): CV not found
-        HTTPException(403): CV belongs to another user
+        HTTPException(404): CV inconnu OU appartenant à un autre utilisateur
+            (ADR-GATING : accès croisé = 404, aucun oracle d'existence)
     """
-    result = await db.execute(select(GeneratedCV).where(GeneratedCV.id == cv_id))
-    cv = result.scalars().first()
-
-    if not cv:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"CV with ID {cv_id} not found",
-        )
-
-    # Authorization check
-    if cv.user_id != current_user.id and current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to delete this CV",
-        )
-
+    cv = await get_owned_cv(db, cv_id, current_user)
     await db.delete(cv)
     await db.commit()
 

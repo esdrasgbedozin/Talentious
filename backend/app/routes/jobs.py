@@ -48,8 +48,8 @@ async def get_job_status(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """État courant d'un job, quel que soit son type. 404 inconnu, 403 job
-    d'autrui (contrat — même règle d'ownership que l'alias V1)."""
+    """État courant d'un job, quel que soit son type. Job inconnu OU d'un autre
+    utilisateur ⇒ 404 (aucun oracle d'existence — ADR-GATING ; l'admin accède)."""
     job = await get_owned_job(db, job_id, current_user)
 
     result = None
@@ -104,9 +104,9 @@ async def download_job_result(
     404 : job inconnu, d'un autre utilisateur (anti-IDOR strict), non-export,
     ou fichier purgé (relancer l'export). 409 : job pas encore `succeeded`.
     Autorisé sans Pass (D1). Un admin accède (get_owned_job)."""
-    # Ownership STRICT : un job d'autrui répond 404 (aucun oracle sur un
-    # téléchargement). user_id vient de la session, jamais de la requête.
-    job = await get_owned_job(db, job_id, current_user, not_found_on_forbidden=True)
+    # Ownership STRICT : un job d'autrui répond 404 (aucun oracle — ADR-GATING,
+    # désormais le comportement par défaut). user_id vient de la session.
+    job = await get_owned_job(db, job_id, current_user)
     # Accès admin au fichier d'un autre utilisateur (get_owned_job laisse
     # passer ADMIN) : donnée personnelle ⇒ trace d'AUDIT (revue sécu T17 — on
     # assume l'accès support, on ne le fait jamais en silence).

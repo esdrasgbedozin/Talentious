@@ -13,7 +13,8 @@ Garanties testées :
   `error_message` seulement en `failed` ;
 - tous types : un job `export` se lit sur `/jobs/{id}` mais répond 404 sur
   l'alias `/cv/jobs/{id}` ;
-- 401 sans auth, 404 inconnu, 403 job d'autrui (contrat).
+- 401 sans auth ; 404 inconnu ET 404 job d'autrui (ADR-GATING M2-T18 : accès
+  croisé = 404, aucun oracle — plus de 403).
 """
 
 import uuid
@@ -40,10 +41,12 @@ class TestAcces:
         response = await client.get(f"/jobs/{uuid.uuid4()}", headers=auth_headers)
         assert response.status_code == 404
 
-    async def test_job_d_autrui_403(self, client, auth_headers, test_db, admin_user):
+    async def test_job_d_autrui_404(self, client, auth_headers, test_db, admin_user):
+        """ADR-GATING (M2-T18) : un job d'autrui répond 404, PAS 403 — aucun
+        oracle d'existence (indistinct d'un job inconnu)."""
         job = await _seed_job(test_db, admin_user)
         response = await client.get(f"/jobs/{job.id}", headers=auth_headers)
-        assert response.status_code == 403
+        assert response.status_code == 404
 
 
 class TestCycleDeVie:

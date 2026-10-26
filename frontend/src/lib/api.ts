@@ -337,7 +337,6 @@ export interface CVDetail extends CVBase {
   // (backfill v2 + ceinture de coercition du worker), plus par l'app : les
   // consommateurs gardent leur défense au chargement (ensureCVShape).
   cv_data_json: GeneratedCVData;
-  gcs_pdf_url: string | null;
 }
 
 /** Fetch a single CV; `cv_data_json` is canonical GeneratedCVData, passed

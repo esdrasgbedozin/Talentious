@@ -1544,9 +1544,6 @@ class CVDetailResponse(BaseModel):
         None, description="Texte de l'offre d'emploi utilisée pour la génération"
     )
     cv_data_json: GeneratedCVData
-    gcs_pdf_url: str | None = Field(
-        None, description='URL GCS du PDF exporté. Null si pas encore généré.'
-    )
     is_editable: bool | None = Field(
         None,
         description='Calculé à la lecture (jamais persisté) : true si le Pass est actif ou si le\ndocument est entièrement gratuit. false = lecture et téléchargement seuls\n(décision D1) ; une édition premium répondrait `402`.\n',

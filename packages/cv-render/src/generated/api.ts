@@ -642,10 +642,9 @@ export interface paths {
         post?: never;
         /**
          * Supprimer un CV
-         * @description Supprime le CV et, si un PDF GCS existe (`gcs_pdf_url`), le fichier associé
-         *     est également supprimé du bucket. Les fichiers exportés (PDF, docx) sont
-         *     supprimés avec lui. Les Lettres liées (`cv_id`) ne sont pas supprimées : leur
-         *     `cv_id` passe à `null`.
+         * @description Supprime le CV. Les Lettres liées (`cv_id`) ne sont pas supprimées : leur
+         *     `cv_id` passe à `null`. La purge du fichier d'export associé dans le stockage
+         *     relève de l'effacement RGPD (ticket dédié).
          */
         delete: operations["deleteCV"];
         options?: never;
@@ -907,7 +906,8 @@ export interface paths {
          *     - `failed` : le traitement a échoué ; `error_message` contient un message
          *       générique.
          *
-         *     Un job inconnu répond `404` ; un job appartenant à un autre utilisateur `403`.
+         *     Un job inconnu OU appartenant à un autre utilisateur répond `404` :
+         *     aucun oracle d'existence (ADR-GATING). Un admin accède en support.
          *     Remplace `GET /cv/jobs/{job_id}` (déprécié).
          */
         get: operations["getJobStatus"];
@@ -1670,8 +1670,6 @@ export interface components {
             /** @description Texte de l'offre d'emploi utilisée pour la génération */
             job_offer_context?: string | null;
             cv_data_json: components["schemas"]["GeneratedCVData"];
-            /** @description URL GCS du PDF exporté. Null si pas encore généré. */
-            gcs_pdf_url?: string | null;
             /**
              * @description Calculé à la lecture (jamais persisté) : true si le Pass est actif ou si le
              *     document est entièrement gratuit. false = lecture et téléchargement seuls
@@ -3320,7 +3318,6 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -3345,7 +3342,6 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -3437,7 +3433,6 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -3468,7 +3463,6 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             402: components["responses"]["PassRequired"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
@@ -3493,7 +3487,6 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -3523,7 +3516,6 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             /** @description CV ou offre (`job_offer_id`) introuvable */
             404: {
                 headers: {
@@ -3586,7 +3578,6 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             402: components["responses"]["PassRequired"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["JobConflict"];
             422: components["responses"]["ValidationError"];
@@ -3617,7 +3608,6 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             402: components["responses"]["PassRequired"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["JobConflict"];
             /**
@@ -3721,7 +3711,6 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -3745,7 +3734,6 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -3776,7 +3764,6 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             402: components["responses"]["PassRequired"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
@@ -3810,7 +3797,6 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             402: components["responses"]["PassRequired"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["JobConflict"];
             422: components["responses"]["ValidationError"];
@@ -3838,7 +3824,6 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
