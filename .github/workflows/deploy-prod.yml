@@ -141,6 +141,14 @@ jobs:
           fi
           docker build -f "${{ matrix.dockerfile }}" "${EXTRA_ARGS[@]}" \
             -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" "${{ matrix.context }}"
+          # Garde de sécurité AVANT push (M2-T23) : l'image à la plus large
+          # surface CVE (base Chromium) est scannée ; un CRITICAL corrigeable
+          # bloque le push (fail-closed). Le script N'utilise NI la socket docker
+          # NI un montage du dépôt (ce job porte les identifiants WIF) — détail
+          # dans scripts/ci/trivy-scan.sh. Autres images : suivi M2-T30.
+          if [ "${{ matrix.name }}" = "export-service" ]; then
+            bash scripts/ci/trivy-scan.sh "$IMAGE:${{ github.sha }}"
+          fi
           docker push "$IMAGE:${{ github.sha }}"
           docker push "$IMAGE:latest"
 

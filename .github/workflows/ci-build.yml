@@ -1,15 +1,18 @@
 # =============================================================================
-# Garde-fou de BUILD sur PR — valide que toutes les images Docker se
-# construisent AVANT le merge sur main (le deploy-prod.yml ne build qu'au push
-# main). Introduit avec M0-T07 : le build frontend passe en contexte RACINE
-# (workspaces npm) ; ce check attrape toute casse du Dockerfile/contexte/lockfile
-# avant qu'elle n'atteigne la branche de déploiement.
+# Garde-fou de BUILD sur PR (+ rebuild/rescan MENSUEL) — valide que toutes les
+# images Docker se construisent AVANT le merge sur main (le deploy-prod.yml ne
+# build qu'au push main). Introduit avec M0-T07 : le build frontend passe en
+# contexte RACINE (workspaces npm) ; ce check attrape toute casse du
+# Dockerfile/contexte/lockfile avant qu'elle n'atteigne la branche de déploiement.
+# Depuis M2-T23 : scan Trivy de l'image export-service + cron mensuel qui rejoue
+# build + scan sur main pour attraper la dérive CVE des bases (Chromium).
 # - AUCUN push d'image, AUCUNE auth GCP, AUCUN secret : build local au runner.
 # - ubuntu-latest = linux/amd64 : parité avec la CI de déploiement et Cloud Run
 #   (et avec les binaires natifs linux du package-lock.json racine).
+# - Échec du cron mensuel : GitHub notifie l'auteur du workflow par défaut.
 # =============================================================================
 
-name: CI Build (PR)
+name: CI Build (PR + scan mensuel)
 
 on:
   pull_request:
@@ -25,6 +28,11 @@ on:
       - ".dockerignore"
       - "**/*.dockerignore"
       - ".github/workflows/ci-build.yml"
+  # Rebuild + rescan MENSUEL (M2-T23) : rejoue build + scan Trivy sur `main`
+  # même sans PR, pour attraper la dérive CVE des images de base (Chromium en
+  # tête) entre deux changements de code.
+  schedule:
+    - cron: "0 6 1 * *"
   workflow_dispatch: {}
 
 permissions:
@@ -111,5 +119,13 @@ jobs:
               --build-arg "NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ vars.GOOGLE_OAUTH_CLIENT_ID || '' }}"
             )
           fi
-          docker build -f "${{ matrix.dockerfile }}" "${EXTRA_ARGS[@]}" \
+          # --load : rend l'image disponible dans le store docker local pour que
+          # `docker save` (étape Trivy) puisse l'exporter.
+          docker build --load -f "${{ matrix.dockerfile }}" "${EXTRA_ARGS[@]}" \
             -t "${{ matrix.name }}:pr" "${{ matrix.context }}"
+      - name: Scan Trivy (gate CRITICAL) — export-service
+        # Scan de l'image à la plus large surface CVE (base Chromium). Détail du
+        # gate et du choix « sans socket docker » : scripts/ci/trivy-scan.sh.
+        # Les autres images sont couvertes par le ticket de suivi M2-T30.
+        if: matrix.name == 'export-service'
+        run: bash scripts/ci/trivy-scan.sh "${{ matrix.name }}:pr"
