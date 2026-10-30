@@ -18,6 +18,7 @@ on:
       - "backend/**"
       - "frontend/**"
       - "agents/**"
+      - "export-service/**"
       - "packages/**"
       - "package.json"
       - "package-lock.json"
@@ -73,7 +74,7 @@ jobs:
       - name: Start GCS emulator
         run: |
           docker run -d --name fake-gcs -p 4443:4443 fsouza/fake-gcs-server -scheme http
-          for i in $(seq 1 20); do
+          for _ in $(seq 1 20); do
             curl -sf http://localhost:4443/storage/v1/b >/dev/null && break
             sleep 0.5
           done
@@ -102,6 +103,11 @@ jobs:
             # package workspace packages/cv-render + le lockfile unique racine.
             context: .
             dockerfile: frontend/Dockerfile.prod
+          - name: export-service
+            # Contexte RACINE comme frontend (M2-T02) : le build SSR consomme le
+            # package workspace packages/cv-render + le lockfile unique racine.
+            context: .
+            dockerfile: export-service/Dockerfile.prod
           - name: parser-pdf
             context: agents/parser-pdf
             dockerfile: agents/parser-pdf/Dockerfile
@@ -123,12 +129,18 @@ jobs:
       - name: Build and push ${{ matrix.name }}
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ matrix.name }}"
-          EXTRA_ARGS=""
+          # Tableau (pas une chaîne) : chaque --build-arg est passé comme un
+          # argument distinct et correctement quoté (parité ci-build.yml).
+          EXTRA_ARGS=()
           if [ "${{ matrix.name }}" = "frontend" ]; then
-            EXTRA_ARGS="--build-arg NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://api.talentious.app' }} --build-arg NEXT_PUBLIC_ENVIRONMENT=production --build-arg NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ vars.GOOGLE_OAUTH_CLIENT_ID || '' }}"
+            EXTRA_ARGS=(
+              --build-arg "NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://api.talentious.app' }}"
+              --build-arg "NEXT_PUBLIC_ENVIRONMENT=production"
+              --build-arg "NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ vars.GOOGLE_OAUTH_CLIENT_ID || '' }}"
+            )
           fi
-          docker build -f ${{ matrix.dockerfile }} $EXTRA_ARGS \
-            -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" ${{ matrix.context }}
+          docker build -f "${{ matrix.dockerfile }}" "${EXTRA_ARGS[@]}" \
+            -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" "${{ matrix.context }}"
           docker push "$IMAGE:${{ github.sha }}"
           docker push "$IMAGE:latest"
 
@@ -223,10 +235,36 @@ jobs:
           service_account: ${{ env.DEPLOYER_SA }}
       - uses: google-github-actions/setup-gcloud@v2
       - name: Roll out new images (config stays Terraform-owned)
+        # Ordre VOULU : les dépendances du backend (export-service puis agents) et
+        # le frontend AVANT le backend, déployé EN DERNIER. Une version du backend
+        # qui appelle l'export-service ne doit jamais précéder la mise à jour de
+        # ce dernier — sinon fenêtre d'échec d'export le temps du rollout.
+        #
+        # AMORÇAGE EN 2 TEMPS pour export-service (dépend de T19, apply=PAH-M2b),
+        # piloté par la VARIABLE DE DÉPÔT `EXPORT_SERVICE_PROVISIONED` — PAS une
+        # détection dynamique : un `gcloud describe` qui échoue avalerait une vraie
+        # panne (IAM, région, API, jeton WIF expiré) et, pire, masquerait une
+        # SUPPRESSION accidentelle du service après coup (revues sécu+qualité T22).
+        #   1er temps (variable absente ou ≠ "true") : l'image est déjà poussée
+        #     (job build-push) mais le service Cloud Run n'existe pas encore →
+        #     on saute SON rollout, avec une trace visible (warning + résumé).
+        #   2e temps : au moment de l'apply T19, l'humain crée le service ET passe
+        #     `EXPORT_SERVICE_PROVISIONED=true` (acte explicite, cohérent avec le
+        #     point d'arrêt humain) → export-service est déployé comme les autres
+        #     et un service manquant fait DÉSORMAIS échouer le job (plus de
+        #     masquage). Retrait du garde = ticket M2-T19.
+        # Ce contournement ne concerne QUE export-service : un service censé
+        # exister (backend, frontend, agents) qui manquerait échoue TOUJOURS.
         run: |
-          for SVC in backend frontend parser-pdf analyseur-offre redacteur-cv; do
+          for SVC in export-service parser-pdf analyseur-offre redacteur-cv frontend backend; do
             IMAGE="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/$SVC:${{ github.sha }}"
             echo "→ $SVC ($IMAGE)"
+            if [ "$SVC" = "export-service" ] && [ "${{ vars.EXPORT_SERVICE_PROVISIONED }}" != "true" ]; then
+              MSG="export-service pas encore provisionné (vars.EXPORT_SERVICE_PROVISIONED≠true) — image poussée, rollout sauté (amorçage 2 temps ; basculer la variable avec l'apply T19/PAH-M2b)"
+              echo "::warning::$MSG"
+              echo "⚠️ $MSG" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
             gcloud run services update "$SVC" \
               --region "${{ env.REGION }}" \
               --image "$IMAGE" \
