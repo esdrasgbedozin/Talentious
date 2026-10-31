@@ -26,7 +26,10 @@ resource "google_project_service" "apis" {
     "secretmanager.googleapis.com",
     "aiplatform.googleapis.com",
     "iam.googleapis.com",
-    "cloudbuild.googleapis.com"
+    "cloudbuild.googleapis.com",
+    "billingbudgets.googleapis.com",      # M2-T25 : google_billing_budget
+    "monitoring.googleapis.com",          # M2-T25 : canal + alerte de rythme LLM
+    "cloudresourcemanager.googleapis.com" # M2-T25 : data google_project (numéro de projet)
   ])
   service            = each.key
   disable_on_destroy = false
