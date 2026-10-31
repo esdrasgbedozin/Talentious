@@ -1,7 +1,7 @@
 # ============================================
 # Stage 1: Builder - Install dependencies
 # ============================================
-FROM python:3.11-slim AS builder
+FROM python:3.15-slim AS builder
 
 WORKDIR /build
 
@@ -20,7 +20,7 @@ RUN pip wheel --no-cache-dir --wheel-dir /build/wheels -r requirements.txt
 # ============================================
 # Stage 2: Runtime - Production image
 # ============================================
-FROM python:3.11-slim
+FROM python:3.15-slim
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
