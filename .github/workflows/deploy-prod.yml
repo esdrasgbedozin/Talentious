@@ -296,22 +296,29 @@ jobs:
           # export-service (M2-T24) : service PRIVÉ (invoker = backend-sa SEUL).
           # On NE l'appelle PAS directement (ce serait donner run.invoker au
           # déployeur — droit refusé, revue T22). On vérifie par MÉTADONNÉE que la
-          # révision qui SERT le trafic (dernière Ready) porte bien l'image EXACTE
-          # du commit. Gated sur le 2e temps d'amorçage : tant que la variable
-          # n'est pas à true, la CI ne déploie pas encore export-service.
+          # révision qui SERT le trafic (dernière Ready) tourne bien l'image du
+          # commit. Cloud Run épingle l'image de révision par DIGEST : on compare
+          # donc des DIGESTS — le tag du commit résolu en digest (via Artifact
+          # Registry) vs le digest réellement servi — et PAS des tags (sinon
+          # faux-échec tag≠digest). Gated sur le 2e temps d'amorçage.
           if [ "${{ vars.EXPORT_SERVICE_PROVISIONED }}" = "true" ]; then
-            EXPECTED_IMAGE="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/export-service:${{ github.sha }}"
+            EXPECTED_REF="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/export-service:${{ github.sha }}"
+            EXPECTED_DIGEST=$(gcloud artifacts docker images describe "$EXPECTED_REF" \
+              --format 'value(image_summary.digest)')
             EXPORT_REV=$(gcloud run services describe export-service \
               --region "${{ env.REGION }}" \
               --format 'value(status.latestReadyRevisionName)')
-            EXPORT_IMAGE=$(gcloud run revisions describe "$EXPORT_REV" \
+            SERVING_IMAGE=$(gcloud run revisions describe "$EXPORT_REV" \
               --region "${{ env.REGION }}" \
               --format 'value(spec.containers[0].image)')
-            echo "export-service révision Ready: $EXPORT_REV ($EXPORT_IMAGE)"
-            if [ "$EXPORT_IMAGE" = "$EXPECTED_IMAGE" ]; then
-              echo "✅ export-service sert l'image du commit (${{ github.sha }})"
+            SERVING_DIGEST="${SERVING_IMAGE##*@}" # ...@sha256:xxx -> sha256:xxx
+            echo "export-service révision Ready: $EXPORT_REV"
+            echo "  servi   : $SERVING_DIGEST"
+            echo "  attendu : $EXPECTED_DIGEST (tag ${{ github.sha }})"
+            if [ -n "$EXPECTED_DIGEST" ] && [ "$SERVING_DIGEST" = "$EXPECTED_DIGEST" ]; then
+              echo "✅ export-service sert bien l'image du commit"
             else
-              echo "❌ export-service : image servie '$EXPORT_IMAGE' ≠ attendue '$EXPECTED_IMAGE'"
+              echo "❌ export-service : digest servi '$SERVING_DIGEST' ≠ attendu '$EXPECTED_DIGEST'"
               exit 1
             fi
           else
