@@ -1,0 +1,92 @@
+# =============================================================================
+# Dependabot — mises à jour de version (M2-T23).
+# Couvre npm (workspaces, lockfile unique racine) et les images Docker de tous
+# les services. github-actions et pip (backend/agents) ne sont PAS couverts ici
+# (scope roadmap strict « Docker/npm ») — tracé en suivi : M2-T30.
+#
+# INVARIANT PLAYWRIGHT (ADR-PDF-RENDER / export-service pinning.test.ts) : la
+# version npm `playwright-core` DOIT égaler le tag de l'image Playwright du
+# Dockerfile de l'export-service. Dependabot ne peut pas garantir ce lockstep via
+# deux PR séparées (npm vs docker) : chacune, seule, casserait l'invariant et
+# mettrait la CI en rouge. Les DEUX sont donc IGNORÉES ici et montées ENSEMBLE,
+# à la main, au rebuild mensuel. Procédure : docs/RUNBOOK_SECURITY_SCAN.md.
+# (Upgrade possible plus tard : multi-ecosystem groups, GA 2025-07, pour un PR
+#  unique npm+docker coordonné.)
+# =============================================================================
+version: 2
+updates:
+  # ---- npm : monorepo workspaces (le lockfile racine couvre tous les workspaces) ----
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      npm:
+        patterns: ["*"]
+    ignore:
+      # Invariant Playwright — bump manuel coordonné avec l'image (rebuild mensuel).
+      - dependency-name: "playwright-core"
+
+  # ---- docker : une entrée par dossier contenant un Dockerfile* ----
+  # (Dependabot docker reconnaît les fichiers dont le nom contient « dockerfile »,
+  #  donc Dockerfile ET Dockerfile.prod.)
+  - package-ecosystem: "docker"
+    directory: "/export-service"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      docker:
+        patterns: ["*"]
+    ignore:
+      # Invariant Playwright — bump manuel coordonné avec playwright-core.
+      - dependency-name: "mcr.microsoft.com/playwright"
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      docker:
+        patterns: ["*"]
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      docker:
+        patterns: ["*"]
+  - package-ecosystem: "docker"
+    directory: "/agents/parser-pdf"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      docker:
+        patterns: ["*"]
+  - package-ecosystem: "docker"
+    directory: "/agents/analyseur-offre"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      docker:
+        patterns: ["*"]
+  - package-ecosystem: "docker"
+    directory: "/agents/redacteur-cv"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      docker:
+        patterns: ["*"]

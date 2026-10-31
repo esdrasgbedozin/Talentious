@@ -78,10 +78,10 @@ anti-ressentiment D1).
    mais reste soumis à l'authentification.
 
 7bis. **En édition du document d'AUTRUI (support), les capacités d'enveloppe
-   suivent le plan du PROPRIÉTAIRE** (revue M1-T14) : le bypass admin ne vaut
-   que pour `can_edit` (débloquer/corriger un document) — un admin ne peut
-   pas poser une capacité premium sur le document d'un user gratuit (le
-   cliquet le verrouillerait sans issue pour son propriétaire).
+suivent le plan du PROPRIÉTAIRE** (revue M1-T14) : le bypass admin ne vaut
+que pour `can_edit` (débloquer/corriger un document) — un admin ne peut
+pas poser une capacité premium sur le document d'un user gratuit (le
+cliquet le verrouillerait sans issue pour son propriétaire).
 
 8. **`created_under_pass` est un CLIQUET MONOTONE** (revue data M1-T13) : posé
    à la création = « capacité premium consommée » (sens « entièrement
@@ -92,6 +92,41 @@ anti-ressentiment D1).
    Limite assumée : le flag et la gratuité d'un preset sont figés À LA
    REQUÊTE — un `is_free` de registre modifié ensuite ne réécrit pas les
    documents existants (cohérent avec le snapshot).
+
+9. **Unification 403→404 EXÉCUTÉE (M2-T18).** L'ADR actait « 404 anti-IDOR,
+   jamais 403 » (déc. 4) mais plusieurs endpoints livrés rendaient encore un
+   403 pour une ressource d'autrui (contrat ET code) — divergence corrigée ici.
+   Désormais, sur TOUTE ressource possédée, un accès par un non-propriétaire
+   (hors admin) répond le même **404** qu'une ressource inexistante :
+   - `get_owned_job` renvoie 404 par défaut — le paramètre transitoire
+     `not_found_on_forbidden` (M2-T17) est supprimé, le 404 est le seul
+     comportement ; couvre `GET /jobs/{id}`, l'alias déprécié
+     `GET /cv/jobs/{id}` et son flux SSE, et `GET /jobs/{id}/download` ;
+   - `GET`/`PUT`/`DELETE /cv/{id}` et `POST /cv/{id}/export` : CV inconnu ET CV
+     d'autrui ⇒ même 404 (ownership d'abord, gating 402 ensuite — déc. 4). La
+     règle d'ownership CV est centralisée dans `get_owned_cv` (symétrique de
+     `get_owned_job`) : une règle de sécurité, un seul point de vérité.
+   - le contrat retire le `403` de TOUTES les opérations de ressource possédée —
+     les 6 livrées ci-dessus ET les non encore livrées (ats-score, review, et
+     `/letters/{id}` GET/PATCH/DELETE + export) — pour qu'aucun oracle ne
+     subsiste côté spec (Contract First) ; leurs routes appliqueront ce 404 dès
+     leur câblage (déc. 4 + 6, même ordre). Types régénérés même commit.
+   - **Asymétrie assumée de l'export** : `POST /cv/{id}/export` filtre en SQL sur
+     `user_id == current_user.id` (sans bypass admin) — un admin ne CRÉE pas
+     d'export sur le CV d'un autre (moindre privilège, fail-closed) ; il peut en
+     revanche RE-TÉLÉCHARGER un export existant via `/jobs/{id}/download`
+     (support, tracé en audit). Voulu, pas un oubli.
+
+   Le **RBAC admin-only** (`require_admin`, ex. `/admin/users`) garde son 403 :
+   l'appelant est authentifié et connu, il manque un RÔLE — aucun oracle sur une
+   ressource. L'unification ne concerne QUE l'IDOR de ressource possédée.
+
+10. **Aucun nom d'objet de stockage interne dans une réponse publique
+    (M2-T18).** `gcs_pdf_url` (chemin GCS `exports/{user}/{cv}/…`) est retiré de
+    `CVDetailResponse` : le téléchargement passe par la route proxifiée
+    (`result.download_url`, ADR-EXPORT-DELIVERY), le client n'a jamais besoin du
+    chemin interne — l'exposer ne ferait que révéler la topologie du bucket. La
+    colonne DB demeure (le worker/le download l'utilisent côté serveur).
 
 ## Reste à faire (finalisation M9-T11)
 

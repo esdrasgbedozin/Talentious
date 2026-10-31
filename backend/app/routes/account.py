@@ -17,9 +17,11 @@ JWT invalidation: tokens are stateless (no revocation list), but ``get_current_u
 reloads the user on every request, so a deleted account's token is de-facto
 rejected (401) on the very next call.
 
-Extension point: PDF storage in GCS is not implemented (``gcs_pdf_url`` is never
-written and there is no GCS client). When it is, erasure MUST also purge the
-user's GCS blobs here, before the DB rows are deleted.
+Purge GCS (M2-T28) : l'export PDF de l'utilisateur vit dans un bucket privé sous
+``exports/{user_id}/…``. L'effacement purge ce préfixe AVANT de supprimer les
+lignes DB (ADR-RGPD-ERASURE déc. 3), en best-effort : un incident de stockage
+ne bloque pas un effacement légalement dû (la rétention du bucket, M2-T20, reste
+le filet de sécurité).
 """
 
 import logging
@@ -34,6 +36,7 @@ from app.models import User
 from app.routes.auth import get_current_active_user
 from app.services import billing
 from app.services import email_service
+from app.services import storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +64,13 @@ async def delete_account(
                 "Stripe customer deletion failed for user %s (continuing erasure)",
                 user_id,
             )
+
+    # Purge RGPD des exports GCS AVANT la suppression DB (ADR-RGPD-ERASURE
+    # déc. 3) : tout le préfixe exports/{user_id}/ (tous ses CV). Best-effort —
+    # comme Stripe, un échec de stockage ne bloque pas l'effacement dû.
+    await storage_service.safe_delete_export_prefix(
+        storage_service.export_prefix(user_id), context=f"user={user_id}"
+    )
 
     # Hard delete. Postgres ON DELETE CASCADE purges profile, CVs, jobs and passes.
     await db.execute(delete(User).where(User.id == user_id))

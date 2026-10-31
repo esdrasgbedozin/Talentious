@@ -27,9 +27,19 @@ Les JWT sont stateless, sans liste de révocation.
    tout échec est loggé et **n'interrompt pas** l'effacement. Aujourd'hui no-op
    (champ toujours nul) mais correct et testé. Stripe conserve les enregistrements
    de transactions pour ses obligations légales/fiscales — exception RGPD légitime.
-3. **Pas de purge GCS** (infra inexistante). Point d'extension documenté dans le
-   code : quand le stockage PDF GCS sera implémenté, l'effacement devra purger les
-   blobs de l'utilisateur **avant** la suppression des lignes DB.
+3. **Purge GCS des exports — IMPLÉMENTÉE (M2-T28).** Le stockage PDF privé
+   (ADR-EXPORT-DELIVERY) écrit sous `exports/{user_id}/{cv_id}/…`. L'effacement
+   purge ce périmètre **avant** la suppression des lignes DB :
+   - `DELETE /users/me` purge tout le préfixe `exports/{user_id}/` ;
+   - `DELETE /cv/{id}` purge `exports/{user_id}/{cv_id}/` (le CV seul).
+     Via `storage_service.delete_export_prefix`, avec un **garde-fou fail-closed** :
+     le préfixe DOIT matcher `exports/{uuid}/…` et finir par `/`, sinon `ValueError`
+     AVANT tout réseau — un préfixe vide/trop large effacerait un périmètre non
+     voulu (au pire tout le bucket). **Best-effort**, comme Stripe (déc. 2) : un
+     incident de stockage ne bloque PAS un effacement légalement dû (loggé) ; la
+     rétention du bucket (lifecycle GCS, M2-T20) est le filet de sécurité qui
+     rattrape un objet orphelin. En dev sans bucket configuré, la purge est un
+     no-op silencieux (`StorageNotConfiguredError` absorbée).
 4. **Confirmation forte côté client, backend bearer-only.** Le backend se conforme
    au contrat : bearer JWT seul, sans corps de requête (le token donne déjà le
    contrôle total du compte). Le garde-fou contre l'effacement accidentel est
@@ -61,4 +71,11 @@ Les JWT sont stateless, sans liste de révocation.
   rechargerait pas l'utilisateur. Toutes les routes protégées passent aujourd'hui
   par `get_current_user` (rechargement → 401), donc pas d'exposition réelle. Une
   vraie révocation relève du chantier « session courte / refresh token ».
-- **Purge GCS** à brancher lors de l'implémentation du stockage PDF (décision 3).
+- **Purge GCS** : branchée en M2-T28 (décision 3). **Dépendance de conformité
+  RGPD (revue sécu T28)** : le best-effort s'appuie sur la rétention/lifecycle du
+  bucket pour rattraper un objet orphelin d'un échec de purge. Or la règle
+  lifecycle n'est PAS encore déployée (le terraform bucket est M2-T20). Tant
+  qu'elle ne l'est pas, un échec best-effort = PDF (donnée perso) conservé
+  jusqu'à intervention ⇒ **M2-T20 DOIT inclure une `lifecycle_rule` d'expiration
+  sur le bucket d'exports**, et un échec de purge est tracé (`logger.exception`)
+  pour reprise manuelle d'ici là. Risque suivi, à solder avant la V1 facturée.

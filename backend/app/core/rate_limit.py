@@ -28,6 +28,9 @@ LOGIN_RATE_LIMIT = settings.login_rate_limit
 EMAIL_RATE_LIMIT = settings.email_rate_limit
 # Import PDF : chaque requête déclenche un appel Gemini (coût réel).
 IMPORT_RATE_LIMIT = settings.import_rate_limit
+# Export (M2-T17) : POST lance un rendu, GET download charge le PDF en mémoire.
+EXPORT_RATE_LIMIT = settings.export_rate_limit
+DOWNLOAD_RATE_LIMIT = settings.download_rate_limit
 
 
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:

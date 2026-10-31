@@ -1,0 +1,11 @@
+# =============================================================================
+# Exceptions Trivy — M2-T23.
+# Le scan de la CI échoue sur toute vulnérabilité CRITICAL CORRIGEABLE des images
+# (voir .github/workflows/{ci-build,deploy-prod}.yml). Pour tolérer sciemment une
+# CRITICAL précise (faux positif avéré, ou correctif indisponible mais risque
+# accepté et justifié), ajouter une ligne `CVE-XXXX-YYYYY` ci-dessous AVEC un
+# commentaire : date, raison, échéance de revue. Rien d'implicite.
+#
+# État au 2026-10-30 : image export-service = 0 CRITICAL (3 HIGH non bloquantes,
+# le gate ne porte que sur CRITICAL). Aucune exception nécessaire pour l'instant.
+# =============================================================================

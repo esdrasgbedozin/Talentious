@@ -71,3 +71,50 @@ variable "stripe_price_90_days" {
   type        = string
   default     = "price_1TryiWLgApLstvmEzswHD8Bm"
 }
+
+# --- M2-T25 : budgets & alertes de coût -------------------------------------
+# Les 3 identifiants ci-dessous ne vivent PAS dans le repo : le fondateur les
+# fournit à l'apply (TF_VAR_...). Défaut vide → les ressources de budget/alerte
+# sont créées SEULEMENT une fois renseignées (count conditionnel dans billing.tf),
+# donc un `plan` ordinaire reste sans friction ni erreur.
+
+variable "billing_account" {
+  description = "ID du compte de facturation GCP (format XXXXXX-XXXXXX-XXXXXX), fourni à l'apply. Vide = budgets non créés."
+  type        = string
+  default     = ""
+}
+
+variable "alert_notification_email" {
+  description = "E-mail destinataire des alertes budget/coût (canal Monitoring), fourni à l'apply. Vide = canal + alerte non créés."
+  type        = string
+  default     = ""
+}
+
+variable "vertex_billing_service_id" {
+  description = "ID de service de facturation Vertex AI (format XXXX-XXXX-XXXX, cf. `gcloud billing services list` / Cloud Billing Catalog). Vide = budget Vertex non créé."
+  type        = string
+  default     = ""
+}
+
+variable "budget_monthly_eur" {
+  description = "Plafond du budget mensuel global, en EUR (devise = celle du compte de facturation)."
+  type        = number
+  default     = 50
+}
+
+variable "budget_vertex_eur" {
+  description = "Plafond du budget Vertex AI, en EUR."
+  type        = number
+  default     = 15
+}
+
+variable "llm_rate_threshold_per_min" {
+  description = "Seuil de l'alerte de rythme : requêtes Vertex AI/minute (somme de toutes les séries) au-delà duquel on alerte après 5 min soutenues. 20 détecte un emballement tôt sur une bêta faible volume ; tunable."
+  type        = number
+  default     = 20
+
+  validation {
+    condition     = var.llm_rate_threshold_per_min > 0
+    error_message = "Le seuil de rythme LLM doit être strictement positif."
+  }
+}

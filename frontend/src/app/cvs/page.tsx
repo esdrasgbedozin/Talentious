@@ -14,6 +14,7 @@ import GenerateCVModal from '@/components/GenerateCVModal';
 import EmailVerificationBanner from '@/components/EmailVerificationBanner';
 import { useToast } from '@/components/ui/Toast';
 import { getCVs, deleteCV, getBillingStatus, type CVBase } from '@/lib/api';
+import { useCvExport } from '@/hooks/useCvExport';
 import { getMe } from '@/lib/auth';
 import { useState } from 'react';
 import { FileText, Edit, Download, Trash2, Plus } from 'lucide-react';
@@ -63,12 +64,6 @@ export default function DashboardPage() {
 
   const handleEdit = (cvId: string) => {
     router.push(`/cv/${cvId}/edit`);
-  };
-
-  const handleDownload = (cvId: string) => {
-    // Opens the print route, which renders the CV full-size and triggers the
-    // browser's print dialog (Save as PDF).
-    router.push(`/cv/${cvId}/print`);
   };
 
   // Le pass est vérifié AU CLIC, avant d'ouvrir le formulaire : sans ça,
@@ -194,7 +189,6 @@ export default function DashboardPage() {
                 key={cv.id}
                 cv={cv}
                 onEdit={handleEdit}
-                onDownload={handleDownload}
                 onDelete={handleDelete}
                 isDeleting={deletingId === cv.id}
               />
@@ -211,12 +205,13 @@ export default function DashboardPage() {
 interface CVCardProps {
   cv: CVBase;
   onEdit: (id: string) => void;
-  onDownload: (id: string) => void;
   onDelete: (id: string, name: string) => void;
   isDeleting: boolean;
 }
 
-function CVCard({ cv, onEdit, onDownload, onDelete, isDeleting }: CVCardProps) {
+function CVCard({ cv, onEdit, onDelete, isDeleting }: CVCardProps) {
+  const { exportPdf, isExporting } = useCvExport();
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('fr-FR', {
@@ -257,11 +252,16 @@ function CVCard({ cv, onEdit, onDownload, onDelete, isDeleting }: CVCardProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => onDownload(cv.id)}
+          onClick={() => exportPdf(cv.id)}
+          isLoading={isExporting}
+          aria-busy={isExporting}
           className="flex items-center justify-center p-2"
-          title="Télécharger en PDF"
+          title={isExporting ? 'Export du PDF en cours…' : 'Télécharger en PDF'}
+          aria-label={
+            isExporting ? 'Export du PDF en cours…' : 'Télécharger en PDF'
+          }
         >
-          <Download size={18} />
+          {!isExporting && <Download size={18} />}
         </Button>
         <Button
           variant="ghost"

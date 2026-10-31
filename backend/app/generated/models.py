@@ -1466,14 +1466,17 @@ class JobResult(BaseModel):
     """
 
     result_kind: JobResultKind
-    result_id: UUID
-    download_url: AnyUrl | None = Field(
+    result_id: UUID = Field(
+        ...,
+        description='Identifiant de la ressource produite : le CV (`cv`), la lettre\n(`letter`), ou — pour un `export` — le CV SOURCE exporté (le fichier\nlui-même se récupère via `download_url`, pas par cet id).\n',
+    )
+    download_url: str | None = Field(
         None,
-        description='URL signée (GCS) à durée limitée pour télécharger le fichier. Renseignée\nuniquement si `result_kind` = `export`.\n',
+        description="CHEMIN de téléchargement RELATIF à l'API (ex. `/jobs/{id}/download`),\nservi par le BACKEND (download proxifié : authentification +\nownership revérifiés à chaque accès, le bucket reste privé —\nADR-EXPORT-DELIVERY, R2 tranché ; relatif car le client appelle la\nmême origine que l'API). Renseigné uniquement si `result_kind` =\n`export`.\n",
     )
     expires_at: AwareDatetime | None = Field(
         None,
-        description="Expiration de `download_url`. Une URL expirée se renouvelle en relançant\nl'export (le fichier à jour est resservi sans nouveau rendu). Renseignée\nuniquement si `result_kind` = `export`.\n",
+        description="Horizon de disponibilité du fichier (politique de rétention du\nstockage). Un fichier purgé se renouvelle en relançant l'export\n(le fichier à jour est resservi sans nouveau rendu). Null = pas\nd'expiration programmée. Renseignée uniquement si `result_kind`\n= `export`.\n",
     )
     review: ReviewResult | None = Field(
         None,
@@ -1541,9 +1544,6 @@ class CVDetailResponse(BaseModel):
         None, description="Texte de l'offre d'emploi utilisée pour la génération"
     )
     cv_data_json: GeneratedCVData
-    gcs_pdf_url: str | None = Field(
-        None, description='URL GCS du PDF exporté. Null si pas encore généré.'
-    )
     is_editable: bool | None = Field(
         None,
         description='Calculé à la lecture (jamais persisté) : true si le Pass est actif ou si le\ndocument est entièrement gratuit. false = lecture et téléchargement seuls\n(décision D1) ; une édition premium répondrait `402`.\n',

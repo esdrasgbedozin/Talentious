@@ -69,6 +69,19 @@ class Settings(BaseSettings):
     # recharge pas le compteur). Le kill-switch GLOBAL arrive à M6-T03.
     free_daily_generation_cap: int = 5
 
+    # Stockage des exports (M2-T15, ADR-EXPORT-DELIVERY) : bucket GCS PRIVÉ,
+    # download toujours PROXIFIÉ par le backend (jamais d'URL signée). Vide =
+    # stockage désactivé (dev sans émulateur) : le worker d'export échouera
+    # proprement. STORAGE_EMULATOR_HOST (env standard du client GCS) route
+    # vers fake-gcs-server en test.
+    export_bucket_name: str = ""
+
+    # Drapeau R6 (M2-T17) : le format `docx` est au contrat avant son
+    # implémentation (M8-T05/T07). Tant que false, `POST /cv/{id}/export`
+    # avec format=docx répond 422 explicite (jamais un échec sale en aval),
+    # même avec Pass. Le PDF, lui, est toujours autorisé (D1).
+    export_docx_enabled: bool = False
+
     # CORS
     cors_origins: Annotated[list[str], NoDecode] = [
         "http://localhost:3000",
@@ -110,6 +123,10 @@ class Settings(BaseSettings):
     email_rate_limit: str = "3/minute"
     # Import PDF (appel LLM coûteux) : plafond par utilisateur/IP.
     import_rate_limit: str = "5/hour"
+    # Export (M2-T17) : lancement d'un job de rendu (POST) et téléchargement
+    # proxifié (GET, charge le PDF en mémoire) — plafonds par utilisateur/IP.
+    export_rate_limit: str = "10/minute"
+    download_rate_limit: str = "30/minute"
 
     @model_validator(mode="after")
     def _enforce_production_safety(self):

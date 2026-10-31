@@ -25,6 +25,11 @@ output "cv_bucket_url" {
   value       = google_storage_bucket.cv_bucket.url
 }
 
+output "exports_bucket_name" {
+  description = "Nom du bucket Cloud Storage des exports PDF (M2-T20)"
+  value       = google_storage_bucket.exports.name
+}
+
 # Artifact Registry
 output "artifact_registry_url" {
   description = "URL du repository Artifact Registry"

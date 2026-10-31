@@ -15,17 +15,25 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     HTTPException,
+    Request,
     Response,
     status,
 )
 from fastapi.responses import StreamingResponse
+
+from app.core.rate_limit import EXPORT_RATE_LIMIT, limiter
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.database import get_db, get_session_factory
-from app.generated.models import GeneratedCVData
+from app.generated.models import (
+    ExportFormat,
+    ExportJobAccepted,
+    ExportRequest,
+    GeneratedCVData,
+)
 from app.generated.models import CVTemplate as CVTemplateContract
 from app.generated.models import CVTheme as CVThemeContract
 from app.generated.models import DocumentLanguage as DocumentLanguageContract
@@ -38,13 +46,14 @@ from app.models import (
     JobType,
     User,
     UserProfile,
-    UserRole,
 )
 from app.config import settings
 from app.core.problem import ProblemException
 from app.models.generated_cv import ANTHRACITE_TOKENS, DocumentLanguage
 from app.routes.auth import get_current_active_user
 from app.services.cv_content_coercion import CVContentCoercionError, coerce_cv_content
+from app.services import storage_service
+from app.services.cv_access import get_owned_cv
 from app.services.jobs import get_owned_job
 from app.services.entitlements import (
     Decision,
@@ -63,6 +72,7 @@ from app.services.cv_worker import (
     CVEnvelope,
     run_cv_generation,
 )
+from app.services.export_worker import run_export_job
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +155,6 @@ class CVDetailResponse(BaseModel):
     job_offer_id: Optional[UUID] = None
     job_offer_context: Optional[str]
     cv_data_json: dict
-    gcs_pdf_url: Optional[str]
     is_editable: bool
     created_at: datetime
     updated_at: datetime
@@ -346,7 +355,6 @@ async def _detail_response(
         job_offer_id=cv.offer_id,
         job_offer_context=cv.job_offer_context,
         cv_data_json=cv.cv_data_json,
-        gcs_pdf_url=cv.gcs_pdf_url,
         is_editable=editable.allowed,
         created_at=cv.created_at,
         updated_at=cv.updated_at,
@@ -579,6 +587,109 @@ async def generate_cv(
     return GenerateCVJobAccepted(job_id=job.id, status=job.status)
 
 
+_EXPORT_IN_PROGRESS = "An export is already in progress. Please wait for it to finish."
+
+
+@router.post(
+    "/{cv_id}/export",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=ExportJobAccepted,
+)
+@limiter.limit(EXPORT_RATE_LIMIT)
+async def export_cv(
+    request: Request,  # requis par slowapi (rate limit) — distinct du corps
+    cv_id: UUID,
+    payload: ExportRequest,
+    response: Response,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+    session_factory: async_sessionmaker = Depends(get_session_factory),
+):
+    """Lance l'export asynchrone d'un CV possédé (`job_type=export`).
+
+    Gating = OWNERSHIP (D1) : exporter un document possédé n'est PAS premium —
+    le PDF est autorisé sans Pass. `docx` est refusé par le drapeau R6 tant que
+    M8-T05/T07 n'a pas livré le rendu docx (422, jamais un échec sale en aval).
+
+    Raises:
+        HTTPException(404): CV inexistant OU appartenant à un autre utilisateur
+            (anti-IDOR : aucun oracle d'existence).
+        HTTPException(422): format `docx` tant que le drapeau est désactivé.
+        HTTPException(409): un export est déjà en cours pour cet utilisateur.
+    """
+    # Ownership : un CV d'autrui répond comme un inexistant (anti-IDOR). Le
+    # user_id vient de la SESSION authentifiée, jamais de la requête.
+    cv = (
+        (
+            await db.execute(
+                select(GeneratedCV)
+                .where(GeneratedCV.id == cv_id)
+                .where(GeneratedCV.user_id == current_user.id)
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if cv is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="CV not found"
+        )
+
+    # docx : capacité au contrat mais non implémentée (R6) — drapeau off ⇒ 422
+    # explicite, même avec un Pass (la gratuité premium viendra à M8-T07).
+    if payload.format is ExportFormat.docx and not settings.export_docx_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="L'export docx n'est pas encore disponible.",
+        )
+
+    # Idempotence : au plus un export actif par utilisateur (pré-check amical,
+    # l'index partiel uq_cv_jobs_one_active_per_user_type reste le vrai garde).
+    active = await db.execute(
+        select(CVJob)
+        .where(CVJob.user_id == current_user.id)
+        .where(CVJob.job_type == JobType.EXPORT)
+        .where(CVJob.status.in_([JobStatus.QUEUED, JobStatus.RUNNING]))
+    )
+    if active.scalars().first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=_EXPORT_IN_PROGRESS,
+        )
+
+    job = CVJob(
+        user_id=current_user.id,
+        cv_name=cv.cv_name,
+        status=JobStatus.QUEUED,
+        job_type=JobType.EXPORT,
+        cv_id=cv.id,
+        progress_pct=0,
+    )
+    db.add(job)
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        if not _is_active_job_conflict(exc):
+            raise
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=_EXPORT_IN_PROGRESS,
+        )
+    await db.refresh(job)
+
+    background_tasks.add_task(run_export_job, session_factory, job.id)
+    response.headers["Location"] = f"/jobs/{job.id}"
+    return ExportJobAccepted(
+        job_id=job.id,
+        job_type="export",
+        status="queued",
+        format=payload.format,
+        message="Export job accepted. Poll GET /jobs/{job_id} for status.",
+    )
+
+
 async def _get_owned_cv_generation_job(
     cv_job_id: UUID, current_user: User, db: AsyncSession
 ) -> CVJob:
@@ -753,26 +864,10 @@ async def get_cv(
         Complete CV data including cv_data_json
 
     Raises:
-        HTTPException(404): CV not found
-        HTTPException(403): CV belongs to another user
+        HTTPException(404): CV inconnu OU appartenant à un autre utilisateur
+            (ADR-GATING : accès croisé = 404, aucun oracle d'existence)
     """
-    result = await db.execute(select(GeneratedCV).where(GeneratedCV.id == cv_id))
-    cv = result.scalars().first()
-
-    if not cv:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"CV with ID {cv_id} not found",
-        )
-
-    # Authorization check (403 contrat V1 — harmonisation 404 anti-IDOR
-    # tracée pour la matrice M9-T11, ADR-GATING).
-    if cv.user_id != current_user.id and current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to access this CV",
-        )
-
+    cv = await get_owned_cv(db, cv_id, current_user)
     return await _detail_response(db, current_user, cv)
 
 
@@ -794,29 +889,18 @@ async def update_cv(
     created_under_pass=true, jamais l'inverse (ADR-GATING déc. 8).
 
     Raises:
-        HTTPException(404): CV not found
-        HTTPException(403): CV belongs to another user
+        HTTPException(404): CV inconnu OU appartenant à un autre utilisateur
+            (ADR-GATING : accès croisé = 404, aucun oracle d'existence)
         ProblemException(402): édition d'un doc créé sous Pass sans Pass
             actif (D1), ou capacité premium introduite sans droit (types
             RFC 7807 du contrat)
         HTTPException(422): corps vide, contenu invalide, template/preset
             inconnu, thème illisible, langue désactivée (drapeau R6)
     """
-    result = await db.execute(select(GeneratedCV).where(GeneratedCV.id == cv_id))
-    cv = result.scalars().first()
-
-    if not cv:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"CV with ID {cv_id} not found",
-        )
-
-    # Authorization check (ownership D'ABORD, gating ENSUITE — ADR-GATING).
-    if cv.user_id != current_user.id and current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to update this CV",
-        )
+    # ADR-GATING (M2-T18) : ownership D'ABORD (404 inconnu/croisé, aucun
+    # oracle), gating premium (402) ENSUITE seulement — jamais un 402 avant le
+    # 404 qui révélerait qu'un CV d'autrui existe ET qu'il est premium.
+    cv = await get_owned_cv(db, cv_id, current_user)
 
     # Gating D1 (revue M1-T11 pt 2) : l'ÉCRITURE suit la même règle que
     # is_editable — un document créé sous Pass ne se modifie pas sans Pass
@@ -923,26 +1007,21 @@ async def delete_cv(
     Delete a CV
 
     Raises:
-        HTTPException(404): CV not found
-        HTTPException(403): CV belongs to another user
+        HTTPException(404): CV inconnu OU appartenant à un autre utilisateur
+            (ADR-GATING : accès croisé = 404, aucun oracle d'existence)
     """
-    result = await db.execute(select(GeneratedCV).where(GeneratedCV.id == cv_id))
-    cv = result.scalars().first()
+    cv = await get_owned_cv(db, cv_id, current_user)
+    owner_id, cv_uuid = cv.user_id, cv.id
 
-    if not cv:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"CV with ID {cv_id} not found",
-        )
-
-    # Authorization check
-    if cv.user_id != current_user.id and current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to delete this CV",
-        )
+    # Purge RGPD du fichier d'export AVANT la suppression DB (ADR-RGPD-ERASURE
+    # déc. 3), bornée à CE user/CV. Best-effort : un incident de stockage ne
+    # bloque JAMAIS la suppression (rétention du bucket M2-T20 en filet).
+    await storage_service.safe_delete_export_prefix(
+        storage_service.export_prefix(owner_id, cv_uuid), context=f"cv={cv_uuid}"
+    )
 
     await db.delete(cv)
     await db.commit()
 
-    logger.info(f"CV {cv_id} deleted by user {current_user.email}")
+    # Journal sans PII (ADR-RGPD-ERASURE déc. 6) : identifiants pseudonymes seuls.
+    logger.info("CV deleted: cv_id=%s user_id=%s", cv_id, current_user.id)

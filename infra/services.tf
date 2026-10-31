@@ -56,6 +56,14 @@ resource "google_service_account" "redacteur" {
   display_name = "Agent redacteur-cv (Vertex AI)"
 }
 
+# export-service ne touche à AUCUNE ressource GCP (rendu HTML→PDF en local, le
+# fichier est remonté au backend qui l'écrit dans GCS) : SA sans aucun rôle
+# projet, sur le modèle du frontend.
+resource "google_service_account" "export" {
+  account_id   = "export-sa"
+  display_name = "export-service rendu PDF (aucun privilège GCP)"
+}
+
 # Rôles projet — strictement le nécessaire.
 resource "google_project_iam_member" "backend_cloudsql" {
   project = var.project_id
@@ -294,6 +302,93 @@ resource "google_cloud_run_v2_service_iam_member" "redacteur_invoker" {
 }
 
 # --------------------------------------------------------------------------
+# export-service — rendu PDF (Chromium/Playwright), PRIVÉ : appelé par le backend
+# --------------------------------------------------------------------------
+
+resource "google_cloud_run_v2_service" "export" {
+  name     = "export-service"
+  location = var.region
+  ingress  = "INGRESS_TRAFFIC_ALL" # privé : auth par IAM, aucun binding allUsers
+
+  template {
+    service_account = google_service_account.export.email
+    # Maillon de la chaîne de timeouts (ADR-RENDER-SECURITY déc. 7) :
+    # rendu 80 s < Fastify 110 s < Cloud Run 120 s < lecture backend 130 s.
+    timeout = "120s"
+    # Un seul rendu à la fois PAR INSTANCE : isole les sessions Chromium et borne
+    # la mémoire. Jusqu'à 2 rendus simultanés (max_instance_count = 2).
+    max_instance_request_concurrency = 1
+    # Environnement d'exécution épinglé (microVM gen2) : isolation déterministe
+    # pour le rendu de HTML non fiable (revue sécurité), sans dérive du défaut.
+    execution_environment = "EXECUTION_ENVIRONMENT_GEN2"
+    scaling {
+      min_instance_count = 0
+      max_instance_count = 2
+    }
+    containers {
+      image = "${local.registry}/export-service:${var.image_tag}"
+      ports {
+        container_port = 8004
+      }
+      resources {
+        limits = {
+          cpu    = "2"   # Chromium : rendu CPU-intensif
+          memory = "2Gi" # navigateur + /tmp en mémoire (FS Cloud Run en RAM)
+        }
+        # Rendu borné à la requête (pas de tâche de fond) : CPU throttlé au repos
+        # (cpu_idle défaut = true → coût nul au repos, scale-to-zero). Boost au
+        # démarrage pour accélérer le cold start de Chromium (min = 0).
+        startup_cpu_boost = true
+      }
+      # Le bac à sable Chromium exige des privilèges absents sur Cloud Run →
+      # --no-sandbox requis ; l'isolation est portée par la microVM gen2, le SA
+      # sans rôle et le blocage réseau APPLICATIF (render/pdf.ts : tout egress
+      # avorté, JS désactivé). --disable-dev-shm-usage évite la limite de
+      # /dev/shm (cf. docker-compose).
+      env {
+        name  = "CHROMIUM_EXTRA_ARGS"
+        value = "--no-sandbox --disable-dev-shm-usage"
+      }
+      # Garde-fous de rendu in-process. Cloud Run borne déjà l'entrée à 1
+      # requête/instance (max_instance_request_concurrency = 1) : on aligne la
+      # concurrence interne à 1 (RENDER_QUEUE_MAX reste un filet de sûreté).
+      env {
+        name  = "RENDER_CONCURRENCY"
+        value = "1"
+      }
+      env {
+        name  = "RENDER_QUEUE_MAX"
+        value = "8"
+      }
+      env {
+        # 80 s de rendu → Fastify coupe à 80+30 = 110 s < 120 s Cloud Run, pour
+        # que le 504 TYPÉ sorte avant la coupure brute de Cloud Run (revue
+        # qualité ; chaîne ADR-RENDER-SECURITY déc. 7).
+        name  = "RENDER_TIMEOUT_MS"
+        value = "80000"
+      }
+      env {
+        name  = "LOG_LEVEL"
+        value = "INFO"
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [template[0].containers[0].image] # la CI pilote les images
+  }
+  depends_on = [google_project_service.apis]
+}
+
+# Invoker : SEUL le backend peut appeler export-service (aucun binding allUsers).
+resource "google_cloud_run_v2_service_iam_member" "export_invoker" {
+  name     = google_cloud_run_v2_service.export.name
+  location = var.region
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.backend.email}"
+}
+
+# --------------------------------------------------------------------------
 # Backend (API) — public, secrets via Secret Manager, Cloud SQL par socket
 # --------------------------------------------------------------------------
 
@@ -415,6 +510,14 @@ resource "google_cloud_run_v2_service" "backend" {
       env {
         name  = "WRITER_SERVICE_URL"
         value = google_cloud_run_v2_service.redacteur.uri
+      }
+      env {
+        name  = "EXPORT_SERVICE_URL"
+        value = google_cloud_run_v2_service.export.uri
+      }
+      env {
+        name  = "EXPORT_BUCKET_NAME"
+        value = google_storage_bucket.exports.name
       }
 
       # ---- Secrets (Secret Manager, jamais en clair) ----

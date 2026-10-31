@@ -1,0 +1,47 @@
+# =============================================================================
+# Garde-fous INFRA sur PR (M2-T21). Vérifie des invariants de configuration
+# Terraform AVANT le merge, sans toucher au cloud (aucune auth, aucun secret,
+# pas de terraform apply). Workflow SÉPARÉ de ci-build.yml pour ne PAS relancer
+# les builds Docker sur une PR purement infra.
+#
+# Invariant couvert : le backend reste MONO-INSTANCE (max_instance_count == 1).
+# Le rate-limit in-memory et l'unicité de job par utilisateur en dépendent tant
+# qu'il n'y a pas de store partagé — cf. scripts/ci/check_backend_max_instances.py.
+# Échec FERMÉ : toute config non vérifiable (valeur non littérale, scaling
+# manuel, bloc absent) fait rougir la CI plutôt que de laisser passer.
+# =============================================================================
+
+name: Infra guards (PR)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - "scripts/ci/check_backend_max_instances.py"
+      - "scripts/ci/test_check_backend_max_instances.py"
+      - ".github/workflows/infra-guard.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-single-instance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # Prouve le garde-fou lui-même (rouge sur une config à 2, vert à 1) avant
+      # de l'appliquer au fichier réel — sinon un garde-fou cassé passerait tout.
+      - name: Tests du garde-fou
+        run: python scripts/ci/test_check_backend_max_instances.py
+      - name: Garde-fou — backend max_instance_count == 1
+        run: python scripts/ci/check_backend_max_instances.py
