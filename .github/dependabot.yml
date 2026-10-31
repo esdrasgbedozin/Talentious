@@ -4,6 +4,12 @@
 # les services. github-actions et pip (backend/agents) ne sont PAS couverts ici
 # (scope roadmap strict « Docker/npm ») — tracé en suivi : M2-T30.
 #
+# BUMPS MAJEURS IGNORÉS (ajout 2026-10-31, après incident) : un merge Dependabot
+# sur `main` part DIRECTEMENT en prod (deploy-prod build + déploie). Un saut de
+# version MAJEURE non testé (ex. python 3.11 -> 3.15, node 20 -> 25) peut casser
+# la prod. On ne laisse donc Dependabot proposer que patch/mineur ; les majeurs
+# se font DÉLIBÉRÉMENT, testés, à la main (bump ciblé + CI + relecture).
+#
 # INVARIANT PLAYWRIGHT (ADR-PDF-RENDER / export-service pinning.test.ts) : la
 # version npm `playwright-core` DOIT égaler le tag de l'image Playwright du
 # Dockerfile de l'export-service. Dependabot ne peut pas garantir ce lockstep via
@@ -29,6 +35,9 @@ updates:
     ignore:
       # Invariant Playwright — bump manuel coordonné avec l'image (rebuild mensuel).
       - dependency-name: "playwright-core"
+      # Pas de saut MAJEUR automatique (cf. en-tête) — patch/mineur seulement.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   # ---- docker : une entrée par dossier contenant un Dockerfile* ----
   # (Dependabot docker reconnaît les fichiers dont le nom contient « dockerfile »,
@@ -45,6 +54,8 @@ updates:
     ignore:
       # Invariant Playwright — bump manuel coordonné avec playwright-core.
       - dependency-name: "mcr.microsoft.com/playwright"
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "docker"
     directory: "/backend"
     schedule:
@@ -54,6 +65,9 @@ updates:
     groups:
       docker:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "docker"
     directory: "/frontend"
     schedule:
@@ -63,6 +77,9 @@ updates:
     groups:
       docker:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "docker"
     directory: "/agents/parser-pdf"
     schedule:
@@ -72,6 +89,9 @@ updates:
     groups:
       docker:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "docker"
     directory: "/agents/analyseur-offre"
     schedule:
@@ -81,6 +101,9 @@ updates:
     groups:
       docker:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "docker"
     directory: "/agents/redacteur-cv"
     schedule:
@@ -90,3 +113,6 @@ updates:
     groups:
       docker:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
