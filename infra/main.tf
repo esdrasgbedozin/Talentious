@@ -14,6 +14,13 @@ terraform {
 provider "google" {
   project = var.project_id
   region  = var.region
+  # Envoie l'en-tête X-Goog-User-Project (projet de quota/facturation) sur les
+  # appels qui l'exigent — notamment l'API Budgets (M2-T25), qui renvoie sinon un
+  # 403 « quota project not set » avec des identifiants ADC utilisateur. Évite de
+  # devoir passer USER_PROJECT_OVERRIDE/GOOGLE_BILLING_PROJECT en variables d'env
+  # à chaque apply (dette constatée au 1er apply PAH-M2b).
+  user_project_override = true
+  billing_project       = var.project_id
 }
 
 # Activation des APIs nécessaires
