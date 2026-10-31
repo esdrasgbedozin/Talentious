@@ -3,6 +3,9 @@ import { triggerBrowserDownload, useCvExport } from '@/hooks/useCvExport';
 import { exportCvPdf, type ExportedFile } from '@/lib/cvExport';
 
 jest.mock('@/lib/cvExport', () => ({
+  // On garde les fonctions PURES réelles (toSafePdfFilename…) et on ne simule
+  // que l'orchestration réseau.
+  ...jest.requireActual('@/lib/cvExport'),
   exportCvPdf: jest.fn(),
 }));
 
@@ -88,6 +91,31 @@ describe('useCvExport', () => {
     expect(global.URL.createObjectURL).toHaveBeenCalledWith(file.blob);
     expect(mockToast.success).toHaveBeenCalledTimes(1);
     expect(mockToast.error).not.toHaveBeenCalled();
+  });
+
+  it('nomme le fichier téléchargé d’après le nom du CV passé', async () => {
+    const realCreate = document.createElement.bind(document);
+    const anchors: HTMLAnchorElement[] = [];
+    jest.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = realCreate(tag);
+      if (tag === 'a') anchors.push(el as HTMLAnchorElement);
+      return el;
+    });
+    jest
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {});
+    exportCvPdfMock.mockResolvedValue({
+      blob: new Blob(['%PDF'], { type: 'application/pdf' }),
+      filename: 'cv.pdf', // nom serveur générique — doit être ignoré
+    });
+
+    const { result } = renderHook(() => useCvExport());
+    await act(async () => {
+      await result.current.exportPdf('cv-1', 'CV - Dev React - Google');
+    });
+
+    expect(anchors[0]?.download).toBe('CV - Dev React - Google.pdf');
+    jest.restoreAllMocks();
   });
 
   it('échec : traduit une vraie erreur axios 409 via le mapper et notifie', async () => {

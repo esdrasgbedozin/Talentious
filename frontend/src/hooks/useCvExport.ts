@@ -13,7 +13,11 @@
 import axios from 'axios';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/Toast';
-import { exportCvPdf, type ExportedFile } from '@/lib/cvExport';
+import {
+  exportCvPdf,
+  toSafePdfFilename,
+  type ExportedFile,
+} from '@/lib/cvExport';
 import { getExportErrorMessage } from '@/lib/exportErrors';
 
 // Délai avant révocation de l'object URL : laisse le navigateur capter le
@@ -36,8 +40,11 @@ export const triggerBrowserDownload = ({
 };
 
 export interface UseCvExportResult {
-  /** Lance l'export PDF d'un CV (no-op si un export est déjà en cours). */
-  exportPdf: (cvId: string) => Promise<void>;
+  /**
+   * Lance l'export PDF d'un CV (no-op si un export est déjà en cours).
+   * `cvName` nomme le fichier téléchargé (sinon repli sur le nom serveur).
+   */
+  exportPdf: (cvId: string, cvName?: string) => Promise<void>;
   /** Id du CV en cours d'export, ou null. */
   exportingId: string | null;
   /** Vrai tant qu'un export est en cours (pour l'état de chargement du bouton). */
@@ -62,7 +69,7 @@ export function useCvExport(): UseCvExportResult {
   }, []);
 
   const exportPdf = useCallback(
-    async (cvId: string) => {
+    async (cvId: string, cvName?: string) => {
       if (runningRef.current) return;
       runningRef.current = true;
       const controller = new AbortController();
@@ -70,7 +77,10 @@ export function useCvExport(): UseCvExportResult {
       setExportingId(cvId);
       try {
         const file = await exportCvPdf(cvId, { signal: controller.signal });
-        triggerBrowserDownload(file);
+        // Le front nomme le fichier d'après le CV (le Content-Disposition serveur
+        // est générique et non lisible en cross-origin) ; repli sur le nom serveur.
+        const filename = cvName ? toSafePdfFilename(cvName) : file.filename;
+        triggerBrowserDownload({ blob: file.blob, filename });
         if (mountedRef.current) {
           toast.success('Ton CV en PDF est prêt, le téléchargement démarre.');
         }

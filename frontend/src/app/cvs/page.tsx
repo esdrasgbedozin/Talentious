@@ -252,7 +252,7 @@ function CVCard({ cv, onEdit, onDelete, isDeleting }: CVCardProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => exportPdf(cv.id)}
+          onClick={() => exportPdf(cv.id, cv.cv_name)}
           isLoading={isExporting}
           aria-busy={isExporting}
           className="flex items-center justify-center p-2"
