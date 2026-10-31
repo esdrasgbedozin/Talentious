@@ -24,7 +24,17 @@ IMAGE="${1:?usage: trivy-scan.sh <image-ref>}"
 TRIVY="aquasec/trivy:0.58.1@sha256:ab70a02200597efa04748f210f793936eb647cbcdb0ea69cc30b226d6f5a22c7"
 
 WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"' EXIT
+# Nettoyage BEST-EFFORT : le conteneur Trivy tourne en root et écrit son cache
+# (DB de vulnérabilités) dans $WORK ; sur un runner CI non-root, le rm de ces
+# fichiers root échoue. Le nettoyage ne doit JAMAIS changer le code de sortie —
+# qui doit refléter le SCAN (gate fail-closed) : on capture le code réel, on
+# nettoie sans le laisser échouer, puis on ressort avec ce même code.
+cleanup() {
+  ec=$?
+  rm -rf "$WORK" 2>/dev/null || true
+  exit "$ec"
+}
+trap cleanup EXIT
 mkdir -p "$WORK/cache"
 
 echo "→ export de l'image $IMAGE"
