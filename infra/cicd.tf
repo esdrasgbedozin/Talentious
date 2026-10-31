@@ -102,7 +102,7 @@ resource "google_project_iam_member" "deployer_serviceusage_viewer" {
 }
 
 # Nécessaire pour déployer des révisions qui tournent sous les SA runtime
-# (actAs) — restreint aux 5 SA de service, pas au niveau projet.
+# (actAs) — restreint aux 6 SA de service, pas au niveau projet.
 resource "google_service_account_iam_member" "deployer_acts_as" {
   for_each = {
     backend   = google_service_account.backend.name
@@ -110,6 +110,7 @@ resource "google_service_account_iam_member" "deployer_acts_as" {
     parser    = google_service_account.parser.name
     analyseur = google_service_account.analyseur.name
     redacteur = google_service_account.redacteur.name
+    export    = google_service_account.export.name
   }
   service_account_id = each.value
   role               = "roles/iam.serviceAccountUser"
