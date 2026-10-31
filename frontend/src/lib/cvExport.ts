@@ -102,6 +102,24 @@ export const parseContentDispositionFilename = (
 };
 
 /**
+ * Nom de fichier de téléchargement dérivé du NOM DU CV. Le front maîtrise le nom
+ * (il connaît `cv_name`) plutôt que de dépendre du `Content-Disposition` du
+ * serveur, aujourd'hui générique (`cv.pdf`) ET non exposé par CORS (requête
+ * cross-origin). On retire séparateurs de chemin, caractères de contrôle et
+ * caractères réservés (Windows), on borne la longueur, et on garantit `.pdf`.
+ * Repli `cv.pdf` si le nom est vide après nettoyage.
+ */
+export const toSafePdfFilename = (name: string): string => {
+  const base = (name ?? '')
+    .replace(/[\u0000-\u001f<>:"/\\|?*]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
+  if (!base) return DEFAULT_PDF_FILENAME;
+  return /\.pdf$/i.test(base) ? base : `${base}.pdf`;
+};
+
+/**
  * Normalise une erreur du GET binaire : avec `responseType: 'blob'`, axios livre
  * aussi le CORPS d'erreur (problem+json) sous forme de Blob. On le reparse en
  * JSON et on le réaffecte à `error.response.data` pour que

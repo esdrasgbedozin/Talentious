@@ -1,6 +1,37 @@
 import { apiClient } from '@/lib/api';
-import { exportCvPdf, parseContentDispositionFilename } from '@/lib/cvExport';
+import {
+  exportCvPdf,
+  parseContentDispositionFilename,
+  toSafePdfFilename,
+} from '@/lib/cvExport';
 import { getExportErrorMessage } from '@/lib/exportErrors';
+
+describe('toSafePdfFilename', () => {
+  it('dérive un nom .pdf du nom du CV', () => {
+    expect(toSafePdfFilename('CV - Dev React - Google')).toBe(
+      'CV - Dev React - Google.pdf',
+    );
+  });
+
+  it('ne double pas l’extension si déjà .pdf', () => {
+    expect(toSafePdfFilename('mon cv.pdf')).toBe('mon cv.pdf');
+  });
+
+  it('retire séparateurs de chemin, caractères de contrôle et réservés', () => {
+    expect(toSafePdfFilename('a/b\\c:d*e?"f"')).toBe('a b c d e f.pdf');
+  });
+
+  it('repli cv.pdf si vide après nettoyage', () => {
+    expect(toSafePdfFilename('   ')).toBe('cv.pdf');
+    expect(toSafePdfFilename('')).toBe('cv.pdf');
+  });
+
+  it('borne la longueur', () => {
+    const out = toSafePdfFilename('x'.repeat(300));
+    expect(out.endsWith('.pdf')).toBe(true);
+    expect(out.length).toBeLessThanOrEqual(124);
+  });
+});
 
 const JOB_ID = 'job-1';
 const DOWNLOAD_PATH = `/jobs/${JOB_ID}/download`;
