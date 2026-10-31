@@ -29,8 +29,10 @@ import {
 type CVThemeTokens = components["schemas"]["CVThemeTokens"];
 
 // A4 geometry and sheet padding (mm) — single source of truth in fit.ts
-// (shared with the export-service CDP measurement, M2-T06). Kept in sync with
-// the print @page rules.
+// (shared with the export-service CDP measurement, M2-T06). La géométrie de page
+// n'est PAS posée en CSS @page : la feuille est une boîte mm à taille fixe et
+// l'export Chromium impose le format A4 (page.pdf format:A4) — pas de règle
+// @page à maintenir.
 const A4_WIDTH_MM = A4_GEOMETRY.widthMm;
 const A4_HEIGHT_MM = A4_GEOMETRY.heightMm;
 const PAD_Y_MM = A4_GEOMETRY.padYMm;

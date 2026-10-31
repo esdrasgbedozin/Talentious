@@ -13,8 +13,8 @@
 
 /** Identité et cibles de consommation du package partagé. */
 export const CV_RENDER_PACKAGE = {
-  name: '@talentious/cv-render',
-  consumers: ['next-preview', 'export-service'],
+  name: "@talentious/cv-render",
+  consumers: ["next-preview", "export-service"],
 } as const;
 
 export type CvRenderPackage = typeof CV_RENDER_PACKAGE;
@@ -22,9 +22,13 @@ export type CvRenderPackage = typeof CV_RENDER_PACKAGE;
 // Renderer CV (extrait en M0-T08, canonique depuis M0-T08b) : consomme le schéma
 // canonique GeneratedCVData (prop `cv`), sans transformation — même entrée pour
 // l'aperçu Next et l'export-service (M2).
-export { default as CVRenderer } from './CVRenderer';
-export { themeToCssVars, DEFAULT_CV_THEME_TOKENS, CV_FONT_FAMILIES } from './theme';
-export { getCVLocale, CV_RENDER_LOCALES, DEFAULT_CV_LANGUAGE } from './i18n';
+export { default as CVRenderer } from "./CVRenderer";
+export {
+  themeToCssVars,
+  DEFAULT_CV_THEME_TOKENS,
+  CV_FONT_FAMILIES,
+} from "./theme";
+export { getCVLocale, CV_RENDER_LOCALES, DEFAULT_CV_LANGUAGE } from "./i18n";
 // Auto-fit isolé + signal de rendu stable (M0-T15) : CV_READY_FLAG est le point
 // d'attente de l'export-service (M2) avant page.pdf().
 export {
@@ -35,13 +39,24 @@ export {
   A4_AVAILABLE_CONTENT_HEIGHT_PX,
   CV_CONTENT_ATTR,
   fitTransform,
-} from './fit';
-export type { CVLocale, DocumentLanguage } from './i18n';
+} from "./fit";
+export type { CVLocale, DocumentLanguage } from "./i18n";
 export {
   getTemplate,
   resolveTemplateId,
   FALLBACK_TEMPLATE_ID,
   TEMPLATE_IDS,
-} from './templates/registry';
-export type { CVTemplateProps, CVTemplateComponent } from './templates/registry';
-export type { GeneratedCVData } from './types';
+} from "./templates/registry";
+export type {
+  CVTemplateProps,
+  CVTemplateComponent,
+} from "./templates/registry";
+export type { GeneratedCVData } from "./types";
+// Contraste WCAG (M3-T02) : garantit la lisibilité du thème par défaut et sert
+// à valider les thèmes custom de l'éditeur (M3).
+export {
+  contrastRatio,
+  relativeLuminance,
+  WCAG_AA_NORMAL,
+  WCAG_AA_LARGE,
+} from "./contrast";
