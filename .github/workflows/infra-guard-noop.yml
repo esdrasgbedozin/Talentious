@@ -1,0 +1,36 @@
+# =============================================================================
+# Jumeau NO-OP du check `backend-single-instance` (infra-guard.yml).
+#
+# Pourquoi : si `backend-single-instance` est posé en required status check sur
+# `main`, une PR HORS périmètre infra ne déclencherait jamais infra-guard.yml
+# (filtré par `paths:`) et resterait bloquée sur « Expected — Waiting for
+# status ». Ce workflow se déclenche sur les chemins INVERSES (`paths-ignore`,
+# MÊME liste que le `paths:` d'infra-guard.yml — les deux listes doivent rester
+# le MIROIR EXACT l'une de l'autre) et pose un check vert immédiat.
+#
+# Cas mixte (PR touchant infra + autre chose) : les DEUX workflows se
+# déclenchent ; le no-op finit en secondes, le vrai job en ~15 s — GitHub
+# retient le check run le plus récent, donc le verdict RÉEL l'emporte. Ne jamais
+# relancer le no-op seul après un échec du vrai job.
+# =============================================================================
+
+name: Infra guards (PR) — no-op
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "infra/**"
+      - "scripts/ci/check_backend_max_instances.py"
+      - "scripts/ci/test_check_backend_max_instances.py"
+      - ".github/workflows/infra-guard.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  backend-single-instance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: echo "PR hors périmètre infra — check 'backend-single-instance' satisfait (no-op)"
