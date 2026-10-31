@@ -3,7 +3,7 @@
 # partagé @talentious/cv-render, qui vit hors de frontend/. Le build de PROD est
 # frontend/Dockerfile.prod. La source est montée en volume par docker-compose et
 # le serveur tourne en mode dev (hot reload).
-FROM node:20-slim
+FROM node:25-slim
 WORKDIR /app
 
 # Manifestes des workspaces + lockfile racine (couche d'install mise en cache).

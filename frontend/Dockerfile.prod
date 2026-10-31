@@ -9,7 +9,7 @@
 # NEXT_PUBLIC_* sont FIGÉS AU BUILD : la CI passe l'URL API de prod en build-arg.
 # =============================================================================
 
-FROM node:20-slim AS builder
+FROM node:25-slim AS builder
 WORKDIR /app
 
 # 1) Manifestes des workspaces + lockfile unique racine : couche `npm ci` mise en
@@ -35,7 +35,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
 
 RUN npm run build --workspace frontend
 
-FROM node:20-slim AS runner
+FROM node:25-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
