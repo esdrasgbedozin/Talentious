@@ -114,6 +114,51 @@ resource "google_storage_bucket" "cv_bucket" {
   }
 }
 
+# Bucket des EXPORTS PDF (M2-T20, ADR-EXPORT-DELIVERY) — PRIVÉ, jamais servi
+# directement (téléchargement proxifié par le backend). Objets rangés sous
+# `exports/{user_id}/{cv_id}/`. PAS de versioning : un export est un artefact
+# DÉRIVÉ et régénérable ; sa suppression (purge T28 ou lifecycle) doit être
+# COMPLÈTE et immédiate (RGPD — aucune version obsolète ne doit survivre).
+resource "google_storage_bucket" "exports" {
+  name          = "${var.project_id}-exports"
+  location      = var.region
+  force_destroy = false # garde-fou : un bucket non vide ne peut pas être détruit
+
+  uniform_bucket_level_access = true
+  public_access_prevention    = "enforced"
+
+  # Soft-delete DÉSACTIVÉ (ADR-RGPD-ERASURE déc. 1 : un effacement art. 17 doit
+  # réellement effacer). Sans ce bloc, GCS applique 7 j de soft-delete par
+  # défaut et un PDF purgé (T28) ou expiré resterait récupérable 7 j — exclu pour
+  # de la donnée perso régénérable.
+  soft_delete_policy {
+    retention_duration_seconds = 0
+  }
+
+  # Filet RGPD (ADR-RGPD-ERASURE) : plafond de rétention des PDF d'export. La
+  # suppression explicite à la suppression d'un CV/compte (T28) est immédiate ;
+  # ce lifecycle rattrape les orphelins (échec best-effort) et borne la
+  # conservation à 30 j. Un PDF effacé reste RÉGÉNÉRABLE en relançant l'export.
+  lifecycle_rule {
+    action {
+      type = "Delete"
+    }
+    condition {
+      age = 30 # jours depuis la création de l'objet
+    }
+  }
+}
+
+# Seul le backend accède au bucket d'exports — droits OBJET (create/get/list/
+# delete : upload, téléchargement proxifié, purge RGPD T28) au niveau du BUCKET,
+# pas du projet. objectUser (et non objectAdmin) : pas de gestion d'IAM sur les
+# objets — moindre privilège.
+resource "google_storage_bucket_iam_member" "backend_exports" {
+  bucket = google_storage_bucket.exports.name
+  role   = "roles/storage.objectUser"
+  member = "serviceAccount:${google_service_account.backend.email}"
+}
+
 # Bucket du STATE Terraform (backend de ce module lui-même).
 # Créé à la main lors du bootstrap (l'œuf et la poule : le state ne peut pas se
 # provisionner par le Terraform qu'il héberge), importé sous IaC le 2026-08-10.

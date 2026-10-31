@@ -515,6 +515,10 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "EXPORT_SERVICE_URL"
         value = google_cloud_run_v2_service.export.uri
       }
+      env {
+        name  = "EXPORT_BUCKET_NAME"
+        value = google_storage_bucket.exports.name
+      }
 
       # ---- Secrets (Secret Manager, jamais en clair) ----
       env {
