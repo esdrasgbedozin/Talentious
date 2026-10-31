@@ -26,7 +26,7 @@ export const A4_AVAILABLE_CONTENT_HEIGHT_PX =
 
 /** Attribut posé sur le conteneur de contenu mesurable : le sélecteur STABLE
  * de la mesure CDP côté export-service (jamais un sélecteur structurel). */
-export const CV_CONTENT_ATTR = 'data-cv-content';
+export const CV_CONTENT_ATTR = "data-cv-content";
 
 /** Style du fit une-page — PARTAGÉ aperçu (CVRenderer) / export (pose CDP) :
  * « aperçu = PDF » exige le transform et l'origine STRICTEMENT identiques. */
@@ -36,7 +36,7 @@ export function fitTransform(scale: number): {
 } {
   return {
     transform: scale < 1 ? `scale(${scale})` : undefined,
-    transformOrigin: 'top center',
+    transformOrigin: "top center",
   };
 }
 
@@ -46,11 +46,11 @@ export const MIN_SCALE = 0.62;
 
 /** Nom de la propriété globale posée quand le rendu est stable — à réutiliser
  * par l'export-service : `page.waitForFunction('window.__CV_READY__ === true')`.
- * CONTRAT : une seule instance de CVRenderer par document d'export (page
- * Chromium neuve par export) — avec plusieurs instances dans la même fenêtre
- * (aperçus, vignettes), la première prête signale pour toutes et le dernier
- * démontage retire le signal. */
-export const CV_READY_FLAG = '__CV_READY__' as const;
+ * CONTRAT : une seule instance de la coquille CvSheet (quel que soit le
+ * template) par document d'export (page Chromium neuve par export) — avec
+ * plusieurs instances dans la même fenêtre (aperçus, vignettes), la première
+ * prête signale pour toutes et le dernier démontage retire le signal. */
+export const CV_READY_FLAG = "__CV_READY__" as const;
 
 /** Plafond d'attente de `fonts.ready` : au-delà, on signale quand même — une
  * police qui pend (réseau) ne doit jamais suspendre un export (revue sécurité
@@ -59,7 +59,7 @@ export const FONTS_READY_TIMEOUT_MS = 5000;
 
 declare global {
   interface Window {
-    /** Posé par CVRenderer après `fonts.ready` ET le re-fit qui suit :
+    /** Posé par la coquille CvSheet après `fonts.ready` ET le re-fit qui suit :
      * le document est prêt à être imprimé (export-service M2). */
     __CV_READY__?: true;
   }
@@ -72,7 +72,10 @@ declare global {
  * hostile ou un environnement sans layout (jsdom, SSR) ne produit jamais un
  * transform invalide.
  */
-export function computeFitScale(naturalHeightPx: number, availableHeightPx: number): number {
+export function computeFitScale(
+  naturalHeightPx: number,
+  availableHeightPx: number,
+): number {
   if (!Number.isFinite(naturalHeightPx) || naturalHeightPx <= 0) return 1;
   if (!Number.isFinite(availableHeightPx) || availableHeightPx <= 0) return 1;
   const ratio = Math.min(1, availableHeightPx / naturalHeightPx);
@@ -92,7 +95,7 @@ export function whenFontsReady(
 ): Promise<void> {
   const fonts = (doc as { fonts?: { ready?: Promise<unknown> } }).fonts;
   const ready = fonts?.ready;
-  if (!ready || typeof ready.then !== 'function') return Promise.resolve();
+  if (!ready || typeof ready.then !== "function") return Promise.resolve();
   return new Promise<void>((resolve) => {
     const timer = setTimeout(resolve, timeoutMs);
     const settle = () => {

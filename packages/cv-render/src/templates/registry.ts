@@ -16,13 +16,14 @@
  *   normalisation) : les ids de template sont des identifiants stables du
  *   contrat (`CVTemplate.id`), pas des saisies utilisateur.
  */
-import type { ComponentType } from 'react';
-import CVRenderer from '../CVRenderer';
-import type { GeneratedCVData } from '../types';
-import type { components } from '../generated/api';
-import type { DocumentLanguage } from '../i18n';
+import type { ComponentType } from "react";
+import CVRenderer from "../CVRenderer";
+import CorporateSobre from "./CorporateSobre";
+import type { GeneratedCVData } from "../types";
+import type { components } from "../generated/api";
+import type { DocumentLanguage } from "../i18n";
 
-type CVThemeTokens = components['schemas']['CVThemeTokens'];
+type CVThemeTokens = components["schemas"]["CVThemeTokens"];
 
 /** Props communes à TOUT template : contenu canonique + enveloppe snapshotée
  * (thème, langue de rendu — M0-T13). */
@@ -35,22 +36,25 @@ export interface CVTemplateProps {
 export type CVTemplateComponent = ComponentType<CVTemplateProps>;
 
 /** Template de repli : « Moderne sobre », le template gratuit. */
-export const FALLBACK_TEMPLATE_ID = 'modern_sobre';
+export const FALLBACK_TEMPLATE_ID = "modern_sobre";
 
 /** `template_id` canonique → composant. Ajouter un template = une entrée ici
  * + une entrée au catalogue serveur (`GET /cv/templates`). */
 const TEMPLATES: Record<string, CVTemplateComponent> = {
   modern_sobre: CVRenderer,
+  corporate_sobre: CorporateSobre,
 };
 
 /** Ids canoniques du registre (gelés) — pour itérer sur TOUS les templates
  * (test structurel du build CSS M0-T14 : chaque classe de chaque template). */
-export const TEMPLATE_IDS: readonly string[] = Object.freeze(Object.keys(TEMPLATES));
+export const TEMPLATE_IDS: readonly string[] = Object.freeze(
+  Object.keys(TEMPLATES),
+);
 
 /** Alias d'ids legacy → id canonique. `modern_v1` : défaut V1 du cv_worker,
  * encore stampé sur les documents existants (dette tracée, ADR). */
 const TEMPLATE_ALIASES: Record<string, string> = {
-  modern_v1: 'modern_sobre',
+  modern_v1: "modern_sobre",
 };
 
 /** Résout un `template_id` d'enveloppe vers un id canonique du registre ;
@@ -59,8 +63,10 @@ const TEMPLATE_ALIASES: Record<string, string> = {
  * d'`Object.prototype` (`__proto__`, `constructor`, `toString`…) ne doit
  * JAMAIS traverser les tables — garde par construction, pas par coercition. */
 export function resolveTemplateId(id: unknown): string {
-  if (typeof id !== 'string') return FALLBACK_TEMPLATE_ID;
-  const canonical = Object.hasOwn(TEMPLATE_ALIASES, id) ? TEMPLATE_ALIASES[id] : id;
+  if (typeof id !== "string") return FALLBACK_TEMPLATE_ID;
+  const canonical = Object.hasOwn(TEMPLATE_ALIASES, id)
+    ? TEMPLATE_ALIASES[id]
+    : id;
   return Object.hasOwn(TEMPLATES, canonical) ? canonical : FALLBACK_TEMPLATE_ID;
 }
 
