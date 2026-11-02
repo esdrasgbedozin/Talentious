@@ -19,6 +19,7 @@
 import type { ComponentType } from "react";
 import CVRenderer from "../CVRenderer";
 import CorporateSobre from "./CorporateSobre";
+import Tech from "./Tech";
 import type { GeneratedCVData } from "../types";
 import type { components } from "../generated/api";
 import type { DocumentLanguage } from "../i18n";
@@ -43,6 +44,7 @@ export const FALLBACK_TEMPLATE_ID = "modern_sobre";
 const TEMPLATES: Record<string, CVTemplateComponent> = {
   modern_sobre: CVRenderer,
   corporate_sobre: CorporateSobre,
+  tech: Tech,
 };
 
 /** Ids canoniques du registre (gelés) — pour itérer sur TOUS les templates
