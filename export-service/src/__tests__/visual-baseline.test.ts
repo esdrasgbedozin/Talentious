@@ -1,7 +1,8 @@
 /**
- * M2-T10 — baseline de non-régression VISUELLE : les 3 fixtures canoniques ×
- * modern_sobre, rasterisées depuis le PDF RÉEL (pdfjs + @napi-rs/canvas) et
- * comparées aux PNG de référence commités (__baselines__/, pixelmatch).
+ * M2-T10 / M3 — baseline de non-régression VISUELLE : les 3 fixtures canoniques
+ * × CHAQUE template livré, rasterisées depuis le PDF RÉEL (pdfjs +
+ * @napi-rs/canvas) et comparées aux PNG de référence commités (__baselines__/,
+ * pixelmatch). Nommage `${templateId}-${fixture}.png`.
  *
  * - Seuil : < 0,5 % de pixels différents (anti-crénelage toléré, une vraie
  *   régression de template/CSS/fit dépasse largement).
@@ -10,6 +11,9 @@
  * - Jusqu'à M2-T16 (polices data:), le rendu dépend des polices SYSTÈME de la
  *   machine : baselines locales dev, à RÉGÉNÉRER à T16 — leur rôle immédiat
  *   est d'attraper les régressions de CODE. Réutilisée en M3/M10.
+ * - TEMPLATES : chaque ticket de finitions de template (M3-T02/T04/T06…) ajoute
+ *   son id ici ET committe ses 3 baselines. Thème = défaut anthracite (D2) pour
+ *   tous (le contraste de ce thème est garanti par cv-render/contrast.test).
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -31,6 +35,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "..", "..", "..");
 const baselineDir = join(here, "__baselines__");
 const FIXTURES = ["minimal", "complete", "dense"] as const;
+// Templates sous baseline visuelle. Un template y entre à son ticket de
+// finitions (M3-T02 : corporate_sobre), avec ses 3 PNG de référence committés.
+const TEMPLATES = ["modern_sobre", "corporate_sobre"] as const;
 const RASTER_SCALE = 2; // ≈1588×2246 px par page A4
 const MAX_DIFF_RATIO = 0.005;
 
@@ -104,59 +111,61 @@ describe.skipIf(!chromiumAvailable)("baseline visuelle (M2-T10)", () => {
     await renderer?.close();
   });
 
-  for (const fixture of FIXTURES) {
-    it(`fixture « ${fixture} » : diff raster sous ${MAX_DIFF_RATIO * 100} % vs baseline`, async () => {
-      const cv = JSON.parse(
-        readFileSync(
-          join(repoRoot, "fixtures", "cv-reference", `${fixture}.json`),
-          "utf8",
-        ),
-      ) as GeneratedCVData;
-      const html = buildCvDocumentHtml({
-        cvContent: cv,
-        templateId: "modern_sobre",
-        theme: anthracite,
-        language: "fr",
-        css: loadCvCss(),
-      });
-      const pdf = await normalizePdfMetadata(await renderer.render(html));
-      const raster = await rasterizeFirstPage(pdf);
+  for (const templateId of TEMPLATES) {
+    for (const fixture of FIXTURES) {
+      it(`${templateId} / « ${fixture} » : diff raster sous ${MAX_DIFF_RATIO * 100} % vs baseline`, async () => {
+        const cv = JSON.parse(
+          readFileSync(
+            join(repoRoot, "fixtures", "cv-reference", `${fixture}.json`),
+            "utf8",
+          ),
+        ) as GeneratedCVData;
+        const html = buildCvDocumentHtml({
+          cvContent: cv,
+          templateId,
+          theme: anthracite,
+          language: "fr",
+          css: loadCvCss(),
+        });
+        const pdf = await normalizePdfMetadata(await renderer.render(html));
+        const raster = await rasterizeFirstPage(pdf);
 
-      const baselinePath = join(baselineDir, `${fixture}.png`);
-      if (process.env.UPDATE_VISUAL_BASELINE) {
-        mkdirSync(baselineDir, { recursive: true });
-        writeFileSync(baselinePath, raster.png);
-        console.info(
-          `baseline régénérée : ${baselinePath} (${raster.png.length} octets)`,
-        );
-        return;
-      }
-      if (!existsSync(baselinePath)) {
-        throw new Error(
-          `Baseline absente : ${baselinePath} — générer avec UPDATE_VISUAL_BASELINE=1 ` +
-            "et COMMITTER le PNG (le diff du PNG est la revue).",
-        );
-      }
-      const baseline = await decodePng(readFileSync(baselinePath));
-      expect(
-        { width: raster.width, height: raster.height },
-        "géométrie de page changée : régénérer sciemment la baseline",
-      ).toEqual({ width: baseline.width, height: baseline.height });
+        const baselinePath = join(baselineDir, `${templateId}-${fixture}.png`);
+        if (process.env.UPDATE_VISUAL_BASELINE) {
+          mkdirSync(baselineDir, { recursive: true });
+          writeFileSync(baselinePath, raster.png);
+          console.info(
+            `baseline régénérée : ${baselinePath} (${raster.png.length} octets)`,
+          );
+          return;
+        }
+        if (!existsSync(baselinePath)) {
+          throw new Error(
+            `Baseline absente : ${baselinePath} — générer avec UPDATE_VISUAL_BASELINE=1 ` +
+              "et COMMITTER le PNG (le diff du PNG est la revue).",
+          );
+        }
+        const baseline = await decodePng(readFileSync(baselinePath));
+        expect(
+          { width: raster.width, height: raster.height },
+          "géométrie de page changée : régénérer sciemment la baseline",
+        ).toEqual({ width: baseline.width, height: baseline.height });
 
-      const { default: pixelmatch } = await import("pixelmatch");
-      const differing = pixelmatch(
-        baseline.data,
-        raster.data,
-        undefined,
-        raster.width,
-        raster.height,
-        { threshold: 0.1 },
-      );
-      const ratio = differing / (raster.width * raster.height);
-      expect(
-        ratio,
-        `${(ratio * 100).toFixed(3)} % de pixels diffèrent`,
-      ).toBeLessThan(MAX_DIFF_RATIO);
-    }, 120_000);
+        const { default: pixelmatch } = await import("pixelmatch");
+        const differing = pixelmatch(
+          baseline.data,
+          raster.data,
+          undefined,
+          raster.width,
+          raster.height,
+          { threshold: 0.1 },
+        );
+        const ratio = differing / (raster.width * raster.height);
+        expect(
+          ratio,
+          `${(ratio * 100).toFixed(3)} % de pixels diffèrent`,
+        ).toBeLessThan(MAX_DIFF_RATIO);
+      }, 120_000);
+    }
   }
 });
