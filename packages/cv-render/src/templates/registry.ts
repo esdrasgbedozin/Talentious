@@ -20,6 +20,7 @@ import type { ComponentType } from "react";
 import CVRenderer from "../CVRenderer";
 import CorporateSobre from "./CorporateSobre";
 import Tech from "./Tech";
+import Creatif from "./Creatif";
 import type { GeneratedCVData } from "../types";
 import type { components } from "../generated/api";
 import type { DocumentLanguage } from "../i18n";
@@ -45,6 +46,7 @@ const TEMPLATES: Record<string, CVTemplateComponent> = {
   modern_sobre: CVRenderer,
   corporate_sobre: CorporateSobre,
   tech: Tech,
+  creatif: Creatif,
 };
 
 /** Ids canoniques du registre (gelés) — pour itérer sur TOUS les templates

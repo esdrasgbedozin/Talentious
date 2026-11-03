@@ -70,6 +70,7 @@ export default function CorporateSobre({
   const {
     t,
     fullName,
+    summary,
     contactBits,
     experiences,
     educations,
@@ -115,10 +116,10 @@ export default function CorporateSobre({
       </header>
 
       {/* Summary */}
-      {cv.summary?.trim() && (
+      {summary.trim() && (
         <section className="mb-5">
           <SectionTitle>{t.sections.profile}</SectionTitle>
-          <p className="whitespace-pre-line">{cv.summary}</p>
+          <p className="whitespace-pre-line">{summary}</p>
         </section>
       )}
 

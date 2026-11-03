@@ -55,6 +55,7 @@ export default function CVRenderer({ cv, theme, language }: CVRendererProps) {
   const {
     t,
     fullName,
+    summary,
     contactBits,
     experiences,
     educations,
@@ -91,10 +92,10 @@ export default function CVRenderer({ cv, theme, language }: CVRendererProps) {
       </header>
 
       {/* Summary */}
-      {cv.summary?.trim() && (
+      {summary.trim() && (
         <section className="mb-4">
           <SectionTitle>{t.sections.profile}</SectionTitle>
-          <p className="whitespace-pre-line">{cv.summary}</p>
+          <p className="whitespace-pre-line">{summary}</p>
         </section>
       )}
 

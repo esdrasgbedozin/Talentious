@@ -93,13 +93,17 @@ describe("Tech — personnalité « stack d'abord »", () => {
     expect(idxExp).toBeGreaterThan(idxSkills);
   });
 
-  it("chaque titre de section porte un sigle « # » décoratif (aria-hidden)", () => {
+  it("chaque titre de section porte un marqueur décoratif NON-TEXTE (rien dans la couche texte du PDF lue par un ATS)", () => {
     const { container } = render(<Tech cv={complete} />);
     const titles = Array.from(container.querySelectorAll("h2"));
     expect(titles.length).toBeGreaterThan(0);
     for (const title of titles) {
-      const sigil = title.querySelector('[aria-hidden="true"]');
-      expect(sigil?.textContent).toBe("#");
+      const marker = title.querySelector('[aria-hidden="true"]');
+      expect(marker).not.toBeNull();
+      // Pas un glyphe texte (« # ») : un aplat accent, donc aucun caractère
+      // parasite extrait par un ATS devant « COMPÉTENCES », « PROFIL », etc.
+      expect(marker?.textContent).toBe("");
+      expect(marker?.getAttribute("style") ?? "").toContain("var(--cv-accent)");
     }
   });
 });
