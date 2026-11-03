@@ -15,6 +15,7 @@ import {
 } from "./registry";
 import CVRenderer from "../CVRenderer";
 import CorporateSobre from "./CorporateSobre";
+import Tech from "./Tech";
 import type { GeneratedCVData } from "../types";
 import completeFixture from "../../../../fixtures/cv-reference/complete.json";
 
@@ -37,9 +38,10 @@ describe("resolveTemplateId — repli sûr et alias legacy", () => {
     expect(resolveTemplateId("modern_v1")).toBe("modern_sobre");
   });
 
-  it("résout corporate_sobre (M3-T01) vers lui-même, sans casser le repli ni la garde prototype", () => {
+  it("résout corporate_sobre (M3-T01) et tech (M3-T03) vers eux-mêmes, sans casser le repli ni la garde prototype", () => {
     expect(resolveTemplateId("corporate_sobre")).toBe("corporate_sobre");
-    // Deux entrées au registre : le repli et la garde héritée restent verts.
+    expect(resolveTemplateId("tech")).toBe("tech");
+    // Plusieurs entrées au registre : le repli et la garde héritée restent verts.
     expect(resolveTemplateId("inconnu_xyz")).toBe(FALLBACK_TEMPLATE_ID);
     expect(resolveTemplateId("__proto__")).toBe(FALLBACK_TEMPLATE_ID);
   });
@@ -96,6 +98,12 @@ describe("getTemplate — id → composant", () => {
   it("corporate_sobre (M3-T01) résout vers CorporateSobre, distinct du repli", () => {
     expect(getTemplate("corporate_sobre")).toBe(CorporateSobre);
     expect(getTemplate("corporate_sobre")).not.toBe(CVRenderer);
+  });
+
+  it("tech (M3-T03) résout vers Tech, distinct du repli et de corporate_sobre", () => {
+    expect(getTemplate("tech")).toBe(Tech);
+    expect(getTemplate("tech")).not.toBe(CVRenderer);
+    expect(getTemplate("tech")).not.toBe(CorporateSobre);
   });
 
   it("le composant résolu rend un CV réel (smoke, fixture canonique + thème optionnel)", () => {
