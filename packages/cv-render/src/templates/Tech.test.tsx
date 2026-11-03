@@ -135,8 +135,10 @@ describe("Tech — compétences en tags, jamais de barre ni d'icône", () => {
     const { container } = render(<Tech cv={complete} />);
     // Les tags portent le NOM de la compétence (information écrite) et une
     // bordure thémable — jamais un remplissage de jauge.
+    // Hook de test stable (data-cv-chip), découplé des classes Tailwind : un
+    // restylage de la bordure ne casse pas ce test de contrat (dette c).
     const tags = Array.from(
-      container.querySelectorAll<HTMLElement>("span.border"),
+      container.querySelectorAll<HTMLElement>("[data-cv-chip]"),
     );
     expect(tags.length).toBeGreaterThan(0);
     const tagText = tags.map((el) => el.textContent).join(" ");

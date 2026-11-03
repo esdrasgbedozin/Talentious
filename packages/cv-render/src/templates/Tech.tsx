@@ -28,7 +28,16 @@ import type { GeneratedCVData } from "../types";
 import type { components } from "../generated/api";
 import type { DocumentLanguage } from "../i18n";
 import { CvSheet } from "./CvSheet";
-import { dateRange, deriveCvView, formatMonthYear } from "./format";
+import {
+  CertificationEntry,
+  ContactLine,
+  EducationEntry,
+  ExperienceEntry,
+  InlineSkills,
+  ProjectEntry,
+  SlashSeparator,
+} from "./blocks";
+import { deriveCvView } from "./format";
 
 type CVThemeTokens = components["schemas"]["CVThemeTokens"];
 
@@ -40,7 +49,6 @@ interface TechProps {
 
 // Styles THÉMABLES uniquement (ADR-THEME-DECOUPLED) : inline `var(--cv-*)`,
 // jamais de classe de charte app, jamais de police codée en dur.
-const mutedText = { color: "var(--cv-muted)" } as const;
 const headingFont = { fontFamily: "var(--cv-font-heading)" } as const;
 
 /** Titre de section « tech » : marqueur « curseur » (barre verticale accent,
@@ -74,6 +82,7 @@ function SkillTags({ skills }: { skills: string[] }) {
       {named.map((skill, i) => (
         <span
           key={i}
+          data-cv-chip="tag"
           className="rounded-sm border px-1.5 py-0.5 text-[10px]"
           style={{ borderColor: "var(--cv-muted)" }}
         >
@@ -81,18 +90,6 @@ function SkillTags({ skills }: { skills: string[] }) {
         </span>
       ))}
     </span>
-  );
-}
-
-/** Compétences d'une expérience/projet : texte en ligne discret (on réserve les
- * tags à la section Compétences, pour garder les entrées denses et lisibles). */
-function InlineSkills({ skills }: { skills: string[] }) {
-  const named = skills.filter(Boolean);
-  if (named.length === 0) return null;
-  return (
-    <p className="mt-1 text-[10px]" style={mutedText}>
-      {named.join(" · ")}
-    </p>
   );
 }
 
@@ -124,19 +121,11 @@ export default function Tech({ cv, theme, language }: TechProps) {
         >
           {fullName || "Votre nom"}
         </h1>
-        {contactBits.length > 0 && (
-          <p
-            className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px]"
-            style={mutedText}
-          >
-            {contactBits.map((bit, i) => (
-              <span key={i} className="flex items-center gap-2">
-                {i > 0 && <span style={mutedText}>/</span>}
-                {bit}
-              </span>
-            ))}
-          </p>
-        )}
+        <ContactLine
+          bits={contactBits}
+          className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px]"
+          separator={SlashSeparator}
+        />
         <div
           className="mt-3 border-t"
           style={{ borderColor: "var(--cv-muted)" }}
@@ -184,32 +173,12 @@ export default function Tech({ cv, theme, language }: TechProps) {
           <SectionTitle>{t.sections.experience}</SectionTitle>
           <div className="space-y-3">
             {experiences.map((exp, i) => (
-              <div key={exp.id ?? i} className="break-inside-avoid">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="font-semibold">
-                    {exp.title}
-                    {exp.company && (
-                      <span className="font-normal" style={mutedText}>
-                        {" "}
-                        — {exp.company}
-                      </span>
-                    )}
-                  </h3>
-                  <span className="flex-shrink-0 text-[10px]" style={mutedText}>
-                    {/* Canonique : pas d'is_current — end_date null = poste en cours. */}
-                    {dateRange(t, exp.start_date, exp.end_date, !exp.end_date)}
-                  </span>
-                </div>
-                {exp.location && (
-                  <p className="text-[10px] italic" style={mutedText}>
-                    {exp.location}
-                  </p>
-                )}
-                {exp.description && (
-                  <p className="mt-1 whitespace-pre-line">{exp.description}</p>
-                )}
-                <InlineSkills skills={exp.highlighted_skills ?? []} />
-              </div>
+              <ExperienceEntry
+                key={exp.id ?? i}
+                exp={exp}
+                t={t}
+                skills={<InlineSkills skills={exp.highlighted_skills ?? []} />}
+              />
             ))}
           </div>
         </section>
@@ -221,20 +190,12 @@ export default function Tech({ cv, theme, language }: TechProps) {
           <SectionTitle>{t.sections.projects}</SectionTitle>
           <div className="space-y-2">
             {projects.map((proj, i) => (
-              <div key={proj.id ?? i} className="break-inside-avoid">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="font-semibold">{proj.name}</h3>
-                  <span className="flex-shrink-0 text-[10px]" style={mutedText}>
-                    {formatMonthYear(t, proj.completion_date)}
-                  </span>
-                </div>
-                {proj.description && (
-                  <p className="mt-0.5 whitespace-pre-line">
-                    {proj.description}
-                  </p>
-                )}
-                <InlineSkills skills={proj.relevant_skills ?? []} />
-              </div>
+              <ProjectEntry
+                key={proj.id ?? i}
+                proj={proj}
+                t={t}
+                skills={<InlineSkills skills={proj.relevant_skills ?? []} />}
+              />
             ))}
           </div>
         </section>
@@ -246,22 +207,7 @@ export default function Tech({ cv, theme, language }: TechProps) {
           <SectionTitle>{t.sections.education}</SectionTitle>
           <div className="space-y-2">
             {educations.map((edu, i) => (
-              <div key={edu.id ?? i} className="break-inside-avoid">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="font-semibold">{edu.degree}</h3>
-                  <span className="flex-shrink-0 text-[10px]" style={mutedText}>
-                    {formatMonthYear(t, edu.end_date)}
-                  </span>
-                </div>
-                <p className="text-[10px]" style={mutedText}>
-                  {edu.institution}
-                </p>
-                {edu.description && (
-                  <p className="mt-0.5 whitespace-pre-line">
-                    {edu.description}
-                  </p>
-                )}
-              </div>
+              <EducationEntry key={edu.id ?? i} edu={edu} t={t} />
             ))}
           </div>
         </section>
@@ -273,20 +219,7 @@ export default function Tech({ cv, theme, language }: TechProps) {
           <SectionTitle>{t.sections.certifications}</SectionTitle>
           <div className="space-y-1">
             {certifications.map((cert, i) => (
-              <div
-                key={cert.id ?? i}
-                className="flex items-baseline justify-between gap-3"
-              >
-                <span>
-                  <span className="font-semibold">{cert.name}</span>
-                  {cert.issuer && (
-                    <span style={mutedText}> — {cert.issuer}</span>
-                  )}
-                </span>
-                <span className="flex-shrink-0 text-[10px]" style={mutedText}>
-                  {formatMonthYear(t, cert.issue_date)}
-                </span>
-              </div>
+              <CertificationEntry key={cert.id ?? i} cert={cert} t={t} />
             ))}
           </div>
         </section>
