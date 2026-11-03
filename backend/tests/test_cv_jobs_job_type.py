@@ -219,6 +219,12 @@ class TestMigrationJobTypeDowngrade:
             # user_a : cv_generation actif (seed) + export actif.
             _insert_job(engine, ids["user_a"], "queued", "export")
 
+            # Se positionner EXACTEMENT sur la migration job_type (robuste aux
+            # migrations empilées au-dessus, ex. seed M3-T07) : sinon la DDL
+            # transactionnelle annulerait toute la chaîne de downgrade et la
+            # version retomberait sur la tête, pas sur f1a2b3c4d5e6.
+            command.downgrade(cfg, "f1a2b3c4d5e6")
+
             with pytest.raises(Exception, match="uq_cv_jobs_one_active_per_user"):
                 command.downgrade(cfg, _PRE_T06_REV)
 

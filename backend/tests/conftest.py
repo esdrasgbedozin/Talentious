@@ -74,6 +74,26 @@ async def test_db_engine():
                 "'https://talentious.app/templates/modern_sobre.png', 'anthracite')"
             )
         )
+        # Les 3 templates premium M3 (seed migration a7b8c9d0e1f2 / M3-T07),
+        # dupliqués à dessein : le catalogue de fixture reflète la prod (4
+        # templates, seul modern_sobre gratuit) pour les tests de catalogue et
+        # de gating premium.
+        await conn.execute(
+            _text(
+                "INSERT INTO cv_templates "
+                "(id, name, sector, is_free, description, preview_url, default_theme_id) "
+                "VALUES "
+                "('corporate_sobre', 'Corporate sobre', 'corporate', false, "
+                "'Registre exécutif et rassurant : en-tête centré, titres en petites capitales.', "
+                "'https://talentious.app/templates/corporate_sobre.png', 'anthracite'), "
+                "('tech', 'Tech', 'tech', false, "
+                "'Orienté stack : compétences mises en avant, tags à bordure.', "
+                "'https://talentious.app/templates/tech.png', 'anthracite'), "
+                "('creatif', 'Créatif', 'creative', false, "
+                "'Éditorial et expressif : en-tête bichrome, pilules de compétences.', "
+                "'https://talentious.app/templates/creatif.png', 'anthracite')"
+            )
+        )
 
     yield engine
 

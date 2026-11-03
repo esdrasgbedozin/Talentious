@@ -190,3 +190,65 @@ class TestCVTemplateORM:
         assert row is not None
         assert row.is_free is True
         assert row.sector == "modern"
+
+
+class TestMigrationSeedM3Templates:
+    """M3-T07 — le seed d'activation ajoute corporate_sobre / tech / creatif au
+    catalogue data-driven : à `head`, `cv_templates` porte 4 entrées, seul
+    `modern_sobre` est gratuit. Le downgrade (un cran) retire les 3 templates
+    M3 et laisse `modern_sobre` — migration de données symétrique."""
+
+    _EXPECTED = {
+        "modern_sobre": True,
+        "corporate_sobre": False,
+        "tech": False,
+        "creatif": False,
+    }
+
+    def test_head_seede_les_4_templates_un_seul_gratuit_et_down_les_retire(
+        self, disposable_db_url
+    ):
+        import os
+
+        from alembic import command
+
+        cfg = _alembic_config()
+        previous = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = disposable_db_url
+        engine = create_engine(sync_db_url(disposable_db_url))
+        try:
+            command.upgrade(cfg, "head")
+            with engine.connect() as conn:
+                rows = dict(
+                    conn.execute(
+                        text("SELECT id, is_free FROM cv_templates")
+                    ).fetchall()
+                )
+            # 4 entrées, mapping is_free exact (seul modern_sobre gratuit).
+            assert rows == self._EXPECTED
+
+            # Downgrade d'UN cran : les 3 templates M3 disparaissent, le gratuit
+            # historique reste (parité avec le seed M1-T03).
+            command.downgrade(cfg, "-1")
+            with engine.connect() as conn:
+                ids = {
+                    r[0]
+                    for r in conn.execute(
+                        text("SELECT id FROM cv_templates")
+                    ).fetchall()
+                }
+            assert ids == {"modern_sobre"}
+
+            # Re-upgrade : de nouveau les 4 (idempotence du cycle).
+            command.upgrade(cfg, "head")
+            with engine.connect() as conn:
+                count = conn.execute(
+                    text("SELECT COUNT(*) FROM cv_templates")
+                ).fetchone()[0]
+            assert count == 4
+        finally:
+            engine.dispose()
+            if previous is None:
+                os.environ.pop("DATABASE_URL", None)
+            else:
+                os.environ["DATABASE_URL"] = previous
