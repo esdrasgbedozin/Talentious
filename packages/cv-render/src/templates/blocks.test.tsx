@@ -29,16 +29,21 @@ describe("ContactLine", () => {
 
   it("séquence des items EXACTE, sans aucun caractère de séparation dans le texte (anti-ATS)", () => {
     const { container } = render(
+      // Classe SENTINELLE (pas une classe Tailwind) : on teste la transmission,
+      // pas un style — un restylage ne casse pas ce test (dette c).
       <ContactLine
         bits={["a@ex.com", "+33", "Lyon"]}
-        className="text-[11px]"
+        className="contact-row"
       />,
     );
     // Le texte extractible (couche PDF lue par un ATS) = les seuls items, dans
     // l'ordre, SANS glyphe de séparation (« • »/« / » bannis de la couche texte).
     expect(container.textContent).toBe("a@ex.com+33Lyon");
-    // La classe passée est bien portée par le paragraphe (personnalité du template).
-    expect(container.querySelector("p")?.className).toContain("text-[11px]");
+    // La className passée est portée VERBATIM par le paragraphe (personnalité du
+    // template, transmise telle quelle).
+    expect(container.querySelector("p")?.getAttribute("class")).toBe(
+      "contact-row",
+    );
   });
 
   it("insère un séparateur DÉCOR non-texte ENTRE les items seulement (n−1)", () => {
@@ -94,16 +99,20 @@ describe("InlineSkills", () => {
     expect(container.textContent).toBe("Python · SQL");
   });
 
-  it("classe par défaut « mt-1 », surchargeable (modern utilise « mt-0.5 »)", () => {
+  it("transmet la className VERBATIM ; applique un défaut non vide quand elle est omise", () => {
+    // className explicite → transmise telle quelle (sentinelle, pas Tailwind :
+    // la valeur exacte du défaut relève du snapshot, pas de ce test — dette c).
     expect(
-      render(<InlineSkills skills={["x"]} />).container.querySelector("p")
-        ?.className,
-    ).toContain("mt-1");
+      render(<InlineSkills skills={["x"]} className="skills-sentinel" />)
+        .container.querySelector("p")
+        ?.getAttribute("class"),
+    ).toBe("skills-sentinel");
+    // Omise → un défaut non vide est posé (la marge par défaut existe).
     expect(
-      render(
-        <InlineSkills skills={["x"]} className="mt-0.5 text-[10px]" />,
-      ).container.querySelector("p")?.className,
-    ).toContain("mt-0.5");
+      render(<InlineSkills skills={["x"]} />)
+        .container.querySelector("p")
+        ?.getAttribute("class"),
+    ).toBeTruthy();
   });
 });
 

@@ -85,6 +85,7 @@ function SkillPills({ skills }: { skills: string[] }) {
       {named.map((skill, i) => (
         <span
           key={i}
+          data-cv-chip="pill"
           className="rounded-full border px-2.5 py-0.5 text-[10px] font-medium"
           style={{
             backgroundColor:

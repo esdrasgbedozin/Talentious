@@ -82,6 +82,7 @@ function SkillTags({ skills }: { skills: string[] }) {
       {named.map((skill, i) => (
         <span
           key={i}
+          data-cv-chip="tag"
           className="rounded-sm border px-1.5 py-0.5 text-[10px]"
           style={{ borderColor: "var(--cv-muted)" }}
         >

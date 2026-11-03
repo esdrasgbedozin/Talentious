@@ -137,8 +137,9 @@ describe("Creatif — DoD : texte lisible indépendamment du décor", () => {
 
   it("les pilules de compétences portent le texte en --cv-text (jamais sur l'accent)", () => {
     const { container } = render(<Creatif cv={complete} />);
+    // Hook de test stable (data-cv-chip), découplé des classes Tailwind (dette c).
     const pills = Array.from(
-      container.querySelectorAll<HTMLElement>("span.rounded-full.border"),
+      container.querySelectorAll<HTMLElement>("[data-cv-chip]"),
     );
     expect(pills.length).toBeGreaterThan(0);
     expect(pills.map((p) => p.textContent).join(" ")).toContain("Python");
