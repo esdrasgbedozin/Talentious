@@ -36,9 +36,14 @@ const repoRoot = join(here, "..", "..", "..");
 const baselineDir = join(here, "__baselines__");
 const FIXTURES = ["minimal", "complete", "dense"] as const;
 // Templates sous baseline visuelle. Un template y entre à son ticket de
-// finitions (M3-T02 : corporate_sobre ; M3-T04 : tech), avec ses 3 PNG de
-// référence committés.
-const TEMPLATES = ["modern_sobre", "corporate_sobre", "tech"] as const;
+// finitions (M3-T02 : corporate_sobre ; M3-T04 : tech ; M3-T06 : creatif), avec
+// ses 3 PNG de référence committés.
+const TEMPLATES = [
+  "modern_sobre",
+  "corporate_sobre",
+  "tech",
+  "creatif",
+] as const;
 const RASTER_SCALE = 2; // ≈1588×2246 px par page A4
 const MAX_DIFF_RATIO = 0.005;
 

@@ -16,6 +16,7 @@ import {
 import CVRenderer from "../CVRenderer";
 import CorporateSobre from "./CorporateSobre";
 import Tech from "./Tech";
+import Creatif from "./Creatif";
 import type { GeneratedCVData } from "../types";
 import completeFixture from "../../../../fixtures/cv-reference/complete.json";
 
@@ -38,9 +39,10 @@ describe("resolveTemplateId — repli sûr et alias legacy", () => {
     expect(resolveTemplateId("modern_v1")).toBe("modern_sobre");
   });
 
-  it("résout corporate_sobre (M3-T01) et tech (M3-T03) vers eux-mêmes, sans casser le repli ni la garde prototype", () => {
+  it("résout corporate_sobre (T01), tech (T03) et creatif (T05) vers eux-mêmes, sans casser le repli ni la garde prototype", () => {
     expect(resolveTemplateId("corporate_sobre")).toBe("corporate_sobre");
     expect(resolveTemplateId("tech")).toBe("tech");
+    expect(resolveTemplateId("creatif")).toBe("creatif");
     // Plusieurs entrées au registre : le repli et la garde héritée restent verts.
     expect(resolveTemplateId("inconnu_xyz")).toBe(FALLBACK_TEMPLATE_ID);
     expect(resolveTemplateId("__proto__")).toBe(FALLBACK_TEMPLATE_ID);
@@ -104,6 +106,13 @@ describe("getTemplate — id → composant", () => {
     expect(getTemplate("tech")).toBe(Tech);
     expect(getTemplate("tech")).not.toBe(CVRenderer);
     expect(getTemplate("tech")).not.toBe(CorporateSobre);
+  });
+
+  it("creatif (M3-T05) résout vers Creatif, distinct des autres templates", () => {
+    expect(getTemplate("creatif")).toBe(Creatif);
+    expect(getTemplate("creatif")).not.toBe(CVRenderer);
+    expect(getTemplate("creatif")).not.toBe(CorporateSobre);
+    expect(getTemplate("creatif")).not.toBe(Tech);
   });
 
   it("le composant résolu rend un CV réel (smoke, fixture canonique + thème optionnel)", () => {
