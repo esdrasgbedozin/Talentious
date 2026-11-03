@@ -29,14 +29,39 @@ import { dateRange, formatMonthYear } from "./format";
 
 const mutedText = { color: "var(--cv-muted)" } as const;
 
-/** Ligne de contacts (email • téléphone • ville • LinkedIn). La classe du
+/** Séparateur de contacts DÉCOR non-texte (pastille accent-muet), PAS un glyphe
+ * « • » : rien dans la couche texte du PDF lue par un ATS — cohérent avec les
+ * marqueurs de titre de section déjà passés en décor pur (constat de revue M3).
+ * Défaut de 3 templates sur 4. */
+export const DotSeparator = (
+  <span
+    aria-hidden="true"
+    className="inline-block h-[3px] w-[3px] flex-shrink-0 rounded-full"
+    style={{ backgroundColor: "var(--cv-muted)" }}
+  />
+);
+
+/** Variante « chemin » du template tech (évoquait le « / » d'un fil d'Ariane) :
+ * fine barre oblique, toujours en décor non-texte (aucun glyphe « / » extrait
+ * par un ATS). */
+export const SlashSeparator = (
+  <span
+    aria-hidden="true"
+    className="inline-block h-3 w-px flex-shrink-0 rotate-[18deg]"
+    style={{ backgroundColor: "var(--cv-muted)" }}
+  />
+);
+
+/** Ligne de contacts (email · téléphone · ville · LinkedIn). La classe du
  * paragraphe et le séparateur restent la personnalité de chaque template
- * (alignement, taille, glyphe « • » ou « / ») ; vide ⇒ rien (parité avec le
- * garde `length > 0` inline d'origine). */
+ * (alignement, taille, pastille ou barre). Le séparateur est un DÉCOR non-texte
+ * (cf. DotSeparator/SlashSeparator) : il ne laisse aucun caractère parasite dans
+ * la couche texte du PDF lue par un ATS. Vide ⇒ rien (parité avec le garde
+ * `length > 0` inline d'origine). */
 export function ContactLine({
   bits,
   className,
-  separator = "•",
+  separator = DotSeparator,
 }: {
   bits: string[];
   className: string;
@@ -47,7 +72,7 @@ export function ContactLine({
     <p className={className} style={mutedText}>
       {bits.map((bit, i) => (
         <span key={i} className="flex items-center gap-2">
-          {i > 0 && <span style={mutedText}>{separator}</span>}
+          {i > 0 && separator}
           {bit}
         </span>
       ))}

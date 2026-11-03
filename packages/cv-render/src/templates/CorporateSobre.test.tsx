@@ -100,14 +100,13 @@ describe("CorporateSobre — règle Bible §6.3 : aucune barre de niveau, aucune
       /width:\s*\d+(?:\.\d+)?%/.test(el.getAttribute("style") ?? ""),
     );
     expect(widthBars).toEqual([]);
-    // Le SEUL élément décoratif (aria-hidden) est le filet typographique de
-    // l'en-tête — un trait fin (border-top), pas une barre de données.
-    const decorative = Array.from(
-      container.querySelectorAll('[aria-hidden="true"]'),
-    );
-    expect(decorative).toHaveLength(1);
-    expect(decorative[0].tagName).toBe("DIV");
-    expect(decorative[0].className).toContain("border-t");
+    // L'en-tête garde son filet typographique décoratif (trait fin border-top),
+    // qui n'est pas une barre de données. Les autres éléments décoratifs
+    // (séparateurs de contact) sont de petites pastilles de taille FIXE, jamais
+    // des jauges — l'absence de largeur en % est déjà vérifiée ci-dessus.
+    const filet = container.querySelector('[aria-hidden="true"].border-t');
+    expect(filet).not.toBeNull();
+    expect(filet?.tagName).toBe("DIV");
   });
 
   it("les compétences sont du TEXTE, jamais une barre (template sobre) : rendues en ligne, séparées par « · »", () => {

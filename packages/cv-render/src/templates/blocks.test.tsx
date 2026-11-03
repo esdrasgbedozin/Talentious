@@ -13,6 +13,7 @@ import {
   ExperienceEntry,
   InlineSkills,
   ProjectEntry,
+  SlashSeparator,
 } from "./blocks";
 import { getCVLocale } from "../i18n";
 
@@ -26,33 +27,53 @@ describe("ContactLine", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("insère un séparateur ENTRE les items seulement (n−1), jamais en tête ni en queue", () => {
+  it("séquence des items EXACTE, sans aucun caractère de séparation dans le texte (anti-ATS)", () => {
     const { container } = render(
       <ContactLine
         bits={["a@ex.com", "+33", "Lyon"]}
         className="text-[11px]"
       />,
     );
-    // Séquence EXACTE : verrouille l'ordre ET le n−1 (un « • » en tête/queue ou
-    // un item réordonné ferait échouer), là où un simple comptage ne le ferait pas.
-    expect(container.textContent).toBe("a@ex.com•+33•Lyon");
+    // Le texte extractible (couche PDF lue par un ATS) = les seuls items, dans
+    // l'ordre, SANS glyphe de séparation (« • »/« / » bannis de la couche texte).
+    expect(container.textContent).toBe("a@ex.com+33Lyon");
     // La classe passée est bien portée par le paragraphe (personnalité du template).
     expect(container.querySelector("p")?.className).toContain("text-[11px]");
   });
 
-  it("un seul item ⇒ aucun séparateur", () => {
+  it("insère un séparateur DÉCOR non-texte ENTRE les items seulement (n−1)", () => {
+    const { container } = render(
+      <ContactLine bits={["a@ex.com", "+33", "Lyon"]} className="x" />,
+    );
+    const seps = container.querySelectorAll('[aria-hidden="true"]');
+    expect(seps).toHaveLength(2); // 3 items → 2 séparateurs
+    for (const sep of seps) {
+      expect(sep.textContent).toBe(""); // décor pur, rien à extraire
+      expect(sep.getAttribute("style") ?? "").toContain("var(--cv-muted)");
+    }
+  });
+
+  it("un seul item ⇒ aucun séparateur (ni texte, ni décor)", () => {
     const { container } = render(
       <ContactLine bits={["solo@ex.com"]} className="x" />,
     );
     expect(container.textContent).toBe("solo@ex.com");
+    expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(0);
   });
 
-  it("séparateur personnalisable (tech utilise « / »)", () => {
+  it("séparateur personnalisable (tech utilise la barre oblique), toujours non-texte", () => {
     const { container } = render(
-      <ContactLine bits={["a", "b"]} className="x" separator="/" />,
+      <ContactLine
+        bits={["a", "b"]}
+        className="x"
+        separator={SlashSeparator}
+      />,
     );
-    expect(container.textContent).toContain("/");
-    expect(container.textContent).not.toContain("•");
+    // Aucun glyphe « / » parasite ; le séparateur fourni est bien du décor.
+    expect(container.textContent).toBe("ab");
+    const seps = container.querySelectorAll('[aria-hidden="true"]');
+    expect(seps).toHaveLength(1);
+    expect(seps[0].textContent).toBe("");
   });
 });
 

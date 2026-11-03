@@ -35,6 +35,7 @@ import {
   ExperienceEntry,
   InlineSkills,
   ProjectEntry,
+  SlashSeparator,
 } from "./blocks";
 import { deriveCvView } from "./format";
 
@@ -122,7 +123,7 @@ export default function Tech({ cv, theme, language }: TechProps) {
         <ContactLine
           bits={contactBits}
           className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px]"
-          separator="/"
+          separator={SlashSeparator}
         />
         <div
           className="mt-3 border-t"
