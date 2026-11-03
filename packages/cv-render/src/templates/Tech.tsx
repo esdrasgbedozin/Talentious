@@ -43,18 +43,22 @@ interface TechProps {
 const mutedText = { color: "var(--cv-muted)" } as const;
 const headingFont = { fontFamily: "var(--cv-font-heading)" } as const;
 
-/** Titre de section « tech » : sigle « # » décoratif (cue markdown/code) +
- * libellé en capitales, sans filet. Distinct du titre souligné de modern et des
- * petites capitales à filet de corporate. */
+/** Titre de section « tech » : marqueur « curseur » (barre verticale accent,
+ * DÉCOR non-texte — pas un glyphe, pour ne rien laisser dans la couche texte du
+ * PDF lue par un ATS, constat de revue) + libellé en capitales, sans filet.
+ * Distinct du titre souligné de modern, des petites capitales à filet de
+ * corporate, et du carré de creatif. */
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <h2
-      className="mb-2 text-[12px] font-bold uppercase tracking-wide"
+      className="mb-2 flex items-center gap-2 text-[12px] font-bold uppercase tracking-wide"
       style={{ ...headingFont, color: "var(--cv-accent)" }}
     >
-      <span aria-hidden="true" className="mr-1.5 font-normal" style={mutedText}>
-        #
-      </span>
+      <span
+        aria-hidden="true"
+        className="inline-block h-3 w-0.5 flex-shrink-0"
+        style={{ backgroundColor: "var(--cv-accent)" }}
+      />
       {children}
     </h2>
   );
@@ -96,6 +100,7 @@ export default function Tech({ cv, theme, language }: TechProps) {
   const {
     t,
     fullName,
+    summary,
     contactBits,
     experiences,
     educations,
@@ -140,10 +145,10 @@ export default function Tech({ cv, theme, language }: TechProps) {
       </header>
 
       {/* Summary */}
-      {cv.summary?.trim() && (
+      {summary.trim() && (
         <section className="mb-4">
           <SectionTitle>{t.sections.profile}</SectionTitle>
-          <p className="whitespace-pre-line">{cv.summary}</p>
+          <p className="whitespace-pre-line">{summary}</p>
         </section>
       )}
 
