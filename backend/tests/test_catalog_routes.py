@@ -56,6 +56,14 @@ class TestCatalogueTemplates:
         assert modern.default_theme_id == "anthracite"
         assert str(modern.preview_url).endswith("/templates/modern_sobre.png")
 
+        # ACTIVATION M3-T07 : les 4 templates livrés sont au catalogue, les 3
+        # nouveaux en premium (le seul gratuit reste modern_sobre, ci-dessus).
+        by_id = {t.id: t for t in parsed}
+        assert {"modern_sobre", "corporate_sobre", "tech", "creatif"} <= set(by_id)
+        assert by_id["corporate_sobre"].is_free is False
+        assert by_id["tech"].is_free is False
+        assert by_id["creatif"].is_free is False
+
     async def test_data_driven_une_ligne_en_base_apparait(
         self, client, auth_headers, test_db
     ):
