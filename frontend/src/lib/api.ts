@@ -13,6 +13,10 @@ import {
 
 type GeneratedCVData = components['schemas']['GeneratedCVData'];
 
+/** Entrée du catalogue des Templates (`GET /cv/templates`). `is_free` pilote le
+ * badge Gratuit/Premium ; tous les Templates sont listés pour l'aperçu. */
+export type CVTemplate = components['schemas']['CVTemplate'];
+
 // Base URL of the FastAPI backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -355,15 +359,31 @@ export const getCV = async (cvId: string): Promise<CVDetail> => {
  * the `PUT /cv` contract and backend coercion expect: the state is sent AS IS,
  * zero transformation (ADR-CONTENT-SCHEMA) — per-experience highlighted_skills
  * included. Sending anything else silently wipes the CV body (M0-T08a).
+ *
+ * The PUT is PARTIAL: only provided fields change. Content (`cv_data_json`) and
+ * envelope (`template_id`, M3-T08) are independent: picking a template never
+ * touches the body, and saving the body never touches the envelope.
  */
 export const updateCV = async (
   cvId: string,
-  payload: { cv_name?: string; cv_data_json?: GeneratedCVData },
+  payload: {
+    cv_name?: string;
+    cv_data_json?: GeneratedCVData;
+    template_id?: string;
+  },
 ): Promise<CVDetail> => {
   const body: Record<string, unknown> = {};
   if (payload.cv_name !== undefined) body.cv_name = payload.cv_name;
   if (payload.cv_data_json !== undefined) body.cv_data_json = payload.cv_data_json;
+  if (payload.template_id !== undefined) body.template_id = payload.template_id;
   const { data } = await apiClient.put<CVDetail>(`/cv/${cvId}`, body);
+  return data;
+};
+
+/** Catalogue des Templates disponibles (`GET /cv/templates`). Liste gratuits ET
+ * premium pour permettre l'aperçu ; `is_free` indique l'accès sans Pass. */
+export const getCVTemplates = async (): Promise<CVTemplate[]> => {
+  const { data } = await apiClient.get<CVTemplate[]>('/cv/templates');
   return data;
 };
 
