@@ -63,6 +63,18 @@ function cvDetail(templateId: string): CVDetail {
     updated_at: '2026-10-01T00:00:00Z',
     job_offer_context: null,
     cv_data_json: completeFixture as unknown as GeneratedCVData,
+    theme: {
+      id: 'anthracite',
+      name: 'Anthracite',
+      tokens: {
+        color_accent: '#2D3748',
+        color_text: '#1A202C',
+        color_muted: '#4A5568',
+        color_background: '#FFFFFF',
+        font_heading: 'Inter',
+        font_body: 'Inter',
+      },
+    },
   };
 }
 

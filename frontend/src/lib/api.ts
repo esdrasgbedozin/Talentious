@@ -17,6 +17,13 @@ type GeneratedCVData = components['schemas']['GeneratedCVData'];
  * badge Gratuit/Premium ; tous les Templates sont listés pour l'aperçu. */
 export type CVTemplate = components['schemas']['CVTemplate'];
 
+/** Thème CV (enveloppe) : `{ id?, name, tokens, is_free }`. `id` null = thème
+ * personnalisé ; le serveur tranche preset vs custom en comparant les tokens
+ * (M1-T14) et gate le premium (402 premium-theme-required). `is_free` est
+ * readOnly (ignoré en entrée). */
+export type CVTheme = components['schemas']['CVTheme'];
+export type CVThemeTokens = components['schemas']['CVThemeTokens'];
+
 // Base URL of the FastAPI backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -341,6 +348,9 @@ export interface CVDetail extends CVBase {
   // (backfill v2 + ceinture de coercition du worker), plus par l'app : les
   // consommateurs gardent leur défense au chargement (ensureCVShape).
   cv_data_json: GeneratedCVData;
+  // Enveloppe thème (M3-T11) : requise au contrat (CVDetailResponse),
+  // toujours renvoyée par le serveur.
+  theme: CVTheme;
 }
 
 /** Fetch a single CV; `cv_data_json` is canonical GeneratedCVData, passed
@@ -361,8 +371,9 @@ export const getCV = async (cvId: string): Promise<CVDetail> => {
  * included. Sending anything else silently wipes the CV body (M0-T08a).
  *
  * The PUT is PARTIAL: only provided fields change. Content (`cv_data_json`) and
- * envelope (`template_id`, M3-T08) are independent: picking a template never
- * touches the body, and saving the body never touches the envelope.
+ * envelope (`template_id` M3-T08, `theme` M3-T11) are independent: picking a
+ * template or saving a theme never touches the body, and saving the body never
+ * touches the envelope.
  */
 export const updateCV = async (
   cvId: string,
@@ -370,12 +381,14 @@ export const updateCV = async (
     cv_name?: string;
     cv_data_json?: GeneratedCVData;
     template_id?: string;
+    theme?: CVTheme;
   },
 ): Promise<CVDetail> => {
   const body: Record<string, unknown> = {};
   if (payload.cv_name !== undefined) body.cv_name = payload.cv_name;
   if (payload.cv_data_json !== undefined) body.cv_data_json = payload.cv_data_json;
   if (payload.template_id !== undefined) body.template_id = payload.template_id;
+  if (payload.theme !== undefined) body.theme = payload.theme;
   const { data } = await apiClient.put<CVDetail>(`/cv/${cvId}`, body);
   return data;
 };

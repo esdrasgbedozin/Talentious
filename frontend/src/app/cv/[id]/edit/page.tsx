@@ -24,9 +24,12 @@ import CVCertificationForm from '@/components/cv/CVCertificationForm';
 import {
   FALLBACK_TEMPLATE_ID,
   getTemplate,
+  DEFAULT_CV_THEME_TOKENS,
   type GeneratedCVData,
 } from '@talentious/cv-render';
 import TemplateSelector from '@/components/cv/TemplateSelector';
+import ThemeEditor from '@/components/cv/ThemeEditor';
+import ThemeContrast from '@/components/cv/ThemeContrast';
 import { useToast } from '@/components/ui/Toast';
 import {
   getCV,
@@ -34,6 +37,7 @@ import {
   getCVTemplates,
   getErrorMessage,
   type CVTemplate,
+  type CVThemeTokens,
 } from '@/lib/api';
 import { getExportErrorMessage } from '@/lib/exportErrors';
 import {
@@ -56,6 +60,20 @@ type ListKey =
   | 'selected_projects'
   | 'selected_certifications';
 
+const THEME_TOKEN_KEYS: (keyof CVThemeTokens)[] = [
+  'color_accent',
+  'color_text',
+  'color_muted',
+  'color_background',
+  'font_heading',
+  'font_body',
+];
+
+// Égalité des 6 champs : dérive l'état « modifié » du thème (revenir à la
+// valeur sauvée efface le drapeau, pas de faux positif).
+const sameThemeTokens = (a: CVThemeTokens, b: CVThemeTokens): boolean =>
+  THEME_TOKEN_KEYS.every((k) => a[k] === b[k]);
+
 export default function CVEditorPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -71,10 +89,25 @@ export default function CVEditorPage() {
   const [templates, setTemplates] = useState<CVTemplate[]>([]);
   // Template dont la sélection s'enregistre (PUT en vol) : désactive l'option.
   const [templateBusyId, setTemplateBusyId] = useState<string | null>(null);
+  // Enveloppe thème (M3-T11) : tokens édités en direct + provenance (id/name)
+  // pour le round-trip. Save BUFFERISÉ (bouton dédié), pas un PUT par frappe.
+  const [themeTokens, setThemeTokens] = useState<CVThemeTokens>(
+    DEFAULT_CV_THEME_TOKENS,
+  );
+  const [themeId, setThemeId] = useState<string | null>('anthracite');
+  const [themeName, setThemeName] = useState<string>('Anthracite');
+  // Derniers tokens PERSISTÉS : référence de l'état « modifié » dérivé.
+  const [savedThemeTokens, setSavedThemeTokens] =
+    useState<CVThemeTokens>(DEFAULT_CV_THEME_TOKENS);
+  const [isThemeSaving, setIsThemeSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // « Modifié » DÉRIVÉ : vrai tant que les tokens édités diffèrent des
+  // derniers persistés. Revenir à la valeur sauvée efface l'état.
+  const isThemeDirty = !sameThemeTokens(themeTokens, savedThemeTokens);
 
   // Load the CV — getCV returns the canonical content; ensureCVShape only
   // fills missing lists (raw V1 CVs stored before the coercion belt).
@@ -87,6 +120,12 @@ export default function CVEditorPage() {
         setCvName(detail.cv_name);
         setTemplateId(detail.template_id);
         setCv(ensureCVShape(detail.cv_data_json));
+        // Enveloppe thème (requise au contrat) : aligne l'édition ET la
+        // référence « persistée » sur ce que le serveur renvoie.
+        setThemeTokens(detail.theme.tokens);
+        setSavedThemeTokens(detail.theme.tokens);
+        setThemeId(detail.theme.id ?? null);
+        setThemeName(detail.theme.name);
       })
       .catch((err) => !cancelled && setLoadError(getErrorMessage(err)))
       .finally(() => !cancelled && setIsLoading(false));
@@ -114,14 +153,14 @@ export default function CVEditorPage() {
   // Warn before leaving with unsaved changes (tab close / reload).
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
+      if (isDirty || isThemeDirty) {
         e.preventDefault();
         e.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [isDirty]);
+  }, [isDirty, isThemeDirty]);
 
   // State helpers — every mutation marks the CV dirty.
   const mutate = useCallback((updater: (prev: GeneratedCVData) => GeneratedCVData) => {
@@ -209,6 +248,45 @@ export default function CVEditorPage() {
     }
   };
 
+  const handleThemeChange = (next: CVThemeTokens) => {
+    // L'état « modifié » est dérivé (comparaison aux tokens persistés).
+    setThemeTokens(next);
+  };
+
+  // Sauvegarde du THÈME : PUT d'enveloppe SEUL ({ theme }), jamais le contenu
+  // (M1-T14 : contenu et enveloppe indépendants). Le serveur tranche preset vs
+  // personnalisé en comparant les tokens et gate le premium (402).
+  const handleSaveTheme = async () => {
+    if (!cvId || !isThemeDirty) return;
+    setIsThemeSaving(true);
+    try {
+      const updated = await updateCV(cvId, {
+        theme: { id: themeId, name: themeName, tokens: themeTokens },
+      });
+      // Resync AUTORITATIF sur ce que le serveur a stocké (custom => id null
+      // / nom « Personnalisé » ; preset reconnu => sa provenance). La
+      // référence persistée suit, ce qui remet l'état « modifié » à faux.
+      setThemeTokens(updated.theme.tokens);
+      setSavedThemeTokens(updated.theme.tokens);
+      setThemeId(updated.theme.id ?? null);
+      setThemeName(updated.theme.name);
+      toast.success('Thème enregistré.');
+    } catch (err) {
+      // 402 premium-theme-required intercepté en amont (redirection /billing,
+      // qui perd le contenu non sauvé : à affiner en T12 par un intercepteur
+      // typé). Repli NEUTRE (réseau/5xx/422) ; les couleurs invalides sont
+      // déjà bloquées par l'éditeur.
+      toast.error(
+        getExportErrorMessage(
+          err,
+          "Impossible d'enregistrer le thème. Réessaie dans un instant.",
+        ),
+      );
+    } finally {
+      setIsThemeSaving(false);
+    }
+  };
+
   // L'aperçu rend EXACTEMENT le payload du save (aperçu = PDF). Mémoïsé pour ne
   // pas recréer l'objet (et re-déclencher la mesure du renderer) inutilement.
   const previewCv = useMemo(() => sanitizeCVForSave(cv), [cv]);
@@ -218,7 +296,7 @@ export default function CVEditorPage() {
   const softSkills = useMemo(() => skillNames(cv.highlighted_skills, 'soft_skill'), [cv]);
 
   const confirmLeave = () =>
-    !isDirty ||
+    (!isDirty && !isThemeDirty) ||
     window.confirm('Vous avez des modifications non sauvegardées. Quitter quand même ?');
 
   const handleBack = () => {
@@ -318,6 +396,42 @@ export default function CVEditorPage() {
               />
             </ProfileSection>
           )}
+          <ProfileSection
+            title="Thème"
+            description="Couleurs et polices du CV. L'aperçu se met à jour en direct."
+            defaultOpen
+            isComplete
+          >
+            <div className="space-y-5">
+              <ThemeEditor
+                tokens={themeTokens}
+                onChange={handleThemeChange}
+                disabled={isThemeSaving}
+              />
+              <div className="border-t border-border pt-4">
+                <p className="mb-2 text-xs font-medium text-text-secondary">
+                  Contraste (lisibilité)
+                </p>
+                <ThemeContrast tokens={themeTokens} />
+              </div>
+              <div className="flex items-center justify-end gap-3">
+                {isThemeDirty && (
+                  <span className="text-xs text-text-secondary">
+                    Thème modifié
+                  </span>
+                )}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleSaveTheme}
+                  isLoading={isThemeSaving}
+                  disabled={!isThemeDirty || isThemeSaving}
+                >
+                  Enregistrer le thème
+                </Button>
+              </div>
+            </div>
+          </ProfileSection>
           <ProfileSection
             title="Informations personnelles"
             description="Coordonnées affichées en en-tête du CV"
@@ -505,7 +619,7 @@ export default function CVEditorPage() {
             <div className="overflow-hidden rounded-lg border border-border bg-white shadow-sm">
               <div style={{ zoom: 0.62 }}>
                 {/* eslint-disable-next-line react-hooks/static-components -- référence stable du registre (ADR-TEMPLATE-REGISTRY) */}
-                <Template cv={previewCv} />
+                <Template cv={previewCv} theme={themeTokens} />
               </div>
             </div>
           </div>
