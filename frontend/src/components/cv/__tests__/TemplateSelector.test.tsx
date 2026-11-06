@@ -97,7 +97,7 @@ describe('TemplateSelector — sélection (groupe de radios)', () => {
     expect(screen.getByRole('radio', { name: /Tech/ })).not.toBeChecked();
   });
 
-  it('appelle onSelect avec l id du template choisi', async () => {
+  it("appelle onSelect avec l'id du template choisi", async () => {
     const { onSelect } = renderSelector();
 
     await userEvent.click(screen.getByRole('radio', { name: /Tech/ }));
@@ -105,10 +105,17 @@ describe('TemplateSelector — sélection (groupe de radios)', () => {
     expect(onSelect).toHaveBeenCalledWith('tech');
   });
 
-  it('désactive l option en cours d enregistrement (busyId)', () => {
+  it("désactive toutes les options pendant l'enregistrement et marque l'option en vol (busyId)", () => {
     renderSelector({ busyId: 'tech' });
 
+    // Désactivation GLOBALE le temps du PUT : aucun clic concurrent possible.
     expect(screen.getByRole('radio', { name: /Tech/ })).toBeDisabled();
-    expect(screen.getByRole('radio', { name: /Moderne sobre/ })).toBeEnabled();
+    expect(screen.getByRole('radio', { name: /Moderne sobre/ })).toBeDisabled();
+    // Seule l'option réellement en vol porte aria-busy.
+    const busyCard = screen
+      .getByRole('radio', { name: /Tech/ })
+      .closest('label')!
+      .querySelector('[aria-busy="true"]');
+    expect(busyCard).toBeInTheDocument();
   });
 });

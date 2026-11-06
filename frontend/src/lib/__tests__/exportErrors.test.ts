@@ -96,4 +96,10 @@ describe('getExportErrorMessage', () => {
   it('fournit un repli pour une valeur totalement inconnue', () => {
     expect(getExportErrorMessage('boom')).toContain('échoué');
   });
+
+  it('utilise le repli fourni (flux non-export) pour un 4xx non cartographié', () => {
+    expect(
+      getExportErrorMessage(axiosError(400, {}), 'Repli dédié modèle.'),
+    ).toBe('Repli dédié modèle.');
+  });
 });

@@ -102,7 +102,10 @@ export default function CVEditorPage() {
     let cancelled = false;
     getCVTemplates()
       .then((list) => !cancelled && setTemplates(list))
-      .catch(() => undefined);
+      .catch((err) => {
+        // Dégradation voulue : sélecteur masqué, l'édition du contenu continue.
+        console.error('Catalogue des templates indisponible:', err);
+      });
     return () => {
       cancelled = true;
     };
@@ -195,7 +198,12 @@ export default function CVEditorPage() {
     } catch (err) {
       // Le 402 premium est intercepté en amont (redirection /billing, api.ts) ;
       // ce repli couvre réseau/5xx et porte la bonne copie premium au besoin.
-      toast.error(getExportErrorMessage(err));
+      toast.error(
+        getExportErrorMessage(
+          err,
+          "Impossible d'appliquer ce modèle. Réessaie dans un instant.",
+        ),
+      );
     } finally {
       setTemplateBusyId(null);
     }

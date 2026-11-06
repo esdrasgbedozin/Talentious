@@ -100,8 +100,8 @@ beforeEach(() => {
   getCVTemplatesMock.mockReset().mockResolvedValue(CATALOG);
 });
 
-describe('M3-T08 inc.3 — sélection de Template dans l éditeur', () => {
-  it('appelle le PUT d enveloppe { template_id } et bascule la sélection', async () => {
+describe("M3-T08 inc.3 — sélection de Template dans l'éditeur", () => {
+  it("appelle le PUT d'enveloppe { template_id } et bascule la sélection", async () => {
     render(<CVEditorPage />);
 
     const tech = await screen.findByRole('radio', { name: /Tech/ });
@@ -135,5 +135,45 @@ describe('M3-T08 inc.3 — sélection de Template dans l éditeur', () => {
     // La sélection reste sur le template chargé : le refus ne change rien.
     expect(screen.getByRole('radio', { name: /Moderne sobre/ })).toBeChecked();
     expect(screen.getByRole('radio', { name: /Tech/ })).not.toBeChecked();
+  });
+
+  it('sur une erreur non premium, ne bascule pas et affiche un message adapté au modèle', async () => {
+    // Cas réellement atteignable (pas de redirection /billing, contrairement
+    // au 402) : un 4xx non premium doit porter le repli DÉDIÉ au modèle, pas
+    // le message générique d'export.
+    updateCVMock.mockReset().mockRejectedValue(
+      new axios.AxiosError('Bad Request', 'ERR_BAD_REQUEST', undefined, undefined, {
+        status: 400,
+        data: {},
+      } as never),
+    );
+
+    render(<CVEditorPage />);
+
+    const tech = await screen.findByRole('radio', { name: /Tech/ });
+    await userEvent.click(tech);
+
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith(
+        "Impossible d'appliquer ce modèle. Réessaie dans un instant.",
+      ),
+    );
+    expect(screen.getByRole('radio', { name: /Moderne sobre/ })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /Tech/ })).not.toBeChecked();
+  });
+
+  it('masque la section Modèle si le catalogue est indisponible (édition intacte)', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    getCVTemplatesMock.mockReset().mockRejectedValue(new Error('boom'));
+
+    render(<CVEditorPage />);
+
+    // Le CV lui-même charge (nom en barre d'outils)...
+    await screen.findByDisplayValue('CV Camille');
+    // ...mais sans catalogue, aucune option de template n'est rendue.
+    expect(screen.queryByRole('radio', { name: /Tech/ })).not.toBeInTheDocument();
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+
+    spy.mockRestore();
   });
 });

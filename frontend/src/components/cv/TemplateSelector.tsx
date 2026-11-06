@@ -54,16 +54,21 @@ export default function TemplateSelector({
           return (
             <label
               key={template.id}
-              className={
-                isBusy ? 'block cursor-wait' : 'block cursor-pointer'
-              }
+              className={[
+                'block',
+                isBusy
+                  ? 'cursor-wait'
+                  : busyId != null
+                    ? 'cursor-not-allowed'
+                    : 'cursor-pointer',
+              ].join(' ')}
             >
               <input
                 type="radio"
                 name="cv-template"
                 value={template.id}
                 checked={isSelected}
-                disabled={isBusy}
+                disabled={busyId != null}
                 onChange={() => onSelect(template.id)}
                 className="peer sr-only"
               />
@@ -73,7 +78,7 @@ export default function TemplateSelector({
                   'flex flex-col overflow-hidden rounded-lg border border-border bg-white transition',
                   'peer-checked:border-primary peer-checked:ring-2 peer-checked:ring-primary',
                   'peer-focus-visible:ring-2 peer-focus-visible:ring-primary',
-                  'peer-disabled:opacity-70',
+                  isBusy ? 'opacity-70' : '',
                   isSelected ? '' : 'hover:border-primary/50',
                 ].join(' ')}
               >
