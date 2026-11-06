@@ -36,6 +36,8 @@ export type CVTemplate = components['schemas']['CVTemplate'];
  * readOnly (ignoré en entrée). */
 export type CVTheme = components['schemas']['CVTheme'];
 export type CVThemeTokens = components['schemas']['CVThemeTokens'];
+/** Langue du document généré/exporté (`fr` par défaut, `en` premium). */
+export type DocumentLanguage = components['schemas']['DocumentLanguage'];
 
 // Base URL of the FastAPI backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -195,6 +197,11 @@ export interface CVBase {
 export interface GenerateCVRequest {
   cv_name: string;
   offer_text: string;
+  // Enveloppe optionnelle (M3-T13) : omis = défauts serveur (modèle
+  // gratuit, thème du modèle, français). Premium => 402 typé serveur.
+  template_id?: string;
+  theme?: CVTheme;
+  target_language?: DocumentLanguage;
 }
 
 export interface GenerateCVResult {
@@ -213,9 +220,21 @@ export interface CVJobStatus {
 export const startGeneration = async (
   data: GenerateCVRequest,
 ): Promise<{ job_id: string; status: string }> => {
+  // Body construit champ par champ : les 3 champs d'enveloppe (M3-T13) ne
+  // sont transmis que s'ils sont fournis — la requête V1 (cv_name +
+  // offer_text seuls) reste STRICTEMENT inchangée, le serveur applique ses
+  // défauts.
+  const body: Record<string, unknown> = {
+    cv_name: data.cv_name,
+    offer_text: data.offer_text,
+  };
+  if (data.template_id !== undefined) body.template_id = data.template_id;
+  if (data.theme !== undefined) body.theme = data.theme;
+  if (data.target_language !== undefined)
+    body.target_language = data.target_language;
   const { data: job } = await apiClient.post<{ job_id: string; status: string }>(
     '/cv/generate',
-    data,
+    body,
   );
   return job;
 };

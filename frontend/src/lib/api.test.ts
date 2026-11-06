@@ -5,7 +5,13 @@
  * canonique (backfill v2 + ceinture de coercition au worker), le pont legacy
  * `toCanonicalCVData` a été supprimé.
  */
-import { apiClient, getCV, getCVTemplates, updateCV } from '@/lib/api';
+import {
+  apiClient,
+  getCV,
+  getCVTemplates,
+  startGeneration,
+  updateCV,
+} from '@/lib/api';
 import { createEmptyCVData, createEmptyCVExperience } from '@/lib/cvEditor';
 
 describe('updateCV — envoie du GeneratedCVData au réseau (M0-T08a → T08c)', () => {
@@ -205,5 +211,59 @@ describe('getCVTemplates — catalogue des templates (M3-T08)', () => {
     expect(result).toBe(catalogue);
 
     getSpy.mockRestore();
+  });
+});
+
+describe('startGeneration — enveloppe optionnelle (M3-T13)', () => {
+  it("requête V1 inchangée : sans enveloppe, body = cv_name + offer_text", async () => {
+    const postSpy = jest
+      .spyOn(apiClient, 'post')
+      .mockResolvedValue({ data: { job_id: 'j', status: 'queued' } });
+
+    await startGeneration({ cv_name: 'CV', offer_text: 'offre' });
+
+    const [url, body] = postSpy.mock.calls[0];
+    expect(url).toBe('/cv/generate');
+    expect(body).toEqual({ cv_name: 'CV', offer_text: 'offre' });
+    // Aucun champ d'enveloppe : le serveur applique ses défauts.
+    expect(body).not.toHaveProperty('template_id');
+    expect(body).not.toHaveProperty('theme');
+    expect(body).not.toHaveProperty('target_language');
+
+    postSpy.mockRestore();
+  });
+
+  it('transmet template_id, theme et target_language quand fournis', async () => {
+    const postSpy = jest
+      .spyOn(apiClient, 'post')
+      .mockResolvedValue({ data: { job_id: 'j', status: 'queued' } });
+
+    const theme = {
+      id: null,
+      name: 'Personnalisé',
+      tokens: {
+        color_accent: '#123ABC',
+        color_text: '#1A202C',
+        color_muted: '#4A5568',
+        color_background: '#FFFFFF',
+        font_heading: 'Inter',
+        font_body: 'Inter',
+      },
+    };
+
+    await startGeneration({
+      cv_name: 'CV',
+      offer_text: 'offre',
+      template_id: 'tech',
+      theme: theme as never,
+      target_language: 'en',
+    });
+
+    const body = postSpy.mock.calls[0][1] as Record<string, unknown>;
+    expect(body.template_id).toBe('tech');
+    expect(body.theme).toBe(theme);
+    expect(body.target_language).toBe('en');
+
+    postSpy.mockRestore();
   });
 });
