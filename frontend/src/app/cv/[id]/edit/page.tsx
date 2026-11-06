@@ -39,6 +39,7 @@ import {
   getErrorMessage,
   type CVTemplate,
   type CVThemeTokens,
+  type DocumentLanguage,
 } from '@/lib/api';
 import { getExportErrorMessage } from '@/lib/exportErrors';
 import {
@@ -97,6 +98,9 @@ export default function CVEditorPage() {
   );
   const [themeId, setThemeId] = useState<string | null>('anthracite');
   const [themeName, setThemeName] = useState<string>('Anthracite');
+  // Langue de RENDU de l'enveloppe (M3-T14) : non éditée ici, mais appliquée à
+  // l'aperçu live pour tenir « aperçu = PDF » (libellés de section, mois).
+  const [language, setLanguage] = useState<DocumentLanguage>('fr');
   // Derniers tokens PERSISTÉS : référence de l'état « modifié » dérivé.
   const [savedThemeTokens, setSavedThemeTokens] =
     useState<CVThemeTokens>(DEFAULT_CV_THEME_TOKENS);
@@ -131,6 +135,9 @@ export default function CVEditorPage() {
         setSavedThemeTokens(detail.theme.tokens);
         setThemeId(detail.theme.id ?? null);
         setThemeName(detail.theme.name);
+        // Repli défensif (même motif que is_editable) : un champ absent n'écrase
+        // pas le 'fr' initial par undefined.
+        setLanguage(detail.language ?? 'fr');
         // Défaut éditable si le champ manque : le serveur gate de toute façon.
         setIsEditable(detail.is_editable ?? true);
       })
@@ -690,8 +697,17 @@ export default function CVEditorPage() {
             <p className="mb-3 text-sm font-medium text-text-secondary">Aperçu en direct</p>
             <div className="overflow-hidden rounded-lg border border-border bg-white shadow-sm">
               <div style={{ zoom: 0.62 }}>
+                {/* Aperçu live = état EN COURS d'édition : entrée nettoyée
+                    (sanitizeCVForSave) + thème/langue en état local, PAS
+                    l'enveloppe persistée. La page print (?preview=1) reste le
+                    miroir fidèle de l'export ; ici la sanitisation contrôles/bidi
+                    du serveur n'est pas rejouée (écart cosmétique connu). */}
                 {/* eslint-disable-next-line react-hooks/static-components -- référence stable du registre (ADR-TEMPLATE-REGISTRY) */}
-                <Template cv={previewCv} theme={themeTokens} />
+                <Template
+                  cv={previewCv}
+                  theme={themeTokens}
+                  language={language}
+                />
               </div>
             </div>
           </div>

@@ -56,6 +56,7 @@ function cvDetail(templateId: string): CVDetail {
     id: 'cv-1',
     cv_name: 'CV Camille',
     template_id: templateId,
+    language: 'fr',
     created_at: '2026-10-01T00:00:00Z',
     updated_at: '2026-10-01T00:00:00Z',
     job_offer_context: null,
