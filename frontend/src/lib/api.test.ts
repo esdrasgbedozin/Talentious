@@ -5,7 +5,7 @@
  * canonique (backfill v2 + ceinture de coercition au worker), le pont legacy
  * `toCanonicalCVData` a été supprimé.
  */
-import { apiClient, getCV, updateCV } from '@/lib/api';
+import { apiClient, getCV, getCVTemplates, updateCV } from '@/lib/api';
 import { createEmptyCVData, createEmptyCVExperience } from '@/lib/cvEditor';
 
 describe('updateCV — envoie du GeneratedCVData au réseau (M0-T08a → T08c)', () => {
@@ -122,6 +122,59 @@ describe('getCV — lecture passthrough strict (PAH-M0, pont legacy supprimé)',
 
     const result = await getCV('cv-123');
     expect(result.cv_data_json).toBe(legacy);
+
+    getSpy.mockRestore();
+  });
+});
+
+describe('updateCV — enveloppe template_id (M3-T08)', () => {
+  it('transmet template_id au PUT sans toucher au contenu (PUT partiel)', async () => {
+    const putSpy = jest
+      .spyOn(apiClient, 'put')
+      .mockResolvedValue({ data: { cv_data_json: {} } });
+
+    await updateCV('cv-123', { template_id: 'tech' });
+
+    const [url, body] = putSpy.mock.calls[0];
+    expect(url).toBe('/cv/cv-123');
+    const sent = body as Record<string, unknown>;
+    expect(sent.template_id).toBe('tech');
+    // Changer de template ne sauvegarde JAMAIS le contenu : un PUT partiel
+    // ne porte que l'enveloppe, cv_data_json/cv_name restent absents.
+    expect(sent).not.toHaveProperty('cv_data_json');
+    expect(sent).not.toHaveProperty('cv_name');
+
+    putSpy.mockRestore();
+  });
+
+  it("n'envoie PAS template_id quand il n'est pas fourni (renommage pur)", async () => {
+    const putSpy = jest
+      .spyOn(apiClient, 'put')
+      .mockResolvedValue({ data: { cv_data_json: {} } });
+
+    await updateCV('cv-123', { cv_name: 'Nouveau nom' });
+
+    const [, body] = putSpy.mock.calls[0];
+    expect(body as Record<string, unknown>).not.toHaveProperty('template_id');
+
+    putSpy.mockRestore();
+  });
+});
+
+describe('getCVTemplates — catalogue des templates (M3-T08)', () => {
+  it('appelle GET /cv/templates et renvoie la liste telle quelle', async () => {
+    const catalogue = [
+      { id: 'modern_sobre', name: 'Moderne sobre', is_free: true },
+      { id: 'tech', name: 'Tech', is_free: false },
+    ];
+    const getSpy = jest
+      .spyOn(apiClient, 'get')
+      .mockResolvedValue({ data: catalogue });
+
+    const result = await getCVTemplates();
+
+    expect(getSpy).toHaveBeenCalledWith('/cv/templates');
+    expect(result).toBe(catalogue);
 
     getSpy.mockRestore();
   });

@@ -35,22 +35,30 @@ const MESSAGES_BY_TYPE: Record<string, string> = {
 };
 
 /** Repli FR tutoyé par statut HTTP, pour un `type` non cartographié. */
-const messageForStatus = (status: number | undefined): string => {
+const messageForStatus = (
+  status: number | undefined,
+  fallback: string,
+): string => {
   if (status === 429) {
     return "Trop de demandes d'un coup. Patiente un instant avant de réessayer.";
   }
   if (status !== undefined && status >= 500) {
     return 'Le service est momentanément indisponible. Réessaie dans un instant.';
   }
-  return GENERIC_MESSAGE;
+  return fallback;
 };
 
 /**
  * Message utilisateur traduit pour une erreur d'export, quelle que soit sa
  * forme (erreur axios RFC 7807, `Error` métier levée par le flux, ou valeur
- * inconnue).
+ * inconnue). Un `fallback` optionnel remplace le message générique d'export
+ * pour les flux non-export (ex. sélection de template) : repli final et 4xx
+ * non cartographiés. Le mapping par `type` et par statut reste identique.
  */
-export const getExportErrorMessage = (error: unknown): string => {
+export const getExportErrorMessage = (
+  error: unknown,
+  fallback: string = GENERIC_MESSAGE,
+): string => {
   if (axios.isAxiosError(error)) {
     const problem = error.response?.data as
       (ApiError & { type?: string; invalid_params?: unknown[] }) | undefined;
@@ -77,10 +85,10 @@ export const getExportErrorMessage = (error: unknown): string => {
       return 'Connexion au service impossible. Vérifie ta connexion et réessaie.';
     }
 
-    return messageForStatus(error.response.status);
+    return messageForStatus(error.response.status, fallback);
   }
 
   if (error instanceof Error) return error.message;
 
-  return GENERIC_MESSAGE;
+  return fallback;
 };

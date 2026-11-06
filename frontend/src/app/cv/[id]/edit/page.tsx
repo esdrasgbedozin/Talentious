@@ -26,8 +26,16 @@ import {
   getTemplate,
   type GeneratedCVData,
 } from '@talentious/cv-render';
+import TemplateSelector from '@/components/cv/TemplateSelector';
 import { useToast } from '@/components/ui/Toast';
-import { getCV, updateCV, getErrorMessage } from '@/lib/api';
+import {
+  getCV,
+  updateCV,
+  getCVTemplates,
+  getErrorMessage,
+  type CVTemplate,
+} from '@/lib/api';
+import { getExportErrorMessage } from '@/lib/exportErrors';
 import {
   CV_SAVE_MAX_SKILLS,
   createEmptyCVData,
@@ -59,6 +67,10 @@ export default function CVEditorPage() {
   // Enveloppe du document : le template est résolu par le registre (M0-T12,
   // ADR-TEMPLATE-REGISTRY), jamais mappé ici. Repli sûr tant que rien n'est chargé.
   const [templateId, setTemplateId] = useState<string>(FALLBACK_TEMPLATE_ID);
+  // Catalogue de l'enveloppe : alimente le sélecteur (gratuits + premium).
+  const [templates, setTemplates] = useState<CVTemplate[]>([]);
+  // Template dont la sélection s'enregistre (PUT en vol) : désactive l'option.
+  const [templateBusyId, setTemplateBusyId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -82,6 +94,22 @@ export default function CVEditorPage() {
       cancelled = true;
     };
   }, [cvId]);
+
+  // Catalogue des Templates : chargé une fois pour le sélecteur. Dégradation
+  // silencieuse si indisponible — l'édition du contenu n'en dépend pas, le
+  // sélecteur reste simplement masqué.
+  useEffect(() => {
+    let cancelled = false;
+    getCVTemplates()
+      .then((list) => !cancelled && setTemplates(list))
+      .catch((err) => {
+        // Dégradation voulue : sélecteur masqué, l'édition du contenu continue.
+        console.error('Catalogue des templates indisponible:', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Warn before leaving with unsaved changes (tab close / reload).
   useEffect(() => {
@@ -154,6 +182,30 @@ export default function CVEditorPage() {
       toast.error(getErrorMessage(err));
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Sélection d'un Template : persiste l'ENVELOPPE seule (PUT partiel), sans
+  // toucher au contenu ni à l'état « modifié ». On ne bascule l'aperçu qu'après
+  // confirmation du serveur (une sélection premium refusée ne change rien).
+  const handleSelectTemplate = async (nextId: string) => {
+    if (!cvId || nextId === templateId || templateBusyId) return;
+    setTemplateBusyId(nextId);
+    try {
+      await updateCV(cvId, { template_id: nextId });
+      setTemplateId(nextId);
+      toast.success('Modèle appliqué.');
+    } catch (err) {
+      // Le 402 premium est intercepté en amont (redirection /billing, api.ts) ;
+      // ce repli couvre réseau/5xx et porte la bonne copie premium au besoin.
+      toast.error(
+        getExportErrorMessage(
+          err,
+          "Impossible d'appliquer ce modèle. Réessaie dans un instant.",
+        ),
+      );
+    } finally {
+      setTemplateBusyId(null);
     }
   };
 
@@ -250,6 +302,22 @@ export default function CVEditorPage() {
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-2">
         {/* Editing pane */}
         <div className="space-y-4">
+          {templates.length > 0 && (
+            <ProfileSection
+              title="Modèle de CV"
+              description="Choisis la mise en page. L'aperçu se met à jour aussitôt."
+              defaultOpen
+              isComplete
+            >
+              <TemplateSelector
+                templates={templates}
+                selectedId={templateId}
+                cv={previewCv}
+                onSelect={handleSelectTemplate}
+                busyId={templateBusyId}
+              />
+            </ProfileSection>
+          )}
           <ProfileSection
             title="Informations personnelles"
             description="Coordonnées affichées en en-tête du CV"
