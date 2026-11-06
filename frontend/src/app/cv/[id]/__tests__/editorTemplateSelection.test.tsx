@@ -119,7 +119,11 @@ describe("M3-T08 inc.3 — sélection de Template dans l'éditeur", () => {
     const tech = await screen.findByRole('radio', { name: /Tech/ });
     await userEvent.click(tech);
 
-    expect(updateCVMock).toHaveBeenCalledWith('cv-1', { template_id: 'tech' });
+    expect(updateCVMock).toHaveBeenCalledWith(
+      'cv-1',
+      { template_id: 'tech' },
+      { skipBillingRedirect: true },
+    );
     await waitFor(() =>
       expect(screen.getByRole('radio', { name: /Tech/ })).toBeChecked(),
     );

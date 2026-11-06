@@ -11,6 +11,7 @@
  */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ArrowLeft, Save, Printer } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Button from '@/components/ui/Button';
@@ -104,10 +105,14 @@ export default function CVEditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Lecture seule (D1, M3-T12) : un document créé sous Pass sans Pass actif
+  // se consulte et se télécharge, mais ne s'édite plus. Serveur autoritatif.
+  const [isEditable, setIsEditable] = useState(true);
 
   // « Modifié » DÉRIVÉ : vrai tant que les tokens édités diffèrent des
   // derniers persistés. Revenir à la valeur sauvée efface l'état.
   const isThemeDirty = !sameThemeTokens(themeTokens, savedThemeTokens);
+  const readOnly = !isEditable;
 
   // Load the CV — getCV returns the canonical content; ensureCVShape only
   // fills missing lists (raw V1 CVs stored before the coercion belt).
@@ -126,6 +131,8 @@ export default function CVEditorPage() {
         setSavedThemeTokens(detail.theme.tokens);
         setThemeId(detail.theme.id ?? null);
         setThemeName(detail.theme.name);
+        // Défaut éditable si le champ manque : le serveur gate de toute façon.
+        setIsEditable(detail.is_editable ?? true);
       })
       .catch((err) => !cancelled && setLoadError(getErrorMessage(err)))
       .finally(() => !cancelled && setIsLoading(false));
@@ -163,10 +170,14 @@ export default function CVEditorPage() {
   }, [isDirty, isThemeDirty]);
 
   // State helpers — every mutation marks the CV dirty.
-  const mutate = useCallback((updater: (prev: GeneratedCVData) => GeneratedCVData) => {
-    setCv(updater);
-    setIsDirty(true);
-  }, []);
+  const mutate = useCallback(
+    (updater: (prev: GeneratedCVData) => GeneratedCVData) => {
+      if (readOnly) return;
+      setCv(updater);
+      setIsDirty(true);
+    },
+    [readOnly],
+  );
 
   const updatePersonalInfo = (field: string, value: string) =>
     mutate((prev) => ({
@@ -191,6 +202,7 @@ export default function CVEditorPage() {
     mutate((prev) => ({ ...prev, [key]: prev[key].filter((item) => item.id !== id) }));
 
   const handleNameChange = (value: string) => {
+    if (readOnly) return;
     setCvName(value);
     setIsDirty(true);
   };
@@ -206,10 +218,14 @@ export default function CVEditorPage() {
     }
     setIsSaving(true);
     try {
-      const updated = await updateCV(cvId, {
-        cv_name: cvName.trim() || 'CV sans nom',
-        cv_data_json: sanitizeCVForSave(cv),
-      });
+      const updated = await updateCV(
+        cvId,
+        {
+          cv_name: cvName.trim() || 'CV sans nom',
+          cv_data_json: sanitizeCVForSave(cv),
+        },
+        { skipBillingRedirect: true },
+      );
       // Resynchronise l'éditeur sur ce qui est RÉELLEMENT stocké : toute entrée
       // écartée ou tronquée par la coercition backend devient visible
       // immédiatement, pas au rechargement.
@@ -218,7 +234,22 @@ export default function CVEditorPage() {
       setIsDirty(false);
       toast.success('CV enregistré.');
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      const status = (err as { response?: { status?: number } })?.response
+        ?.status;
+      if (status === 402) {
+        // Document verrouillé (Pass expiré en cours de session) : bascule en
+        // lecture seule et motif typé, sans redirection dure (le contenu non
+        // sauvé reste à l'écran, l'utilisateur ne perd rien).
+        setIsEditable(false);
+        toast.error(
+          getExportErrorMessage(
+            err,
+            'Ce document nécessite un Pass actif pour être modifié.',
+          ),
+        );
+      } else {
+        toast.error(getErrorMessage(err));
+      }
     } finally {
       setIsSaving(false);
     }
@@ -231,12 +262,16 @@ export default function CVEditorPage() {
     if (!cvId || nextId === templateId || templateBusyId) return;
     setTemplateBusyId(nextId);
     try {
-      await updateCV(cvId, { template_id: nextId });
+      await updateCV(
+        cvId,
+        { template_id: nextId },
+        { skipBillingRedirect: true },
+      );
       setTemplateId(nextId);
       toast.success('Modèle appliqué.');
     } catch (err) {
-      // Le 402 premium est intercepté en amont (redirection /billing, api.ts) ;
-      // ce repli couvre réseau/5xx et porte la bonne copie premium au besoin.
+      // 402 premium : NON redirigé (skipBillingRedirect), le motif typé
+      // s'affiche ici en place (sans pression). Couvre aussi réseau/5xx.
       toast.error(
         getExportErrorMessage(
           err,
@@ -260,9 +295,11 @@ export default function CVEditorPage() {
     if (!cvId || !isThemeDirty) return;
     setIsThemeSaving(true);
     try {
-      const updated = await updateCV(cvId, {
-        theme: { id: themeId, name: themeName, tokens: themeTokens },
-      });
+      const updated = await updateCV(
+        cvId,
+        { theme: { id: themeId, name: themeName, tokens: themeTokens } },
+        { skipBillingRedirect: true },
+      );
       // Resync AUTORITATIF sur ce que le serveur a stocké (custom => id null
       // / nom « Personnalisé » ; preset reconnu => sa provenance). La
       // référence persistée suit, ce qui remet l'état « modifié » à faux.
@@ -272,10 +309,9 @@ export default function CVEditorPage() {
       setThemeName(updated.theme.name);
       toast.success('Thème enregistré.');
     } catch (err) {
-      // 402 premium-theme-required intercepté en amont (redirection /billing,
-      // qui perd le contenu non sauvé : à affiner en T12 par un intercepteur
-      // typé). Repli NEUTRE (réseau/5xx/422) ; les couleurs invalides sont
-      // déjà bloquées par l'éditeur.
+      // 402 premium-theme-required : NON redirigé (skipBillingRedirect), le
+      // motif typé s'affiche en place sans pression. Repli NEUTRE (réseau/5xx/
+      // 422) ; les couleurs invalides sont déjà bloquées par l'éditeur.
       toast.error(
         getExportErrorMessage(
           err,
@@ -352,6 +388,7 @@ export default function CVEditorPage() {
           <input
             value={cvName}
             onChange={(e) => handleNameChange(e.target.value)}
+            disabled={readOnly}
             aria-label="Nom du CV"
             className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-lg font-semibold text-text-primary hover:border-border focus:border-action focus:bg-white focus:outline-none"
           />
@@ -369,7 +406,7 @@ export default function CVEditorPage() {
             size="sm"
             onClick={handleSave}
             isLoading={isSaving}
-            disabled={!isDirty || isSaving}
+            disabled={readOnly || !isDirty || isSaving}
           >
             <Save className="h-4 w-4" />
             Enregistrer
@@ -380,6 +417,29 @@ export default function CVEditorPage() {
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-2">
         {/* Editing pane */}
         <div className="space-y-4">
+          {readOnly && (
+            <div
+              role="status"
+              className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+            >
+              <p className="font-medium">Ce CV est en lecture seule.</p>
+              <p className="mt-1">
+                Il a été créé avec un Pass. Pour le modifier à nouveau, il te
+                faut un Pass actif. Tu peux toujours le consulter et le
+                télécharger en PDF.
+              </p>
+              <Link
+                href="/billing"
+                className="mt-2 inline-block font-medium underline"
+              >
+                Voir les Pass
+              </Link>
+            </div>
+          )}
+          <fieldset
+            disabled={readOnly}
+            className="m-0 min-w-0 space-y-4 border-0 p-0"
+          >
           {templates.length > 0 && (
             <ProfileSection
               title="Modèle de CV"
@@ -489,6 +549,7 @@ export default function CVEditorPage() {
 
           <ProfileSection
             title="Expériences professionnelles"
+            defaultOpen={readOnly}
             isComplete={cv.selected_experiences.length > 0}
           >
             <div className="space-y-4">
@@ -514,7 +575,11 @@ export default function CVEditorPage() {
             </div>
           </ProfileSection>
 
-          <ProfileSection title="Formation" isComplete={cv.selected_educations.length > 0}>
+          <ProfileSection
+            title="Formation"
+            defaultOpen={readOnly}
+            isComplete={cv.selected_educations.length > 0}
+          >
             <div className="space-y-4">
               <div className="flex justify-end">
                 <Button
@@ -540,6 +605,7 @@ export default function CVEditorPage() {
 
           <ProfileSection
             title="Compétences"
+            defaultOpen={readOnly}
             isComplete={cv.highlighted_skills.length > 0}
           >
             <div className="space-y-4">
@@ -558,7 +624,11 @@ export default function CVEditorPage() {
             </div>
           </ProfileSection>
 
-          <ProfileSection title="Projets" isComplete={cv.selected_projects.length > 0}>
+          <ProfileSection
+            title="Projets"
+            defaultOpen={readOnly}
+            isComplete={cv.selected_projects.length > 0}
+          >
             <div className="space-y-4">
               <div className="flex justify-end">
                 <Button
@@ -584,6 +654,7 @@ export default function CVEditorPage() {
 
           <ProfileSection
             title="Certifications"
+            defaultOpen={readOnly}
             isComplete={cv.selected_certifications.length > 0}
           >
             <div className="space-y-4">
@@ -610,6 +681,7 @@ export default function CVEditorPage() {
               ))}
             </div>
           </ProfileSection>
+          </fieldset>
         </div>
 
         {/* Live preview pane */}

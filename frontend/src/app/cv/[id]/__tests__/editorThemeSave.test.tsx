@@ -286,4 +286,24 @@ describe("M3-T11 — sauvegarde du thème dans l'éditeur", () => {
     expect(screen.getByText('Thème modifié')).toBeInTheDocument();
     expect(btn).toBeEnabled();
   });
+
+  it('402 premium-theme : affiche le MOTIF typé en place (sans pression)', async () => {
+    updateCVMock.mockReset().mockRejectedValue(
+      new axios.AxiosError('Payment Required', 'ERR_BAD_REQUEST', undefined, undefined, {
+        status: 402,
+        data: { type: 'https://talentious.fr/errors/premium-theme-required' },
+      } as never),
+    );
+    render(<CVEditorPage />);
+    const accent = await screen.findByLabelText("Couleur d'accent");
+    fireEvent.change(accent, { target: { value: '#123ABC' } });
+    fireEvent.click(screen.getByRole('button', { name: SAVE }));
+
+    // Le motif typé (contient « réservé »), pas le repli générique.
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith(
+        expect.stringContaining('réservé'),
+      ),
+    );
+  });
 });

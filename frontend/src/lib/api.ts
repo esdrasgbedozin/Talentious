@@ -3,13 +3,26 @@
  * Axios instance with JWT authentication and error handling
  */
 
-import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import axios, {
+  AxiosError,
+  AxiosRequestConfig,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+} from 'axios';
 import type { UserProfile } from '@/types/profile';
 import type { components } from '@/generated/api';
 import {
   formatValidationMessage,
   type InvalidParam,
 } from '@/lib/validationErrors';
+
+// Flag de requête propre à l'app : laisse un appelant refuser la redirection
+// /billing sur un 402 pour afficher le motif typé EN PLACE (M3-T12).
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    skipBillingRedirect?: boolean;
+  }
+}
 
 type GeneratedCVData = components['schemas']['GeneratedCVData'];
 
@@ -103,6 +116,7 @@ apiClient.interceptors.response.use(
     const url = original?.url ?? '';
     const isAuthEndpoint =
       url.includes('/auth/refresh') || url.includes('/auth/login');
+    const skipBillingRedirect = original?.skipBillingRedirect === true;
 
     if (status === 401) {
       // First 401 on a normal request: try a silent refresh, then replay once.
@@ -129,9 +143,13 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // If 402 (Payment Required), the user needs an active CareerPass → billing.
+    // 402 (Payment Required) : par défaut on amène vers /billing. Un appelant
+    // peut refuser cette redirection dure (skipBillingRedirect) pour afficher
+    // le MOTIF typé en place, sans pression ni perte du travail en cours
+    // (M3-T12 : saves d'enveloppe de l'éditeur).
     if (
       status === 402 &&
+      !skipBillingRedirect &&
       typeof window !== 'undefined' &&
       !window.location.pathname.includes('/billing')
     ) {
@@ -351,6 +369,9 @@ export interface CVDetail extends CVBase {
   // Enveloppe thème (M3-T11) : requise au contrat (CVDetailResponse),
   // toujours renvoyée par le serveur.
   theme: CVTheme;
+  // Lecture seule (M3-T12) : false = édition premium verrouillée (D1) ; le
+  // serveur le calcule à la lecture. Optionnel au typage (défaut éditable).
+  is_editable?: boolean;
 }
 
 /** Fetch a single CV; `cv_data_json` is canonical GeneratedCVData, passed
@@ -383,13 +404,19 @@ export const updateCV = async (
     template_id?: string;
     theme?: CVTheme;
   },
+  options?: { skipBillingRedirect?: boolean },
 ): Promise<CVDetail> => {
   const body: Record<string, unknown> = {};
   if (payload.cv_name !== undefined) body.cv_name = payload.cv_name;
   if (payload.cv_data_json !== undefined) body.cv_data_json = payload.cv_data_json;
   if (payload.template_id !== undefined) body.template_id = payload.template_id;
   if (payload.theme !== undefined) body.theme = payload.theme;
-  const { data } = await apiClient.put<CVDetail>(`/cv/${cvId}`, body);
+  // skipBillingRedirect : l'appelant affichera le MOTIF typé 402 en place
+  // (sans redirection dure vers /billing) — gating UX « sans pression ».
+  const config: AxiosRequestConfig | undefined = options?.skipBillingRedirect
+    ? { skipBillingRedirect: true }
+    : undefined;
+  const { data } = await apiClient.put<CVDetail>(`/cv/${cvId}`, body, config);
   return data;
 };
 

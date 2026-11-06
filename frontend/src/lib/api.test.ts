@@ -161,6 +161,34 @@ describe('updateCV — enveloppe template_id (M3-T08)', () => {
   });
 });
 
+describe('updateCV — gating sans pression (M3-T12)', () => {
+  it('transmet skipBillingRedirect au config axios quand demandé', async () => {
+    const putSpy = jest
+      .spyOn(apiClient, 'put')
+      .mockResolvedValue({ data: { cv_data_json: {} } });
+
+    await updateCV(
+      'cv-1',
+      { template_id: 'tech' },
+      { skipBillingRedirect: true },
+    );
+
+    expect(putSpy.mock.calls[0][2]).toEqual({ skipBillingRedirect: true });
+    putSpy.mockRestore();
+  });
+
+  it('sans option, aucun config (redirection /billing par défaut)', async () => {
+    const putSpy = jest
+      .spyOn(apiClient, 'put')
+      .mockResolvedValue({ data: { cv_data_json: {} } });
+
+    await updateCV('cv-1', { template_id: 'tech' });
+
+    expect(putSpy.mock.calls[0][2]).toBeUndefined();
+    putSpy.mockRestore();
+  });
+});
+
 describe('getCVTemplates — catalogue des templates (M3-T08)', () => {
   it('appelle GET /cv/templates et renvoie la liste telle quelle', async () => {
     const catalogue = [
