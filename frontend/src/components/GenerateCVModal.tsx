@@ -15,7 +15,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { X, FileText, Sparkles, CheckCircle2, Upload } from 'lucide-react';
 import Button from './ui/Button';
 import { useToast } from './ui/Toast';
-import { startGeneration, getJobStatus, getErrorMessage } from '@/lib/api';
+import {
+  startGeneration,
+  getJobStatus,
+  getErrorMessage,
+  getCVTemplates,
+  type CVTemplate,
+  type CVThemeTokens,
+  type DocumentLanguage,
+  type GenerateCVRequest,
+} from '@/lib/api';
+import { DEFAULT_CV_THEME_TOKENS } from '@talentious/cv-render';
+import ThemeEditor from './cv/ThemeEditor';
+import ThemeContrast from './cv/ThemeContrast';
 
 interface GenerateCVModalProps {
   isOpen: boolean;
@@ -34,6 +46,23 @@ const GENERATION_STEPS = [
 // Minimum offer length for a meaningful AI analysis (kept in sync with the hint).
 const MIN_OFFER_CHARS = 50;
 
+const LANGUAGES: { value: DocumentLanguage; label: string }[] = [
+  { value: 'fr', label: 'Français' },
+  // L'export en anglais est premium (402 côté serveur) : on le signale.
+  { value: 'en', label: 'Anglais (Premium)' },
+];
+
+const THEME_TOKEN_KEYS: (keyof CVThemeTokens)[] = [
+  'color_accent',
+  'color_text',
+  'color_muted',
+  'color_background',
+  'font_heading',
+  'font_body',
+];
+const sameThemeTokens = (a: CVThemeTokens, b: CVThemeTokens): boolean =>
+  THEME_TOKEN_KEYS.every((k) => a[k] === b[k]);
+
 export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -46,6 +75,17 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
   // Internal dismissal: guarantees the modal hides on success even if the parent's
   // onClose prop is stale in this effect's closure. Reset whenever the modal opens.
   const [dismissed, setDismissed] = useState(false);
+  // Enveloppe optionnelle (M3-T13) : '' / 'fr' / thème défaut = non envoyés.
+  const [templates, setTemplates] = useState<CVTemplate[]>([]);
+  const [templateId, setTemplateId] = useState('');
+  const [language, setLanguage] = useState<DocumentLanguage>('fr');
+  const [customizeTheme, setCustomizeTheme] = useState(false);
+  // Hypothèse : les modèles actuels ont TOUS l'anthracite pour thème par
+  // défaut (DEFAULT_CV_THEME_TOKENS). On compare à ce défaut : un thème
+  // n'est envoyé que s'il en diffère. Quand des presets non-anthracite par
+  // modèle existeront, initialiser depuis le défaut du modèle choisi.
+  const [themeTokens, setThemeTokens] =
+    useState<CVThemeTokens>(DEFAULT_CV_THEME_TOKENS);
 
   useEffect(() => {
     if (isOpen) setDismissed(false);
@@ -68,12 +108,30 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
     }
   }, [isOpen]);
 
+  // Catalogue des modèles pour le choix optionnel (dégradation silencieuse).
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    getCVTemplates()
+      .then((list) => !cancelled && setTemplates(list))
+      .catch((err) => {
+        console.error('Catalogue des templates indisponible:', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
   // Fonction de fermeture du modal
   const handleClose = useCallback(() => {
     if (isGenerating) return; // Ne pas fermer pendant génération
     setCvName('');
     setOfferText('');
     setCurrentStep(0);
+    setTemplateId('');
+    setLanguage('fr');
+    setCustomizeTheme(false);
+    setThemeTokens(DEFAULT_CV_THEME_TOKENS);
     onClose();
   }, [isGenerating, onClose]);
 
@@ -81,12 +139,15 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
     setCvName('');
     setOfferText('');
     setCurrentStep(0);
+    setTemplateId('');
+    setLanguage('fr');
+    setCustomizeTheme(false);
+    setThemeTokens(DEFAULT_CV_THEME_TOKENS);
   }, []);
 
   // 1. Submit the generation job (fast, returns a job id).
   const startMutation = useMutation({
-    mutationFn: (data: { cv_name: string; offer_text: string }) =>
-      startGeneration(data),
+    mutationFn: (data: GenerateCVRequest) => startGeneration(data),
     onSuccess: (job) => {
       setJobId(job.job_id);
     },
@@ -230,10 +291,21 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
       'cv_generate_draft',
       JSON.stringify({ cv_name: cvName.trim(), offer_text: offerText.trim() }),
     );
-    startMutation.mutate({
+    const payload: GenerateCVRequest = {
       cv_name: cvName.trim(),
       offer_text: offerText.trim(),
-    });
+    };
+    // Enveloppe optionnelle : un champ n'est ajouté QUE s'il est
+    // explicitement choisi — sinon la requête reste la V1 (défauts serveur).
+    if (templateId) payload.template_id = templateId;
+    if (language !== 'fr') payload.target_language = language;
+    if (
+      customizeTheme &&
+      !sameThemeTokens(themeTokens, DEFAULT_CV_THEME_TOKENS)
+    ) {
+      payload.theme = { id: null, name: 'Personnalisé', tokens: themeTokens };
+    }
+    startMutation.mutate(payload);
   };
 
   const isFormValid =
@@ -399,6 +471,88 @@ export default function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProp
                     caractères saisis
                   </p>
                 </div>
+
+                {/* Mise en forme (facultatif) — M3-T13 */}
+                <fieldset className="rounded-lg border border-gray-200 p-4">
+                  <legend className="px-1 text-sm font-semibold text-text-primary">
+                    Mise en forme{' '}
+                    <span className="font-normal text-text-secondary">
+                      (facultatif)
+                    </span>
+                  </legend>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label
+                        htmlFor="gen-template"
+                        className="mb-1 block text-xs font-medium text-text-secondary"
+                      >
+                        Modèle
+                      </label>
+                      <select
+                        id="gen-template"
+                        value={templateId}
+                        onChange={(e) => setTemplateId(e.target.value)}
+                        className="w-full rounded-lg border-2 border-gray-300 px-3 py-2 text-sm focus:border-action focus:outline-none"
+                      >
+                        <option value="">Par défaut</option>
+                        {templates.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.is_free ? t.name : `${t.name} (Premium)`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="gen-language"
+                        className="mb-1 block text-xs font-medium text-text-secondary"
+                      >
+                        Langue
+                      </label>
+                      <select
+                        id="gen-language"
+                        value={language}
+                        onChange={(e) =>
+                          setLanguage(e.target.value as DocumentLanguage)
+                        }
+                        className="w-full rounded-lg border-2 border-gray-300 px-3 py-2 text-sm focus:border-action focus:outline-none"
+                      >
+                        {LANGUAGES.map((l) => (
+                          <option key={l.value} value={l.value}>
+                            {l.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <label className="flex items-center gap-2 text-sm text-text-primary">
+                      <input
+                        type="checkbox"
+                        checked={customizeTheme}
+                        onChange={(e) => setCustomizeTheme(e.target.checked)}
+                        aria-expanded={customizeTheme}
+                        aria-controls="gen-theme-panel"
+                        className="h-4 w-4"
+                      />
+                      Personnaliser les couleurs (Premium)
+                    </label>
+                    {customizeTheme && (
+                      <div id="gen-theme-panel" className="mt-4 space-y-4">
+                        <ThemeEditor
+                          tokens={themeTokens}
+                          onChange={setThemeTokens}
+                        />
+                        <div className="border-t border-gray-200 pt-4">
+                          <p className="mb-2 text-xs font-medium text-text-secondary">
+                            Contraste (lisibilité)
+                          </p>
+                          <ThemeContrast tokens={themeTokens} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </fieldset>
 
                 {/* PDF Upload (Disabled for V1) */}
                 <div className="relative">

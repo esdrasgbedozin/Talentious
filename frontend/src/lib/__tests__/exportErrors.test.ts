@@ -103,3 +103,28 @@ describe('getExportErrorMessage', () => {
     ).toBe('Repli dédié modèle.');
   });
 });
+
+describe('getExportErrorMessage — motif typé par 402 (M3-T12)', () => {
+  const SLUGS = [
+    'career-pass-required',
+    'premium-template-required',
+    'premium-theme-required',
+    'premium-language-required',
+    'variant-limit-reached',
+  ];
+  const motif = (slug: string) =>
+    getExportErrorMessage(
+      axiosError(402, { type: `https://talentious.fr/errors/${slug}` }),
+    );
+
+  it.each(SLUGS)('402 %s affiche un motif, pas le repli générique', (slug) => {
+    const msg = motif(slug);
+    expect(msg.length).toBeGreaterThan(0);
+    expect(msg).not.toBe("L'export a échoué. Réessaie dans un instant.");
+  });
+
+  it('chaque type 402 a un motif DISTINCT des autres', () => {
+    const messages = SLUGS.map(motif);
+    expect(new Set(messages).size).toBe(SLUGS.length);
+  });
+});

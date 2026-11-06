@@ -3,7 +3,12 @@
  * Axios instance with JWT authentication and error handling
  */
 
-import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import axios, {
+  AxiosError,
+  AxiosRequestConfig,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+} from 'axios';
 import type { UserProfile } from '@/types/profile';
 import type { components } from '@/generated/api';
 import {
@@ -11,11 +16,28 @@ import {
   type InvalidParam,
 } from '@/lib/validationErrors';
 
+// Flag de requête propre à l'app : laisse un appelant refuser la redirection
+// /billing sur un 402 pour afficher le motif typé EN PLACE (M3-T12).
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    skipBillingRedirect?: boolean;
+  }
+}
+
 type GeneratedCVData = components['schemas']['GeneratedCVData'];
 
 /** Entrée du catalogue des Templates (`GET /cv/templates`). `is_free` pilote le
  * badge Gratuit/Premium ; tous les Templates sont listés pour l'aperçu. */
 export type CVTemplate = components['schemas']['CVTemplate'];
+
+/** Thème CV (enveloppe) : `{ id?, name, tokens, is_free }`. `id` null = thème
+ * personnalisé ; le serveur tranche preset vs custom en comparant les tokens
+ * (M1-T14) et gate le premium (402 premium-theme-required). `is_free` est
+ * readOnly (ignoré en entrée). */
+export type CVTheme = components['schemas']['CVTheme'];
+export type CVThemeTokens = components['schemas']['CVThemeTokens'];
+/** Langue du document généré/exporté (`fr` par défaut, `en` premium). */
+export type DocumentLanguage = components['schemas']['DocumentLanguage'];
 
 // Base URL of the FastAPI backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -96,6 +118,7 @@ apiClient.interceptors.response.use(
     const url = original?.url ?? '';
     const isAuthEndpoint =
       url.includes('/auth/refresh') || url.includes('/auth/login');
+    const skipBillingRedirect = original?.skipBillingRedirect === true;
 
     if (status === 401) {
       // First 401 on a normal request: try a silent refresh, then replay once.
@@ -122,9 +145,13 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // If 402 (Payment Required), the user needs an active CareerPass → billing.
+    // 402 (Payment Required) : par défaut on amène vers /billing. Un appelant
+    // peut refuser cette redirection dure (skipBillingRedirect) pour afficher
+    // le MOTIF typé en place, sans pression ni perte du travail en cours
+    // (M3-T12 : saves d'enveloppe de l'éditeur).
     if (
       status === 402 &&
+      !skipBillingRedirect &&
       typeof window !== 'undefined' &&
       !window.location.pathname.includes('/billing')
     ) {
@@ -170,6 +197,11 @@ export interface CVBase {
 export interface GenerateCVRequest {
   cv_name: string;
   offer_text: string;
+  // Enveloppe optionnelle (M3-T13) : omis = défauts serveur (modèle
+  // gratuit, thème du modèle, français). Premium => 402 typé serveur.
+  template_id?: string;
+  theme?: CVTheme;
+  target_language?: DocumentLanguage;
 }
 
 export interface GenerateCVResult {
@@ -188,9 +220,21 @@ export interface CVJobStatus {
 export const startGeneration = async (
   data: GenerateCVRequest,
 ): Promise<{ job_id: string; status: string }> => {
+  // Body construit champ par champ : les 3 champs d'enveloppe (M3-T13) ne
+  // sont transmis que s'ils sont fournis — la requête V1 (cv_name +
+  // offer_text seuls) reste STRICTEMENT inchangée, le serveur applique ses
+  // défauts.
+  const body: Record<string, unknown> = {
+    cv_name: data.cv_name,
+    offer_text: data.offer_text,
+  };
+  if (data.template_id !== undefined) body.template_id = data.template_id;
+  if (data.theme !== undefined) body.theme = data.theme;
+  if (data.target_language !== undefined)
+    body.target_language = data.target_language;
   const { data: job } = await apiClient.post<{ job_id: string; status: string }>(
     '/cv/generate',
-    data,
+    body,
   );
   return job;
 };
@@ -341,6 +385,12 @@ export interface CVDetail extends CVBase {
   // (backfill v2 + ceinture de coercition du worker), plus par l'app : les
   // consommateurs gardent leur défense au chargement (ensureCVShape).
   cv_data_json: GeneratedCVData;
+  // Enveloppe thème (M3-T11) : requise au contrat (CVDetailResponse),
+  // toujours renvoyée par le serveur.
+  theme: CVTheme;
+  // Lecture seule (M3-T12) : false = édition premium verrouillée (D1) ; le
+  // serveur le calcule à la lecture. Optionnel au typage (défaut éditable).
+  is_editable?: boolean;
 }
 
 /** Fetch a single CV; `cv_data_json` is canonical GeneratedCVData, passed
@@ -361,8 +411,9 @@ export const getCV = async (cvId: string): Promise<CVDetail> => {
  * included. Sending anything else silently wipes the CV body (M0-T08a).
  *
  * The PUT is PARTIAL: only provided fields change. Content (`cv_data_json`) and
- * envelope (`template_id`, M3-T08) are independent: picking a template never
- * touches the body, and saving the body never touches the envelope.
+ * envelope (`template_id` M3-T08, `theme` M3-T11) are independent: picking a
+ * template or saving a theme never touches the body, and saving the body never
+ * touches the envelope.
  */
 export const updateCV = async (
   cvId: string,
@@ -370,13 +421,21 @@ export const updateCV = async (
     cv_name?: string;
     cv_data_json?: GeneratedCVData;
     template_id?: string;
+    theme?: CVTheme;
   },
+  options?: { skipBillingRedirect?: boolean },
 ): Promise<CVDetail> => {
   const body: Record<string, unknown> = {};
   if (payload.cv_name !== undefined) body.cv_name = payload.cv_name;
   if (payload.cv_data_json !== undefined) body.cv_data_json = payload.cv_data_json;
   if (payload.template_id !== undefined) body.template_id = payload.template_id;
-  const { data } = await apiClient.put<CVDetail>(`/cv/${cvId}`, body);
+  if (payload.theme !== undefined) body.theme = payload.theme;
+  // skipBillingRedirect : l'appelant affichera le MOTIF typé 402 en place
+  // (sans redirection dure vers /billing) — gating UX « sans pression ».
+  const config: AxiosRequestConfig | undefined = options?.skipBillingRedirect
+    ? { skipBillingRedirect: true }
+    : undefined;
+  const { data } = await apiClient.put<CVDetail>(`/cv/${cvId}`, body, config);
   return data;
 };
 
