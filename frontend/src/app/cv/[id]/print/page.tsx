@@ -108,9 +108,18 @@ export default function CVPrintPage() {
         className="cv-print-fit mx-auto w-[210mm] bg-white shadow-lg print:w-auto print:shadow-none"
         style={{ zoom: fitZoom }}
       >
-        {/* Canonique stocké, injecté TEL QUEL — même payload que l'export-service (M2). */}
+        {/* Invariant « aperçu = PDF » (M3-T14) : MÊME payload de forme que
+            l'export-service — contenu canonique + thème + langue de l'enveloppe.
+            Le registre garantit le composant (ADR-TEMPLATE-REGISTRY). */}
+        {/* Garde défensive (standard « jamais de page vide », comme ensureCVShape
+            ci-dessus) : une enveloppe non conforme au contrat (thème/langue
+            absents) retombe sur le défaut du registre au lieu de planter le rendu. */}
         {/* eslint-disable-next-line react-hooks/static-components -- référence stable du registre (ADR-TEMPLATE-REGISTRY) */}
-        <Template cv={cv.cv_data_json} />
+        <Template
+          cv={cv.cv_data_json}
+          theme={cv.theme?.tokens ?? null}
+          language={cv.language ?? 'fr'}
+        />
       </div>
     </div>
   );

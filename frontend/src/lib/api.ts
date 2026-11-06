@@ -388,6 +388,9 @@ export interface CVDetail extends CVBase {
   // Enveloppe thème (M3-T11) : requise au contrat (CVDetailResponse),
   // toujours renvoyée par le serveur.
   theme: CVTheme;
+  // Langue de RENDU de l'enveloppe (M3-T14) : requise au contrat, alimente
+  // l'aperçu À L'IDENTIQUE de l'export (titres de section, mois) — « aperçu = PDF ».
+  language: DocumentLanguage;
   // Lecture seule (M3-T12) : false = édition premium verrouillée (D1) ; le
   // serveur le calcule à la lecture. Optionnel au typage (défaut éditable).
   is_editable?: boolean;

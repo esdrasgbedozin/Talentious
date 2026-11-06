@@ -34,6 +34,14 @@ const denseCv = JSON.parse(
     "utf8",
   ),
 ) as Record<string, unknown>;
+// MÊME fixture que le miroir front (printParity.test.tsx) : parité sur un payload
+// identique, pas sur deux jeux de données différents.
+const completeCv = JSON.parse(
+  readFileSync(
+    join(repoRoot, "fixtures", "cv-reference", "complete.json"),
+    "utf8",
+  ),
+) as Record<string, unknown>;
 
 const anthracite = {
   color_accent: "#2D3748",
@@ -118,6 +126,35 @@ describe("buildCvDocumentHtml — document nominal", () => {
     const html = buildDoc();
     expect(html).toContain("--cv-accent:#2D3748");
   });
+});
+
+describe("buildCvDocumentHtml — invariant « aperçu = PDF » (M3-T14)", () => {
+  // Le MÊME registre partagé sert l'aperçu Next et l'export (ADR-RENDER-PACKAGE).
+  // Ici on verrouille le CÔTÉ EXPORT : le thème de l'enveloppe ET la langue
+  // atteignent le rendu, sur les 4 templates. Le côté aperçu est verrouillé en
+  // miroir par frontend/.../printParity.test.tsx (même thème custom, mêmes
+  // libellés) — ensemble, ils prouvent « aperçu = PDF » pour le même payload.
+  // Mêmes déterminants de forme que le test front : accent + police custom + EN.
+  const customTheme = {
+    ...anthracite,
+    color_accent: "#BADA55",
+    font_heading: "Lora",
+  } as const;
+  it.each([...TEMPLATE_IDS])(
+    "template %s : accent + police custom (variables CSS) + langue EN",
+    (templateId) => {
+      const html = buildCvDocumentHtml({
+        cvContent: structuredClone(completeCv) as unknown as GeneratedCVData,
+        templateId,
+        theme: customTheme,
+        language: "en",
+        css: FAKE_CSS,
+      });
+      expect(html).toContain("--cv-accent:#BADA55");
+      expect(html.toLowerCase()).toMatch(/--cv-font-heading:\s*&quot;lora/);
+      expect(html).toContain("Professional Experience");
+    },
+  );
 });
 
 describe("buildCvDocumentHtml — surface d'attaque (DET-M0-AC1)", () => {
