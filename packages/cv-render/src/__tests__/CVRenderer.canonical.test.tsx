@@ -69,9 +69,9 @@ describe('CVRenderer — rend les fixtures canoniques GeneratedCVData (M0-T08b)'
   it('end_date null ⇒ poste en cours (« aujourd\'hui »)', () => {
     const { container } = render(<CVRenderer cv={complete} />);
     const text = container.textContent ?? '';
-    expect(text).toContain("mars 2021 — aujourd'hui");
+    expect(text).toContain("mars 2021 – aujourd'hui");
     // L'expérience terminée garde ses deux dates.
-    expect(text).toContain('janv. 2018 — févr. 2021');
+    expect(text).toContain('janv. 2018 – févr. 2021');
   });
 
   it('affiche les compétences par expérience (highlighted_skills de l\'agent)', () => {

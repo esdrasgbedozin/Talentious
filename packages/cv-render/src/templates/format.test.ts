@@ -41,15 +41,15 @@ describe("formatMonthYear", () => {
 });
 
 describe("dateRange", () => {
-  it("deux bornes → « from — to »", () => {
-    expect(dateRange(fr, "2018-01", "2021-02")).toBe("janv. 2018 — févr. 2021");
+  it("deux bornes → « from – to »", () => {
+    expect(dateRange(fr, "2018-01", "2021-02")).toBe("janv. 2018 – févr. 2021");
   });
 
   it("isCurrent → borne « aujourd'hui » quelle que soit end_date", () => {
     expect(dateRange(fr, "2021-03", null, true)).toBe(
-      "mars 2021 — aujourd'hui",
+      "mars 2021 – aujourd'hui",
     );
-    expect(dateRange(en, "2021-03", "", true)).toBe("Mar 2021 — Present");
+    expect(dateRange(en, "2021-03", "", true)).toBe("Mar 2021 – Present");
   });
 
   it("borne unique ou aucune", () => {
