@@ -74,8 +74,8 @@ describe("Tech — rend les fixtures canoniques GeneratedCVData (M3-T03)", () =>
   it("end_date null ⇒ poste en cours (« aujourd'hui ») ; l'expérience terminée garde ses dates", () => {
     const { container } = render(<Tech cv={complete} />);
     const text = container.textContent ?? "";
-    expect(text).toContain("mars 2021 — aujourd'hui");
-    expect(text).toContain("janv. 2018 — févr. 2021");
+    expect(text).toContain("mars 2021 – aujourd'hui");
+    expect(text).toContain("janv. 2018 – févr. 2021");
   });
 });
 
@@ -221,7 +221,7 @@ describe("Tech — i18n d'enveloppe et dates de toutes les sections", () => {
     expect(text).toContain("Skills");
     expect(text).toContain("Projects");
     expect(text).toContain("Certifications");
-    expect(text).toContain("Mar 2021 — Present");
+    expect(text).toContain("Mar 2021 – Present");
   });
 
   it("formate les dates de formation, projet et certification (pas seulement l'expérience)", () => {
