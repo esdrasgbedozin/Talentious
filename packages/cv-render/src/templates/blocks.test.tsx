@@ -134,15 +134,16 @@ describe("ExperienceEntry", () => {
     );
     const text = container.textContent ?? "";
     expect(text).toContain("Développeur");
-    expect(text).toContain("— ACME");
+    expect(text).toContain(", ACME");
+    expect(text).not.toContain("—"); // aucun tiret cadratin (consigne typo Esdras)
     expect(text).toContain("Lyon");
     expect(text).toContain("Back-end.");
-    expect(text).toContain("mars 2021 — juin 2023"); // la période (annoncée dans le titre du test)
+    expect(text).toContain("mars 2021 – juin 2023"); // la période (annoncée dans le titre du test)
   });
 
   it("end_date vide ⇒ poste en cours (« aujourd'hui »)", () => {
     const { container } = render(<ExperienceEntry exp={base} t={t} />);
-    expect(container.textContent).toContain("mars 2021 — aujourd'hui");
+    expect(container.textContent).toContain("mars 2021 – aujourd'hui");
   });
 
   it("end_date renseignée ⇒ borne finale, pas « aujourd'hui »", () => {
@@ -150,13 +151,13 @@ describe("ExperienceEntry", () => {
       <ExperienceEntry exp={{ ...base, end_date: "2023-06" }} t={t} />,
     );
     const text = container.textContent ?? "";
-    expect(text).toContain("mars 2021 — juin 2023");
+    expect(text).toContain("mars 2021 – juin 2023");
     expect(text).not.toContain("aujourd'hui");
   });
 
-  it("société absente ⇒ pas de « — » parasite dans le titre", () => {
-    // Le « — » de la période (« mars 2021 — aujourd'hui ») vit dans un span
-    // frère : on cible le <h3> (titre + société), seul porteur du « — société ».
+  it("société absente ⇒ pas de séparateur parasite dans le titre", () => {
+    // Le séparateur de période (« mars 2021 – aujourd'hui ») vit dans un span
+    // frère : on cible le <h3> (titre + société), seul porteur du « , société ».
     const { container } = render(
       <ExperienceEntry exp={{ ...base, company: "" }} t={t} />,
     );
@@ -237,14 +238,19 @@ describe("CertificationEntry", () => {
     const { container } = render(<CertificationEntry cert={cert} t={t} />);
     const text = container.textContent ?? "";
     expect(text).toContain("PCA");
-    expect(text).toContain("— Google Cloud");
+    expect(text).toContain(", Google Cloud");
+    expect(text).not.toContain("—"); // aucun tiret cadratin (consigne typo Esdras)
     expect(text).toContain("avr. 2023");
   });
 
-  it("émetteur absent ⇒ pas de « — » parasite", () => {
+  it("émetteur absent ⇒ pas de séparateur parasite", () => {
     const { container } = render(
       <CertificationEntry cert={{ ...cert, issuer: "" }} t={t} />,
     );
-    expect(container.textContent).not.toContain("—");
+    // Nom et émetteur partagent le MÊME <span> conteneur (frère de la date) :
+    // sans émetteur, ce conteneur ne porte que le nom, aucune virgule orpheline.
+    // On cible la structure (comme « société absente » via le <h3>) plutôt que
+    // de chercher un glyphe dans tout le texte (fragile si un nom contient « , »).
+    expect(container.querySelector("span")?.textContent).toBe("PCA");
   });
 });

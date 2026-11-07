@@ -40,8 +40,8 @@ describe('CVRenderer — langue de rendu (M0-T13)', () => {
     expect(text).toContain('Soft skills: ');
     // Mois sur TOUTES les sections datées : expériences (2021-03 en cours,
     // 2018-01 → 2021-02), formation (2017-09), projet (2022-06), certif (2023-04).
-    expect(text).toContain('Mar 2021 — Present');
-    expect(text).toContain('Jan 2018 — Feb 2021');
+    expect(text).toContain('Mar 2021 – Present');
+    expect(text).toContain('Jan 2018 – Feb 2021');
     expect(text).toContain('Sep 2017');
     expect(text).toContain('Jun 2022');
     expect(text).toContain('Apr 2023');
@@ -72,7 +72,7 @@ describe('CVRenderer — langue de rendu (M0-T13)', () => {
     const { container } = render(<CVRenderer cv={corrupted} language="en" />);
     const text = container.textContent ?? '';
     // Mois invalide : seule l'année est rendue (comportement préexistant, figé).
-    expect(text).toContain('2020 — 2020');
+    expect(text).toContain('2020 – 2020');
     // Non-chaîne : vide — la plage retombe sur le seul libellé restant (Present).
     expect(text).toContain('Present');
     expect(text).not.toContain('evil');

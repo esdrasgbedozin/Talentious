@@ -28,7 +28,7 @@ export function dateRange(
 ): string {
   const from = formatMonthYear(t, start);
   const to = isCurrent ? t.present : formatMonthYear(t, end);
-  if (from && to) return `${from} — ${to}`;
+  if (from && to) return `${from} – ${to}`;
   return from || to || "";
 }
 

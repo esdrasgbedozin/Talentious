@@ -100,7 +100,7 @@ export function InlineSkills({
   );
 }
 
-/** Cœur d'une entrée d'expérience : titre (— société), dates, lieu, description.
+/** Cœur d'une entrée d'expérience : titre, société, dates, lieu, description.
  * Le rendu des compétences de l'entrée est injecté via `skills` (slot) pour que
  * chaque template garde sa variation sans dupliquer le cœur. */
 export function ExperienceEntry({
@@ -119,8 +119,8 @@ export function ExperienceEntry({
           {exp.title}
           {exp.company && (
             <span className="font-normal" style={mutedText}>
-              {" "}
-              — {exp.company}
+              {", "}
+              {exp.company}
             </span>
           )}
         </h3>
@@ -197,7 +197,7 @@ export function EducationEntry({
   );
 }
 
-/** Entrée de certification : nom (— émetteur), date. Identique sur les 4
+/** Entrée de certification : nom (émetteur en option), date. Identique sur les 4
  * templates. La classe `break-inside-avoid` n'est PAS posée ici (la section la
  * portait au niveau du conteneur, pas de l'entrée) — parité DOM. */
 export function CertificationEntry({
@@ -211,7 +211,7 @@ export function CertificationEntry({
     <div className="flex items-baseline justify-between gap-3">
       <span>
         <span className="font-semibold">{cert.name}</span>
-        {cert.issuer && <span style={mutedText}> — {cert.issuer}</span>}
+        {cert.issuer && <span style={mutedText}>, {cert.issuer}</span>}
       </span>
       <span className="flex-shrink-0 text-[10px]" style={mutedText}>
         {formatMonthYear(t, cert.issue_date)}
