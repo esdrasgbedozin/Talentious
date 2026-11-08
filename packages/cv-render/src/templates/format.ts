@@ -8,6 +8,11 @@
 import type { GeneratedCVData } from "../types";
 import { getCVLocale, type CVLocale, type DocumentLanguage } from "../i18n";
 
+// Tirets, définis par leur point de code pour garder la SOURCE en ASCII (et
+// lisible : « — » cadratin et « – » demi-cadratin sont indiscernables à l'œil).
+const EM_DASH = "\u2014"; // tiret cadratin, banni du texte remis (consigne typo)
+const EN_DASH = "\u2013"; // demi-cadratin, toléré pour les plages (cf. dateRange)
+
 /** "2020-03" | "2020-03-15" → "mars 2020" / "Mar 2020" selon la locale ; "" → "". */
 export function formatMonthYear(t: CVLocale, value?: string | null): string {
   // Document corrompu (non-chaîne) : ne jamais renvoyer un objet comme enfant
@@ -53,8 +58,12 @@ export function splitSkills(
       !!s && typeof s.name === "string" && s.name.length > 0,
   );
   return {
-    hard: named.filter((s) => !isSoft(s.category)).map((s) => s.name),
-    soft: named.filter((s) => isSoft(s.category)).map((s) => s.name),
+    hard: named
+      .filter((s) => !isSoft(s.category))
+      .map((s) => normalizeTypography(s.name)),
+    soft: named
+      .filter((s) => isSoft(s.category))
+      .map((s) => normalizeTypography(s.name)),
   };
 }
 
@@ -69,7 +78,50 @@ export function splitSkills(
  * avec la garde déjà posée sur les dates (`formatMonthYear`). `""` et `undefined`
  * restent falsy : les rendus conditionnels des templates sont inchangés. */
 export function asText(value: unknown): string {
-  return typeof value === "string" ? value : "";
+  return typeof value === "string" ? normalizeTypography(value) : "";
+}
+
+/**
+ * Normalisation typographique au seuil du rendu (consigne Esdras, CLAUDE.md §2) :
+ * aucun tiret cadratin « — » (U+2014) ne doit figurer dans un document remis en
+ * PDF. Le CONTENU rédigé par l'agent IA (titres, descriptions, intitulés) ou
+ * saisi peut en produire ; on le neutralise ici, au même point que la coercition
+ * de type (asText / asTextList / splitSkills), donc UNE SEULE FOIS pour l'aperçu
+ * Next ET le PDF, et y compris pour les CV déjà stockés (aucune migration).
+ *
+ * Règles, du plus spécifique au plus général :
+ *  - plage NUMÉRIQUE (« 2018—2021 », « 10—20 % ») → demi-cadratin « – », qui est
+ *    le caractère de plage correct (cohérent avec dateRange), jamais une virgule ;
+ *  - cadratin en TÊTE de ligne (puce « — item ») → tiret simple « - », pour ne
+ *    pas transformer une puce en virgule orpheline ;
+ *  - cadratin en FIN de ligne → retiré ;
+ *  - cadratin SÉPARATEUR interne (incise, titre/sous-titre) → virgule, choix
+ *    cohérent avec les séparateurs de blocs déjà corrigés (poste/entreprise,
+ *    certif/organisme).
+ *
+ * On n'absorbe que les blancs HORIZONTAUX : les retours à la ligne sont préservés
+ * (les descriptions sont rendues en `whitespace-pre-line`, la structure en lignes
+ * ou en liste doit survivre). La fonction est un NO-OP sur un texte sans cadratin
+ * (emails, URL, dates et tout contenu déjà conforme traversent intacts — aucune
+ * virgule légitime n'est retirée) : elle est donc idempotente (sa sortie ne
+ * contient plus de cadratin) et laisse les snapshots des fixtures inchangés. */
+export function normalizeTypography(value: string): string {
+  // Défense en profondeur : la fonction est exportée ; un appel direct hors de la
+  // ceinture asText avec un non-string ne doit pas lever sur `.replace`.
+  if (typeof value !== "string") return "";
+  if (!value.includes(EM_DASH)) return value;
+  // Blanc horizontal (espaces, tabulations) : ne consomme JAMAIS `\n`/`\r`.
+  const H = "[^\\S\\r\\n]";
+  return value
+    .replace(
+      new RegExp(`(\\d)${H}*${EM_DASH}${H}*(\\d)`, "g"),
+      `$1${EN_DASH}$2`,
+    )
+    .replace(new RegExp(`^(${H}*)${EM_DASH}${H}*`, "gm"), "$1- ")
+    .replace(new RegExp(`${H}*${EM_DASH}${H}*$`, "gm"), "")
+    .replace(new RegExp(`${H}*${EM_DASH}${H}*`, "g"), ", ")
+    .replace(new RegExp(`,(?:${H}*,)+`, "g"), ",")
+    .replace(new RegExp(`,${H}*([.,])`, "g"), "$1");
 }
 
 /** Coercition d'une liste de compétences en `string[]` sûr : non-tableau → `[]`,
@@ -77,7 +129,9 @@ export function asText(value: unknown): string {
  * corrompu, et un `[object Object]` rendu). */
 export function asTextList(value: unknown): string[] {
   return Array.isArray(value)
-    ? value.filter((x): x is string => typeof x === "string" && x.length > 0)
+    ? value
+        .filter((x): x is string => typeof x === "string" && x.length > 0)
+        .map(normalizeTypography)
     : [];
 }
 
