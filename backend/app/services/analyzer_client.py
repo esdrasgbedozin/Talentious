@@ -5,7 +5,7 @@ HTTP client for communicating with the Analyseur-Offre microservice
 
 import os
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 import httpx
 from fastapi import UploadFile, HTTPException, status
@@ -47,12 +47,20 @@ class AnalysisResult:
         seniority_level: str,
         key_responsibilities: List[str],
         tone: str,
+        keywords: Optional[List[Dict[str, Any]]] = None,
+        **_forward_compatible: Any,
     ):
         self.hard_skills = [SkillItem(**skill) for skill in hard_skills]
         self.soft_skills = [SkillItem(**skill) for skill in soft_skills]
         self.seniority_level = seniority_level
         self.key_responsibilities = key_responsibilities
         self.tone = tone
+        # Sortie dédiée au Score ATS (agent analyseur-offre, M5-T01) : déjà
+        # normalisée/dédupliquée/bornée côté agent, conservée telle quelle.
+        self.keywords = keywords if keywords is not None else []
+        # `**_forward_compatible` : le contrat de l'agent est ADDITIF — un nouveau
+        # champ de sortie ne doit JAMAIS casser ce client (c'est précisément ce
+        # qui est arrivé avec `keywords`). On ignore les champs non modélisés.
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
@@ -62,6 +70,7 @@ class AnalysisResult:
             "seniority_level": self.seniority_level,
             "key_responsibilities": self.key_responsibilities,
             "tone": self.tone,
+            "keywords": self.keywords,
         }
 
 
