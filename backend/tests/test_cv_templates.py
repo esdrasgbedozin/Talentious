@@ -32,6 +32,10 @@ from scripts.check_migrations import _alembic_config
 from tests.conftest import sync_db_url
 
 _PRE_T03_REV = "b7c8d9e0f1a2"  # head juste avant cv_templates (job_offers)
+# Révision du SEED des templates M3 : ce test cible CETTE migration précise (son
+# up/down), pas « head » — d'autres migrations peuvent se poser au-dessus (ex.
+# ats_scores, M5-T08). On y upgrade/downgrade explicitement pour rester robuste.
+_M3_SEED_REV = "a7b8c9d0e1f2"
 
 
 def _seed_v1_rows(engine) -> dict:
@@ -217,7 +221,7 @@ class TestMigrationSeedM3Templates:
         os.environ["DATABASE_URL"] = disposable_db_url
         engine = create_engine(sync_db_url(disposable_db_url))
         try:
-            command.upgrade(cfg, "head")
+            command.upgrade(cfg, _M3_SEED_REV)
             with engine.connect() as conn:
                 rows = dict(
                     conn.execute(
@@ -240,7 +244,7 @@ class TestMigrationSeedM3Templates:
             assert ids == {"modern_sobre"}
 
             # Re-upgrade : de nouveau les 4 (idempotence du cycle).
-            command.upgrade(cfg, "head")
+            command.upgrade(cfg, _M3_SEED_REV)
             with engine.connect() as conn:
                 count = conn.execute(
                     text("SELECT COUNT(*) FROM cv_templates")
