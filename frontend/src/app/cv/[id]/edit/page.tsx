@@ -22,6 +22,7 @@ import CVExperienceForm from '@/components/cv/CVExperienceForm';
 import CVEducationForm from '@/components/cv/CVEducationForm';
 import CVProjectForm from '@/components/cv/CVProjectForm';
 import CVCertificationForm from '@/components/cv/CVCertificationForm';
+import ATSScorePanel from '@/components/cv/ATSScorePanel';
 import {
   FALLBACK_TEMPLATE_ID,
   getTemplate,
@@ -84,6 +85,8 @@ export default function CVEditorPage() {
 
   const [cvName, setCvName] = useState('');
   const [cv, setCv] = useState<GeneratedCVData>(createEmptyCVData());
+  // Offre de génération liée au CV : proposée en 1 clic dans le Score ATS.
+  const [linkedOfferText, setLinkedOfferText] = useState<string | null>(null);
   // Enveloppe du document : le template est résolu par le registre (M0-T12,
   // ADR-TEMPLATE-REGISTRY), jamais mappé ici. Repli sûr tant que rien n'est chargé.
   const [templateId, setTemplateId] = useState<string>(FALLBACK_TEMPLATE_ID);
@@ -140,6 +143,7 @@ export default function CVEditorPage() {
         setLanguage(detail.language ?? 'fr');
         // Défaut éditable si le champ manque : le serveur gate de toute façon.
         setIsEditable(detail.is_editable ?? true);
+        setLinkedOfferText(detail.job_offer_context ?? null);
       })
       .catch((err) => !cancelled && setLoadError(getErrorMessage(err)))
       .finally(() => !cancelled && setIsLoading(false));
@@ -689,6 +693,15 @@ export default function CVEditorPage() {
             </div>
           </ProfileSection>
           </fieldset>
+
+          {/* Score ATS (M5) : hors du fieldset désactivé — scorer reste
+              possible sur un CV en lecture seule, le détail est gaté serveur. */}
+          <ProfileSection
+            title="Score ATS"
+            description="Mesure l'alignement de ce CV avec une offre, mots-clés à l'appui."
+          >
+            <ATSScorePanel cvId={cvId} linkedOfferText={linkedOfferText} />
+          </ProfileSection>
         </div>
 
         {/* Live preview pane */}
