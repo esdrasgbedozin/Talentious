@@ -10,6 +10,7 @@ import {
   dateRange,
   deriveCvView,
   formatMonthYear,
+  normalizeTypography,
   splitSkills,
 } from "./format";
 import { getCVLocale } from "../i18n";
@@ -217,5 +218,100 @@ describe("deriveCvView", () => {
     ]) {
       expect(typeof s).toBe("string");
     }
+  });
+});
+
+describe("normalizeTypography — neutralise le cadratin du contenu (consigne typo)", () => {
+  const EM = "—"; // tiret cadratin, banni du texte remis
+  const EN = "–"; // demi-cadratin, toléré pour les plages
+
+  it("cadratin séparateur interne → virgule", () => {
+    expect(normalizeTypography(`Talentious ${EM} plateforme SaaS`)).toBe(
+      "Talentious, plateforme SaaS",
+    );
+    // Collé, sans espaces : « mot—mot » → « mot, mot ».
+    expect(normalizeTypography(`mot${EM}mot`)).toBe("mot, mot");
+    // Incise (cadratins multiples) → virgules.
+    expect(
+      normalizeTypography(`transformation ${EM} rapide ${EM} mesurable`),
+    ).toBe("transformation, rapide, mesurable");
+  });
+
+  it("plage NUMÉRIQUE → demi-cadratin « – », jamais une virgule", () => {
+    expect(normalizeTypography(`2018${EM}2021`)).toBe(`2018${EN}2021`);
+    expect(normalizeTypography(`10 ${EM} 20 %`)).toBe(`10${EN}20 %`);
+    expect(normalizeTypography(`de 5${EM}10 ans`)).toBe(`de 5${EN}10 ans`);
+  });
+
+  it("retours à la ligne préservés ; puce « — » en tête de ligne → tiret", () => {
+    // Descriptions rendues en whitespace-pre-line : la structure doit survivre.
+    expect(
+      normalizeTypography(
+        `Réalisations\n${EM} Déploiement CI/CD\n${EM} Monitoring`,
+      ),
+    ).toBe("Réalisations\n- Déploiement CI/CD\n- Monitoring");
+    // Cadratin séparateur SUR une ligne → virgule, ligne suivante intacte.
+    expect(normalizeTypography(`Lead ${EM} Cloud\nGestion d'équipe`)).toBe(
+      "Lead, Cloud\nGestion d'équipe",
+    );
+  });
+
+  it("cadratin en bordure → pas de virgule orpheline", () => {
+    // Début de champ mono-ligne : traité comme une puce.
+    expect(normalizeTypography(`${EM} Dirigé l'équipe`)).toBe(
+      "- Dirigé l'équipe",
+    );
+    // Fin de champ : simplement retiré.
+    expect(normalizeTypography(`Livré le projet ${EM}`)).toBe(
+      "Livré le projet",
+    );
+  });
+
+  it("artefacts de remplacement nettoyés (virgule double, ponctuation)", () => {
+    expect(normalizeTypography(`a, ${EM} b`)).toBe("a, b");
+    expect(normalizeTypography(`fin ${EM}.`)).toBe("fin.");
+  });
+
+  it("texte déjà conforme : NO-OP strict (aucune virgule légitime touchée)", () => {
+    for (const s of [
+      "Full-Stack",
+      `2018 ${EN} 2021`, // demi-cadratin préservé
+      "Résumé simple.",
+      "Paris, France",
+      "Compétences : Go, Rust, ", // virgule de fin saisie : conservée
+    ]) {
+      expect(normalizeTypography(s)).toBe(s);
+    }
+  });
+
+  it('robustesse : non-string et chaîne vide → ""', () => {
+    expect(normalizeTypography(42 as unknown as string)).toBe("");
+    expect(normalizeTypography(null as unknown as string)).toBe("");
+    expect(normalizeTypography("")).toBe("");
+  });
+
+  it("idempotent : la sortie ne contient plus aucun cadratin", () => {
+    for (const input of [
+      `Talentious ${EM} SaaS`,
+      `2018${EM}2021`,
+      `Réalisations\n${EM} A\n${EM} B`,
+      `a, ${EM} b`,
+      `${EM} seul`,
+    ]) {
+      const once = normalizeTypography(input);
+      expect(once).not.toContain(EM);
+      expect(normalizeTypography(once)).toBe(once);
+    }
+  });
+
+  it("appliqué au seuil du view-model via asText / asTextList / splitSkills", () => {
+    expect(asText(`A ${EM} B`)).toBe("A, B");
+    expect(asTextList([`X ${EM} Y`, "Z"])).toEqual(["X, Y", "Z"]);
+    const { hard, soft } = splitSkills([
+      { name: `Cloud ${EM} GCP`, category: "technical" },
+      { name: `Leadership ${EM} transverse`, category: "soft" },
+    ]);
+    expect(hard).toEqual(["Cloud, GCP"]);
+    expect(soft).toEqual(["Leadership, transverse"]);
   });
 });
