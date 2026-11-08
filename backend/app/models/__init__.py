@@ -10,6 +10,7 @@ from app.models.cv_job import CVJob, JobStatus, JobType
 from app.models.cv_template import CVTemplate, TemplateSector
 from app.models.cv_theme import CVTheme
 from app.models.job_offer import JobOffer
+from app.models.ats_score import AtsScore
 from app.models.refresh_token import RefreshToken
 from app.models.password_reset_token import PasswordResetToken
 
@@ -28,6 +29,7 @@ __all__ = [
     "TemplateSector",
     "CVTheme",
     "JobOffer",
+    "AtsScore",
     "RefreshToken",
     "PasswordResetToken",
 ]
