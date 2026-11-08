@@ -39,6 +39,13 @@ export type CVThemeTokens = components['schemas']['CVThemeTokens'];
 /** Langue du document généré/exporté (`fr` par défaut, `en` premium). */
 export type DocumentLanguage = components['schemas']['DocumentLanguage'];
 
+/** Mot-clé d'offre extrait par l'agent analyseur (`{ name, category, importance, aliases }`). */
+export type ATSKeyword = components['schemas']['ATSKeyword'];
+/** Corps du Score ATS : fournir EXACTEMENT un de `offer_text` / `job_offer_id`. */
+export type ATSScoreRequest = components['schemas']['ATSScoreRequest'];
+/** Résultat du Score ATS. `detail_truncated` = palier gratuit (détail masqué côté serveur). */
+export type ATSScoreResult = components['schemas']['ATSScoreResult'];
+
 // Base URL of the FastAPI backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -538,6 +545,30 @@ export const formatPrice = (
     style: 'currency',
     currency: currency.toUpperCase(),
   }).format(amountCents / 100);
+};
+
+/**
+ * Calcule le Score ATS d'un CV face à une offre (POST /cv/{id}/ats-score).
+ * Fournir EXACTEMENT un de `offerText` / `jobOfferId` (sinon 422 côté serveur).
+ * Le palier gratuit reçoit un résultat au détail tronqué (`detail_truncated`) :
+ * le `score` et `missing_keywords_count` restent renseignés (teaser honnête).
+ */
+export const computeAtsScore = async (
+  cvId: string,
+  offer: { offerText?: string; jobOfferId?: string },
+): Promise<ATSScoreResult> => {
+  const body: ATSScoreRequest = {};
+  if (offer.offerText !== undefined) body.offer_text = offer.offerText;
+  if (offer.jobOfferId !== undefined) body.job_offer_id = offer.jobOfferId;
+  const { data } = await apiClient.post<ATSScoreResult>(
+    `/cv/${encodeURIComponent(cvId)}/ats-score`,
+    body,
+    // L'ATS n'est jamais un mur de paiement dur (palier gratuit = 200 tronqué) :
+    // on neutralise la redirection globale vers /billing pour ne pas perdre la
+    // saisie de l'offre si le backend renvoyait un 402 (défense en profondeur).
+    { skipBillingRedirect: true },
+  );
+  return data;
 };
 
 // Helper to extract error messages from API responses
