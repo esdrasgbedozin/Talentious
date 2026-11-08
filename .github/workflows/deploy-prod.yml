@@ -88,6 +88,12 @@ jobs:
       - name: Run parser-pdf agent tests (coercition ProfileData, sans dépendances)
         working-directory: agents/parser-pdf
         run: python -m pytest tests -q
+      # NB : tourne avec les deps backend déjà installées (fastapi, httpx, pydantic).
+      # L'app de l'agent est importable sans google-genai (imports paresseux) ; si
+      # un import de app.main venait à exiger une autre dep de l'agent, l'ajouter ici.
+      - name: Run analyseur-offre agent tests (coercition keywords ATS, Vertex moqué)
+        working-directory: agents/analyseur-offre
+        run: python -m pytest tests -q
 
   build-push:
     needs: test

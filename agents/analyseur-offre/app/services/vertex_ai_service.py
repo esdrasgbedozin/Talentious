@@ -8,10 +8,16 @@ import os
 import json
 import logging
 import re
-from typing import Dict, Any, Optional
+from typing import TYPE_CHECKING, Dict, Any, Optional
 
-from google import genai
-from google.genai import types
+if TYPE_CHECKING:  # typage seul, aucun import à l'exécution
+    from google import genai
+
+# NB : `google.genai` est importé PARESSEUSEMENT dans les méthodes qui l'utilisent
+# (et non au niveau module) pour que `app.main` reste importable SANS le SDK — la
+# CI teste le harnais de l'agent avec les seules dépendances backend (pas de
+# google-genai), et le client n'est de toute façon instancié qu'en production
+# (GCP_PROJECT_ID renseigné). Comportement de prod inchangé.
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +39,7 @@ class VertexAIService:
         self.project_id = GCP_PROJECT_ID
         self.location = GCP_LOCATION
         self.model_name = MODEL_NAME
-        self.client: Optional[genai.Client] = None
+        self.client: Optional["genai.Client"] = None  # import paresseux
 
         if not self.project_id:
             logger.warning(
@@ -44,6 +50,8 @@ class VertexAIService:
 
     def _initialize_vertex_ai(self):
         """Initialize the google-genai client (Vertex backend)"""
+        from google import genai  # import paresseux (cf. en-tête du module)
+
         try:
             self.client = genai.Client(
                 vertexai=True, project=self.project_id, location=self.location
@@ -84,6 +92,8 @@ class VertexAIService:
         """
         if not self.client:
             raise ValueError("Vertex AI client not initialized")
+
+        from google.genai import types  # import paresseux (cf. en-tête du module)
 
         # Neutralize any attempt to escape the <offre> data fence from within the
         # user-controlled offer text (prompt-injection defense).

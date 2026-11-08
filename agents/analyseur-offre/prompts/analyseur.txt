@@ -20,7 +20,17 @@ Analyse cette offre et extrais les informations suivantes au format JSON strict 
 
 5. **tone** : Ton général de l'offre (formal, casual, innovative, corporate, startup-like, etc.)
 
+6. **keywords** : Liste de mots-clés normalisés, dédiée au matching ATS automatique. SANS DOUBLON. Couvre les compétences (techniques et comportementales) ET les exigences du poste. Chaque mot-clé :
+   - `name` (obligatoire) : le terme sous la forme qu'un recruteur rechercherait, canonique et concis (ex. "Python", "gestion de projet", "Bac+5")
+   - `category` (obligatoire) : EXACTEMENT l'une de ces trois valeurs, sans variante :
+     - "hard_skill" : compétence technique, outil, langage, framework
+     - "soft_skill" : compétence comportementale/transversale
+     - "requirement" : exigence qui n'est pas une compétence (diplôme, certification, séniorité, langue, années d'expérience)
+   - `importance` (optionnel) : "Critical", "Important" ou "Nice to have" si déductible
+   - `aliases` (optionnel, 5 maximum) : variantes et synonymes usuels du terme, pour améliorer la détection dans un CV (ex. "JS" pour "JavaScript", "py" pour "Python", "k8s" pour "Kubernetes")
+
 INSTRUCTIONS :
+- `keywords` : normalise chaque terme (forme canonique), ne mets PAS deux fois le même concept, et n'emploie pour `category` que les trois valeurs exactes ci-dessus. Limite-toi aux mots-clés les plus pertinents (40 environ, 60 au maximum ; 5 aliases maximum par mot-clé). Les `aliases` servent uniquement à élargir la détection, ce ne sont pas de nouveaux mots-clés.
 - Retourne UNIQUEMENT du JSON valide, sans texte avant ou après
 - Utilise les noms de champs exactement comme indiqué ci-dessus
 - Si une information n'est pas explicitement mentionnée, déduis-la du contexte
